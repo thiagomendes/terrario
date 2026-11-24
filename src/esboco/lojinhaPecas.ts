@@ -20,7 +20,7 @@ export type V3 = [number, number, number];
 type P2 = [number, number];
 
 // ------------------------------------------------------------------ catálogo dos candidatos
-export type TipoCandidato = 'andar' | 'bicho' | 'chapeu' | 'roupa' | 'costas' | 'mao';
+export type TipoCandidato = 'andar' | 'bicho' | 'chapeu' | 'roupa' | 'costas' | 'mao' | 'rosto' | 'alto' | 'rastro';
 export type IdCandidato =
   | 'patinete'
   | 'carrinho'
@@ -37,9 +37,16 @@ export type IdCandidato =
   | 'jardineira'
   | 'borboleta'
   | 'foguete'
-  | 'bolhas';
+  | 'bolhas'
+  // rodada 2 (o dono escolheu 10 da rodada 1; faltam 2)
+  | 'oculos'
+  | 'guardachuva'
+  | 'pipa'
+  | 'florzinhas';
 
 export interface Candidato {
+  /** Rodada 1 (os 16) ou rodada 2 (os 4 novos, 24 nov). */
+  rodada?: 2;
   numero: number;
   id: IdCandidato;
   tipo: TipoCandidato;
@@ -195,6 +202,47 @@ export const CANDIDATOS: readonly Candidato[] = [
     preco: 40,
     efeito: 'na mão, solta bolhas de sabão que sobem devagar e estouram sozinhas',
     quem: 'menina',
+  },
+  // ---------------------------------------------------------------- rodada 2
+  {
+    rodada: 2,
+    numero: 17,
+    id: 'oculos',
+    tipo: 'rosto',
+    nome: 'Óculos de estrela',
+    preco: 25,
+    efeito: 'armação de estrela amarela com a lente azulzinha; uma estrelinha pisca no canto de vez em quando',
+    quem: 'menina',
+  },
+  {
+    rodada: 2,
+    numero: 18,
+    id: 'guardachuva',
+    tipo: 'mao',
+    nome: 'Guarda-chuva de gotinhas',
+    preco: 45,
+    efeito: 'guarda-chuva lilás e branco que gira devagar no alto, com gotinhas azuis caindo em volta (sem molhar)',
+    quem: 'menino',
+  },
+  {
+    rodada: 2,
+    numero: 19,
+    id: 'pipa',
+    tipo: 'alto',
+    nome: 'Pipa de lacinhos',
+    preco: 50,
+    efeito: 'pipa amarela e azul presa na mão, voando atrás e acima da criança, com o rabo de lacinhos balançando',
+    quem: 'menina',
+  },
+  {
+    rodada: 2,
+    numero: 20,
+    id: 'florzinhas',
+    tipo: 'rastro',
+    nome: 'Rastro de florzinhas',
+    preco: 40,
+    efeito: 'a cada passo nasce uma florzinha no chão (rosa, branca ou amarela) que fecha e some sozinha',
+    quem: 'menino',
   },
 ];
 
@@ -914,6 +962,157 @@ function varinha(P: Pecas): void {
   });
 }
 
+// ------------------------------------------------------------------ rodada 2
+/** Uma estrela vazada (a armação dos óculos): as dez bordas em varetinhas, no plano xy. */
+function estrelaVazada(P: Pecas, nome: string, junta: Junta, c: V3, r: number, cor: string, grossura: number): void {
+  const pts = perfilEstrela(r);
+  for (let i = 0; i < pts.length; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[(i + 1) % pts.length];
+    const l = Math.hypot(x1 - x0, y1 - y0);
+    P.caixa(`${nome}${i}`, junta, 'cabeca', [l + grossura * 0.8, grossura, grossura], [c[0] + (x0 + x1) / 2, c[1] + (y0 + y1) / 2, c[2]], cor, grossura * 0.4, {
+      rot: [0, 0, Math.atan2(y1 - y0, x1 - x0)],
+      brilho: 0.6,
+    });
+  }
+}
+
+function oculos(P: Pecas, m: Medidas): void {
+  const OURO = '#ffcf3a';
+  const z = m.zRosto + 0.035;
+  const y = -0.035;
+  const r = 0.13;
+  for (const s of [-1, 1]) {
+    // a lente azulzinha transparente (os olhos aparecem) e a armação de estrela em cima
+    P.placa(`oculos-lente${s}`, 'cabeca', 'cabeca', perfilEstrela(r * 0.92), 0.01, [s * 0.155, y, z - 0.008], '#9fd8ff', {
+      alfa: 0.38,
+      brilho: 0.9,
+    });
+    estrelaVazada(P, `oculos-aro${s}-`, 'cabeca', [s * 0.155, y, z], r, OURO, 0.026);
+    // a haste até a orelha
+    P.caixa(`oculos-haste${s}`, 'cabeca', 'cabeca', [0.022, 0.022, 0.34], [s * (m.cab.w / 2 + 0.012), y + 0.02, z - 0.18], OURO, 0.008, {
+      brilho: 0.6,
+    });
+    P.caixa(`oculos-ponta${s}`, 'cabeca', 'cabeca', [0.1, 0.022, 0.022], [s * (m.cab.w / 2 - 0.035), y + 0.02, z - 0.005], OURO, 0.008, {
+      brilho: 0.6,
+    });
+  }
+  P.caixa('oculos-ponte', 'cabeca', 'cabeca', [0.08, 0.022, 0.022], [0, y + 0.03, z], OURO, 0.008, { brilho: 0.6 });
+  // a estrelinha que pisca no canto da armação (luz que acende e apaga, pequena)
+  P.placa('luz-brilho-oculos', 'cabeca', 'cabeca', perfilEstrela(0.04), 0.012, [0.155 + r * 0.8, y + r * 0.75, z + 0.012], '#fff3b0', {
+    luz: 'perola',
+  });
+}
+
+function guardaChuva(P: Pecas): void {
+  const LILAS = '#b48cff';
+  const BRANCO = '#fbf7ff';
+  const j: Junta = 'maoD';
+  // o guarda-chuva inteiro num nó na mão que o palco mantém em pé (o cabo para cima, um tico
+  // inclinado por cima da cabeça) e gira devagar em volta do cabo, como quer que o braço esteja
+  const g = sub('guarda', [0, 0, 0]);
+  P.cone('guardachuva-cabo', j, 'mao', 0.98, 0.018, 0.018, [0, 0.45, 0], '#e6e9f2', { brilho: 0.6, ...g });
+  P.bola('guardachuva-punho', j, 'mao', 0.045, [0, -0.07, 0], LILAS, [1, 1.3, 1], { brilho: 0.5, ...g });
+  // a cúpula em oito gomos (lilás e branco), com a beirada em ondinhas
+  const R = 0.66;
+  const ALTURA = 0.3;
+  const BASE = 0.72;
+  const n = 8;
+  for (let k = 0; k < n; k++) {
+    const a0 = (k / n) * Math.PI * 2;
+    const a1 = ((k + 1) / n) * Math.PI * 2;
+    const am = (a0 + a1) / 2;
+    const topo = [0, BASE + ALTURA, 0];
+    const b = [Math.cos(a0) * R, BASE, Math.sin(a0) * R];
+    const c = [Math.cos(a1) * R, BASE, Math.sin(a1) * R];
+    const meio = [Math.cos(am) * R * 0.92, BASE - 0.06, Math.sin(am) * R * 0.92];
+    P.por({
+      nome: `guardachuva-gomo${k}`,
+      junta: j,
+      apoio: 'mao',
+      forma: 'malha',
+      tamanho: [R, ALTURA, R],
+      malha: { pos: [...topo, ...b, ...meio, ...c], ind: [0, 1, 2, 0, 2, 3] },
+      pos: [0, 0, 0],
+      cor: k % 2 ? LILAS : BRANCO,
+      brilho: 0.35,
+      ...g,
+    });
+    P.bola(`guardachuva-pontinha${k}`, j, 'mao', 0.026, [b[0], b[1] - 0.01, b[2]], LILAS, [1, 1, 1], g);
+  }
+  P.bola('guardachuva-ponta', j, 'mao', 0.035, [0, BASE + ALTURA + 0.03, 0], LILAS, [1, 1.4, 1], g);
+}
+
+function pipa(P: Pecas): void {
+  const AMARELO = '#ffcf3a';
+  const AZUL = '#5cb8ff';
+  const CARAMELO = '#c98a4a';
+  const LACO = '#ff7a8a';
+  const j: Junta = 'prancha';
+  // a pipa voa atrás, à direita e no alto da criança; o nó dela fica na ponta de baixo (onde a
+  // linha e o rabo se prendem) e balança em volta dali
+  const pivo: V3 = [0.4, 2.0, -1.1];
+  const T: P2 = [0, 0.82];
+  const E: P2 = [-0.3, 0.55];
+  const D: P2 = [0.3, 0.55];
+  const B: P2 = [0, 0];
+  const C: P2 = [0, 0.55];
+  const tri = (nome: string, pts: P2[], cor: string) =>
+    P.placa(nome, j, undefined, pts, 0.02, [0, 0, 0], cor, { brilho: 0.35, rot: [-0.3, 0, 0], ...sub('pipa', pivo) });
+  tri('pipa-a', [T, E, C], AMARELO);
+  tri('pipa-b', [T, C, D], AZUL);
+  tri('pipa-c', [E, B, C], AZUL);
+  tri('pipa-d', [C, B, D], AMARELO);
+  // as varetas em cruz (por trás) e a estrelinha branca no meio
+  const vareta = (nome: string, a: P2, b: P2) => {
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    // (a placa da pipa está inclinada -0,3 em x: a vareta vai junto, um tico atrás dela)
+    const meio: V3 = [(a[0] + b[0]) / 2, ((a[1] + b[1]) / 2) * Math.cos(0.3), -((a[1] + b[1]) / 2) * Math.sin(0.3) - 0.02];
+    P.caixa(nome, j, undefined, [l, 0.022, 0.022], meio, CARAMELO, 0.008, { rot: [-0.3, 0, ang], ...sub('pipa', pivo) });
+  };
+  vareta('pipa-vareta1', T, B);
+  vareta('pipa-vareta2', E, D);
+  P.placa('pipa-estrela', j, undefined, perfilEstrela(0.07), 0.012, [0, 0.55 * Math.cos(0.3), -0.55 * Math.sin(0.3) + 0.014], '#ffffff', {
+    rot: [-0.3, 0, 0],
+    ...sub('pipa', pivo),
+  });
+  // o rabo: a cordinha e os lacinhos, num nó próprio que balança atrasado
+  const lacos = 4;
+  for (let i = 0; i < lacos; i++) {
+    const y = -0.2 - i * 0.2;
+    const x = Math.sin(i * 1.3) * 0.06;
+    P.caixa(`pipa-cordinha${i}`, j, undefined, [0.012, 0.2, 0.012], [x, y + 0.1, 0], '#f4f0e6', 0.004, sub('rabopipa', pivo));
+    for (const s of [-1, 1])
+      P.placa(
+        `pipa-laco${i}${s}`,
+        j,
+        undefined,
+        [
+          [0, 0],
+          [s * 0.08, 0.04],
+          [s * 0.08, -0.04],
+        ],
+        0.014,
+        [x, y, 0],
+        i % 2 ? LACO : AZUL,
+        { brilho: 0.35, ...sub('rabopipa', pivo) },
+      );
+  }
+}
+
+function florzinhas(P: Pecas, m: Medidas): void {
+  // a florzinha rosa na ponta de cada sapato (mostra quem está com o rastro)
+  for (const lado of ['pernaE', 'pernaD'] as const) {
+    const c: V3 = [0, -m.quadril + 0.085, 0.175];
+    for (let k = 0; k < 5; k++) {
+      const a = (k / 5) * Math.PI * 2;
+      P.bola(`${lado}-flor${k}`, lado, 'perna', 0.022, [c[0] + Math.cos(a) * 0.026, c[1] + Math.sin(a) * 0.026, c[2]], '#ff8fc0', [1, 1, 0.5]);
+    }
+    P.bola(`${lado}-flor-miolo`, lado, 'perna', 0.016, [c[0], c[1], c[2] + 0.006], '#ffd23a', [1, 1, 0.6]);
+  }
+}
+
 // ------------------------------------------------------------------ vestir
 /** Acrescenta ao plano as peças do candidato (os bichinhos vêm à parte, em `lojinhaBichos.ts`). */
 export function vestirCandidato(id: IdCandidato | null, plano: PlanoBoneco): void {
@@ -932,6 +1131,10 @@ export function vestirCandidato(id: IdCandidato | null, plano: PlanoBoneco): voi
   else if (id === 'borboleta') borboleta(P, m);
   else if (id === 'foguete') foguete(P, m);
   else if (id === 'bolhas') varinha(P);
+  else if (id === 'oculos') oculos(P, m);
+  else if (id === 'guardachuva') guardaChuva(P);
+  else if (id === 'pipa') pipa(P);
+  else if (id === 'florzinhas') florzinhas(P, m);
 }
 
 /** As cores das luzes do esboço (pelo nome da peça: `luz-<cor>-...`). */
@@ -939,4 +1142,5 @@ export const CORES_LUZ: Record<string, string> = {
   menta: '#5fe8cf',
   creme: '#fff1c8',
   chama: '#ffc86a',
+  brilho: '#fff3b0',
 };

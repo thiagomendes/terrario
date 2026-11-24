@@ -37,6 +37,7 @@ interface Enquadre {
   entreBicho?: boolean;
 }
 interface Cand {
+  rodada?: number;
   numero: number;
   id: string;
   tipo: string;
@@ -57,7 +58,14 @@ const PRINCIPAL: Record<string, Enquadre> = {
   borboleta: { ang: 0.22, dist: 4.7, alt: 0.5, alvoY: 0.95, fov: 42 },
   foguete: { ang: 2.0, dist: 4.4, alt: 0.5, alvoY: 0.9, fov: 42 },
   mao: { ang: 0.6, dist: 4.6, alt: 0.35, alvoY: 1.15, fov: 44 },
+  // rodada 2
+  oculos: { ang: 0.5, dist: 3.0, alt: 0.25, alvoY: 1.35, fov: 40 },
+  guardachuva: { ang: 0.6, dist: 5.2, alt: 0.45, alvoY: 1.3, fov: 42 },
+  pipa: { ang: 0.35, dist: 6.4, alt: 0.3, alvoY: 1.75, fov: 44 },
 };
+/** Rodada 2: o rastro de florzinhas só aparece andando (a foto principal dele é andando). */
+const RASTRO: Enquadre = { ang: 0.85, dist: 7.0, alt: 1.6, alvoY: 0.6, fov: 44, frente: -0.5, segue: true };
+const RODADA = process.env.LOJINHA_RODADA === '2' ? 2 : 1;
 const enquadreDe = (c: Cand): Enquadre => PRINCIPAL[c.id] ?? PRINCIPAL[c.tipo];
 
 /** Em movimento: a câmera acompanha a criança no caminho (de três-quartos pela frente). */
@@ -152,9 +160,9 @@ async function abrirPalco(browser: Browser, tamanho: Tamanho): Promise<Page> {
 
 const nomeArquivo = (c: Cand) => `${String(c.numero).padStart(2, '0')}-${c.id}`;
 
-async function foto(page: Page, nome: string) {
-  mkdirSync(PASTA, { recursive: true });
-  await page.screenshot({ path: `${PASTA}/${nome}.jpg`, type: 'jpeg', quality: 88 });
+async function foto(page: Page, nome: string, pasta = PASTA) {
+  mkdirSync(pasta, { recursive: true });
+  await page.screenshot({ path: `${pasta}/${nome}.jpg`, type: 'jpeg', quality: 88 });
   console.log(`FOTO ${nome}`);
 }
 
@@ -172,9 +180,10 @@ async function tomada(page: Page, id: string, modo: 'parado' | 'andando', t: num
 }
 
 test('esboço da Lojinha maior: as fotos de cada candidato (celular em pé)', async ({ browser }) => {
+  test.skip(RODADA === 2, 'só a rodada 2');
   test.setTimeout(1_200_000);
   const page = await abrirPalco(browser, 'empe');
-  const cands: Cand[] = await page.evaluate(() => [...window.__lojinha!.candidatos]);
+  const cands: Cand[] = (await page.evaluate((): Cand[] => [...window.__lojinha!.candidatos])).filter((c) => !c.rodada);
   for (const c of cands) {
     if (SO && !SO.includes(c.id)) continue;
     // a foto principal: parada, um instante depois (as bolhas e a fumacinha já saíram)
@@ -199,16 +208,48 @@ test('esboço da Lojinha maior: as fotos de cada candidato (celular em pé)', as
       await foto(page, `${nomeArquivo(c)}-andando`);
     }
   }
-  if (!SO) await prancha(page, cands);
+  if (!SO) await prancha(page, cands, PASTA, 'Lojinha maior: 16 candidatos', 'Para escolher 12. Preço fixo de cada um embaixo da foto.');
   passo('fotos');
   await page.context().close();
 });
 
-/** A prancha: os 16 lado a lado, numerados, com o nome e o preço (uma imagem só). */
-async function prancha(page: Page, cands: Cand[]) {
+/**
+ * Rodada 2 (24 nov): os 4 candidatos novos (17 a 20) para fechar os 12, a prancha só deles e o
+ * passarinho refeito mais para fora no ombro. Pasta: capturas-036/esboco/rodada2.
+ */
+test('esboço da Lojinha maior, rodada 2: os 4 novos e o passarinho refeito', async ({ browser }) => {
+  test.skip(RODADA !== 2, 'só com LOJINHA_RODADA=2');
+  test.setTimeout(900_000);
+  const pasta = `${PASTA}/rodada2`;
+  const page = await abrirPalco(browser, 'empe');
+  const todos: Cand[] = await page.evaluate((): Cand[] => [...window.__lojinha!.candidatos]);
+  const novos = todos.filter((c) => c.rodada === 2);
+  for (const c of novos) {
+    if (SO && !SO.includes(c.id)) continue;
+    if (c.id === 'florzinhas') await tomada(page, c.id, 'andando', 3.2, RASTRO);
+    else await tomada(page, c.id, 'parado', 2.6, enquadreDe(c));
+    await foto(page, nomeArquivo(c), pasta);
+  }
+  const pass = todos.find((c) => c.id === 'passarinho')!;
+  if (!SO || SO.includes('passarinho')) {
+    await tomada(page, pass.id, 'parado', 2.6, { ...enquadreDe(pass), ang: 0.45 });
+    await foto(page, `${nomeArquivo(pass)}-refeito`, pasta);
+    // de frente, para ver o vão entre o passarinho e a cabeça
+    await tomada(page, pass.id, 'parado', 2.6, { ...enquadreDe(pass), ang: 0.15, lado: 0.1 });
+    await foto(page, `${nomeArquivo(pass)}-refeito-frente`, pasta);
+    await tomada(page, pass.id, 'andando', 3.4, MOVIMENTO.passarinho);
+    await foto(page, `${nomeArquivo(pass)}-refeito-andando`, pasta);
+  }
+  if (!SO) await prancha(page, novos, pasta, 'Lojinha maior, rodada 2: 4 candidatos', 'Para escolher 2 e fechar os 12. Preço fixo de cada um embaixo da foto.');
+  passo('rodada 2');
+  await page.context().close();
+});
+
+/** A prancha: os candidatos lado a lado, numerados, com o nome e o preço (uma imagem só). */
+async function prancha(page: Page, cands: Cand[], pasta: string, titulo: string, sub: string) {
   const cel = cands
     .map((c) => {
-      const b64 = readFileSync(`${PASTA}/${nomeArquivo(c)}.jpg`, 'base64');
+      const b64 = readFileSync(`${pasta}/${nomeArquivo(c)}.jpg`, 'base64');
       return `<figure><div class="num">${c.numero}</div><img src="data:image/jpeg;base64,${b64}">
         <figcaption><b>${c.nome}</b><span>${c.preco} moedinhas</span></figcaption></figure>`;
     })
@@ -227,19 +268,19 @@ async function prancha(page: Page, cands: Cand[]) {
     figcaption { padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 2px; }
     figcaption b { font-size: 20px; }
     figcaption span { font-size: 16px; color: #8a6a1a; font-weight: 700; }
-  </style></head><body><h1>Lojinha maior: 16 candidatos</h1>
-  <p>Para escolher 12. Preço fixo de cada um embaixo da foto.</p><div class="grade">${cel}</div></body></html>`;
+  </style></head><body><h1>${titulo}</h1>
+  <p>${sub}</p><div class="grade">${cel}</div></body></html>`;
   const ctx = await page.context().browser()!.newContext({ viewport: { width: 1338, height: 900 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   await p.setContent(html);
   await p.waitForTimeout(500);
-  await p.screenshot({ path: `${PASTA}/00-prancha.jpg`, type: 'jpeg', quality: 90, fullPage: true });
+  await p.screenshot({ path: `${pasta}/00-prancha.jpg`, type: 'jpeg', quality: 90, fullPage: true });
   console.log('FOTO 00-prancha');
   await ctx.close();
 }
 
 test('esboço da Lojinha maior: o vídeo dos de andar e dos bichinhos (computador)', async ({ browser }) => {
-  test.skip(!!SO || !!process.env.LOJINHA_SEM_VIDEO, 'só as fotos');
+  test.skip(!!SO || !!process.env.LOJINHA_SEM_VIDEO || RODADA === 2, 'só as fotos');
   test.setTimeout(900_000);
   const page = await abrirPalco(browser, 'pc');
   const cands = (await page.evaluate((): Cand[] => [...window.__lojinha!.candidatos])).filter(

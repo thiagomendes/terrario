@@ -13,7 +13,7 @@
  * e o jogador de verdade fica escondido no meio do palco (os pedaços do mundo chegam por ele).
  */
 import { Color3 } from '@babylonjs/core/Maths/math.color';
-import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
@@ -22,10 +22,11 @@ import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { TargetCamera } from '@babylonjs/core/Cameras/targetCamera';
 import type { Scene } from '@babylonjs/core/scene';
 import { aparenciaPadrao, normalizarAparencia, type Aparencia } from '../personagem/aparencia';
-import type { PlanoBoneco } from '../personagem/boneco';
+import type { Peca, PlanoBoneco } from '../personagem/boneco';
+import { criarPlasticos } from '../render/formas';
 import { aplicarJuntas } from '../personagem/gestos';
 import { calcularPose, type Pose } from '../personagem/poses';
-import { criarBoneco } from '../render/boneco';
+import { criarBoneco, dadosDaPeca } from '../render/boneco';
 import type { Personagem } from '../render/personagem';
 import { Bloco } from '../world/blocks';
 import {
@@ -152,10 +153,16 @@ interface Particula {
  * Um punhado de bolinhas que nascem, andam e somem (as nuvenzinhas da nuvem, a fumacinha do
  * foguete e as bolhas de sabão). Sem transparência na fumaça: ela some encolhendo, macia.
  */
-function criarParticulas(scene: Scene, nome: string, max: number, tipo: 'fumaca' | 'bolha', cor: string) {
+function criarParticulas(scene: Scene, nome: string, max: number, tipo: 'fumaca' | 'bolha' | 'gota', cor: string) {
   const mat = new StandardMaterial(`personagem-esboco-fx-${nome}`, scene);
   const c = Color3.FromHexString(cor);
-  if (tipo === 'fumaca') {
+  if (tipo === 'gota') {
+    // a gotinha azul de desenho (opaca, com o reflexo): cai e some antes do chão
+    mat.diffuseColor = c;
+    mat.emissiveColor = c.scale(0.35);
+    mat.specularColor = new Color3(0.9, 0.9, 1);
+    mat.specularPower = 32;
+  } else if (tipo === 'fumaca') {
     mat.diffuseColor = c;
     mat.emissiveColor = c.scale(0.55);
     mat.specularColor = Color3.Black();
@@ -214,6 +221,14 @@ function criarParticulas(scene: Scene, nome: string, max: number, tipo: 'fumaca'
           continue;
         }
         let r: number;
+        if (tipo === 'gota') {
+          q.v.y -= dt * 4.5;
+          r = q.r1 * Math.min(1, f / 0.1) * (f > 0.8 ? (1 - f) / 0.2 : 1);
+          q.p.addInPlace(q.v.scale(dt));
+          q.m.position.copyFrom(q.p);
+          q.m.scaling.set(Math.max(0.001, r), Math.max(0.001, r * 1.4), Math.max(0.001, r));
+          continue;
+        }
         if (tipo === 'fumaca') {
           // cresce macio e depois encolhe até sumir; o vento leva devagar e ela sobe (a
           // fumacinha faz uma curva para cima e se espalha, nada de bolo parado no chão)
@@ -239,6 +254,77 @@ function criarParticulas(scene: Scene, nome: string, max: number, tipo: 'fumaca'
       for (const q of lista) {
         q.vivo = false;
         q.m.setEnabled(false);
+      }
+    },
+  };
+}
+
+// ------------------------------------------------------------------ o rastro de florzinhas
+/**
+ * As florzinhas do rastro (rodada 2): cada uma é uma malha só (pétalas, miolo e folhinhas com a
+ * cor nos vértices, as mesmas peças do boneco), que abre, fica um pouco e fecha até sumir.
+ */
+function criarFlores(scene: Scene, max: number) {
+  const pl = criarPlasticos(scene, 'personagem-esboco-flores');
+  const mat = pl.corVertice(0.3)!;
+  const moldes = (
+    [
+      ['#ff8fc0', '#ffd23a'],
+      ['#fff7fb', '#ffcf3a'],
+      ['#ffd95a', '#ff9a3a'],
+    ] as const
+  ).map(([petala, miolo], i) => {
+    const pecas: Peca[] = [];
+    for (let k = 0; k < 5; k++) {
+      const a = (k / 5) * Math.PI * 2;
+      pecas.push({ nome: 'p', junta: 'corpo', forma: 'esfera', tamanho: [0.07, 0.026, 0.07], pos: [Math.cos(a) * 0.07, 0.03, Math.sin(a) * 0.07], cor: petala });
+    }
+    pecas.push({ nome: 'm', junta: 'corpo', forma: 'esfera', tamanho: [0.042, 0.03, 0.042], pos: [0, 0.05, 0], cor: miolo });
+    for (const s of [-1, 1])
+      pecas.push({ nome: 'f', junta: 'corpo', forma: 'esfera', tamanho: [0.07, 0.015, 0.03], pos: [s * 0.1, 0.012, -s * 0.05], rot: [0, s * 0.6, 0], cor: '#4fbf68' });
+    const dados = pecas.map((p) => dadosDaPeca(p, undefined, true));
+    const vd = dados[0].merge(dados.slice(1), true);
+    const m = new Mesh(`personagem-esboco-flor-molde${i}`, scene);
+    vd.applyToMesh(m);
+    m.material = mat;
+    m.isPickable = false;
+    m.setEnabled(false);
+    return m;
+  });
+  const lista = Array.from({ length: max }, (_, i) => ({
+    m: moldes[i % 3].clone(`personagem-esboco-flor${i}`),
+    vida: 99,
+    dura: 2.4,
+  }));
+  let proxima = 0;
+  return {
+    plantar(x: number, y: number, z: number, giro: number) {
+      const f = lista[proxima++ % lista.length];
+      f.vida = 0;
+      f.m.position.set(x, y, z);
+      f.m.rotation.y = giro;
+      f.m.setEnabled(true);
+    },
+    passo(dt: number) {
+      for (const f of lista) {
+        if (f.vida >= f.dura) continue;
+        f.vida += dt;
+        const k = f.vida / f.dura;
+        if (k >= 1) {
+          f.m.setEnabled(false);
+          continue;
+        }
+        // abre num pulinho (passa um tico do tamanho e volta), fica e fecha devagar
+        const abre = k < 0.08 ? (k / 0.08) * 1.15 : k < 0.14 ? 1.15 - ((k - 0.08) / 0.06) * 0.15 : 1;
+        const fecha = k > 0.75 ? 1 - (k - 0.75) / 0.25 : 1;
+        const s = Math.max(0.001, abre * fecha) * 1.7;
+        f.m.scaling.set(s, s, s);
+      }
+    },
+    limpar() {
+      for (const f of lista) {
+        f.vida = 99;
+        f.m.setEnabled(false);
       }
     },
   };
@@ -292,6 +378,19 @@ function ligar(scene: Scene): void {
   const nuvenzinhas = criarParticulas(scene, 'nuvenzinha', 24, 'fumaca', '#ffffff');
   const fumaca = criarParticulas(scene, 'fumaca', 24, 'fumaca', '#f4f2fa');
   const bolhas = criarParticulas(scene, 'bolha', 18, 'bolha', '#e6f4ff');
+  // rodada 2: as gotinhas do guarda-chuva, as florzinhas do rastro e a linha da pipa
+  const gotas = criarParticulas(scene, 'gota', 24, 'gota', '#6cc0ff');
+  const flores = criarFlores(scene, 14);
+  const linha = MeshBuilder.CreateCylinder('personagem-esboco-linha-pipa', { height: 1, diameter: 0.014, tessellation: 6 }, scene);
+  {
+    const mat = new StandardMaterial('personagem-esboco-linha-pipa', scene);
+    mat.diffuseColor = new Color3(0.95, 0.93, 0.88);
+    mat.emissiveColor = new Color3(0.45, 0.44, 0.42);
+    mat.specularColor = Color3.Black();
+    linha.material = mat;
+    linha.isPickable = false;
+    linha.setEnabled(false);
+  }
   let rng = sementeira(36);
 
   // as luzes do esboço (mansas: fora do mapa do brilho, como tudo que começa com "personagem")
@@ -353,6 +452,9 @@ function ligar(scene: Scene): void {
     helice: 0,
     asa: 0,
     soltar: 0,
+    /** Rodada 2: o caminho andado desde a última florzinha e o pé da vez. */
+    passos: 0,
+    pe: 0,
   };
   const ehBichoNoChao = () => !!bicho && bicho.id !== 'passarinho';
 
@@ -377,6 +479,10 @@ function ligar(scene: Scene): void {
     nuvenzinhas.limpar();
     fumaca.limpar();
     bolhas.limpar();
+    gotas.limpar();
+    flores.limpar();
+    est.passos = 0;
+    est.pe = 0;
     if (est.modo === 'parado') {
       est.x = O[0];
       est.z = O[2];
@@ -462,6 +568,15 @@ function ligar(scene: Scene): void {
       // a varinha no alto, na frente, balançando devagar (as bolhas saem do balanço)
       // (o braço vai para o lado e para a frente: o aro fica fora do rosto)
       aplicarJuntas(pose, { bdX: -1.75 + Math.sin(t * 2.2) * 0.2, bdZ: 0.75 + Math.sin(t * 1.1) * 0.1, cabX: -0.08, cabY: 0.3 }, 1);
+    }
+    if (atual === 'guardachuva') {
+      // o braço direito para o alto e para fora (a cabeça grande ocupa o alto dos ombros); o
+      // guarda-chuva fica em pé sozinho, por cima da cabeça
+      aplicarJuntas(pose, { bdX: -2.3, bdZ: 0.6, cabX: -0.06 }, 1);
+    }
+    if (atual === 'pipa') {
+      // segura a linha com o braço para a frente e para cima, olhando a pipa lá no alto
+      aplicarJuntas(pose, { bdX: -1.55 + Math.sin(t * 1.7) * 0.08, bdZ: 0.25, cabX: -0.22, cabY: andando ? 0 : 0.25 }, 1);
     }
     if (atual === 'foguete' && !andando) {
       // olha para trás por cima do ombro direito, para a fumacinha
@@ -566,9 +681,80 @@ function ligar(scene: Scene): void {
         bolhas.soltar(p, vv, 0, 0.07 + rng() * 0.06, 2.6 + rng() * 1.2, rng() * 6);
       }
     }
+    // rodada 2: o guarda-chuva gira e pinga gotinhas da beirada; a pipa balança e a linha vai da
+    // mão até ela; as florzinhas nascem a cada passo
+    if (juntas.guarda && juntas.maoD) {
+      // em pé no mundo, como quer que o braço esteja: o giro de mundo desejado (gira em volta do
+      // cabo, inclina um tico por cima da cabeça, segue o rumo da criança) desfeito do giro da mão
+      est.helice += dt * (andando ? 2.4 : 1.2);
+      const desejado = Matrix.RotationY(est.helice).multiply(Matrix.RotationZ(0.22)).multiply(Matrix.RotationY(est.yaw));
+      const q = new Quaternion();
+      // (a cadeia inteira, da raiz à mão: nos passos fixos não há quadro desenhado no meio)
+      const cadeia: TransformNode[] = [];
+      for (let n: TransformNode | null = juntas.maoD; n; n = n.parent as TransformNode | null) cadeia.unshift(n);
+      for (const n of cadeia) n.computeWorldMatrix(true);
+      juntas.maoD.getWorldMatrix().decompose(undefined, q);
+      const mao = new Matrix();
+      Matrix.FromQuaternionToRef(q, mao);
+      const local = desejado.multiply(mao.invert());
+      const ql = new Quaternion();
+      local.decompose(undefined, ql);
+      juntas.guarda.rotationQuaternion = ql;
+      if (est.soltar <= 0) {
+        est.soltar = 0.12;
+        // as gotinhas só caem das pontas por fora da criança e dos lados e de trás dela (ninguém
+        // se molha, e nada de gotinha passando na frente do rosto, que parece lágrima)
+        const pontas = boneco.raiz
+          .getChildMeshes(false)
+          .filter((m) => m.name.includes('guardachuva-pontinha'))
+          .map((m) => m.getAbsolutePosition())
+          .filter((p) => {
+            const dx = p.x - est.x;
+            const dz = p.z - est.z;
+            return Math.hypot(dx, dz) > 0.55 && dx * frente.x + dz * frente.z < 0.1;
+          });
+        const ponta = pontas[Math.floor(rng() * pontas.length)];
+        if (ponta) gotas.soltar(ponta.add(new Vector3(0, -0.05, 0)), new Vector3(0, -0.3, 0).addInPlace(frente.scale(andando ? -0.4 : 0)), 0, 0.034, 0.5 + rng() * 0.15);
+      }
+    }
+    const brilho = luzes.get('brilho');
+    if (brilho) {
+      // a estrelinha dos óculos: acende num piscar rápido a cada ~2 s, e fica mansa no resto
+      const pisca = Math.max(0, Math.sin(est.t * 3.1)) ** 6;
+      brilho.emissiveColor.copyFrom(Color3.FromHexString(CORES_LUZ.brilho)).scaleInPlace(0.55 + 0.4 * pisca);
+    }
+    if (juntas.pipa && juntas.rabopipa) {
+      juntas.pipa.rotation.z = Math.sin(est.t * 1.3) * 0.12;
+      juntas.pipa.rotation.x = Math.sin(est.t * 0.9) * 0.06;
+      juntas.rabopipa.rotation.z = Math.sin(est.t * 1.3 - 0.8) * 0.3;
+      juntas.rabopipa.rotation.x = Math.sin(est.t * 2.1) * 0.12;
+      const mao = juntas.maoD?.getAbsolutePosition();
+      const ponta = juntas.pipa.getAbsolutePosition();
+      if (mao) {
+        const d = ponta.subtract(mao);
+        const l = d.length();
+        linha.setEnabled(true);
+        linha.position.copyFrom(mao.add(d.scale(0.5)));
+        linha.scaling.set(1, l, 1);
+        const eixo = Vector3.Cross(Vector3.Up(), d.normalize());
+        const ang = Math.acos(Math.max(-1, Math.min(1, Vector3.Dot(Vector3.Up(), d))));
+        linha.rotationQuaternion = eixo.length() > 1e-6 ? Quaternion.RotationAxis(eixo.normalize(), ang) : Quaternion.Identity();
+      }
+    } else linha.setEnabled(false);
+    if (atual === 'florzinhas' && andando) {
+      est.passos += v * dt;
+      if (est.passos > 0.55) {
+        est.passos = 0;
+        est.pe = 1 - est.pe;
+        const lado = est.pe ? 0.14 : -0.14;
+        flores.plantar(est.x + direita.x * lado, O[1] + 0.005, est.z + direita.z * lado, rng() * Math.PI * 2);
+      }
+    }
     nuvenzinhas.passo(dt);
     fumaca.passo(dt);
     bolhas.passo(dt);
+    gotas.passo(dt);
+    flores.passo(dt);
     // o bichinho
     if (bicho) {
       if (bicho.id === 'passarinho') animarPassarinho(bicho, dt, andando);

@@ -267,8 +267,11 @@ export function montarBicho(scene: Scene, id: IdBichoEsboco): BichoEsboco {
 export function pousarNoOmbro(bicho: BichoEsboco, tronco: TransformNode, lado: -1 | 1, troncoH: number): void {
   const r = bicho.b.raiz;
   r.parent = tronco;
-  r.position.set(lado * 0.4, troncoH - 0.015, 0.04);
-  r.rotation.set(0, lado * 0.25, 0);
+  // (rodada 2, pedido do dono: mais para fora, na ponta do ombro, com um vão até a cabeça:
+  // os pés na beirada do ombro e o corpinho inclinado para fora, virado para a frente e para
+  // fora)
+  r.position.set(lado * 0.41, troncoH - 0.02, 0.05);
+  r.rotation.set(0, lado * 0.45, -lado * 0.32);
 }
 
 /** Põe o bicho num lugar, virado para `yaw` (a foto parada). */
