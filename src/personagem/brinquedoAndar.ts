@@ -59,7 +59,9 @@ const GUIDAO_BICI: V3 = [0, 0.84, 0.36];
 
 export const MONTARIA: Readonly<Record<IdAndar, Montaria>> = {
   'patinete-luz': { corpoY: 0.135, sentada: false, bracoX: -1.0, bracoAbre: -0.12, perna: 0, pedal: 0, troncoX: 0.08, raioRoda: 0.075 },
-  'carrinho-pedal': { corpoY: 0.05, sentada: true, bracoX: -0.85, bracoAbre: -0.16, perna: -1.45, pedal: 0.1, troncoX: 0.04, raioRoda: 0.13 },
+  // (portão: as pernas descem para dentro do capô, onde ficam os pedais; esticadas para a frente,
+  // os sapatos saíam por cima dele)
+  'carrinho-pedal': { corpoY: 0.025, sentada: true, bracoX: -0.85, bracoAbre: -0.16, perna: -1.05, pedal: 0.1, troncoX: 0.04, raioRoda: 0.13 },
   bicicletinha: { corpoY: 0.3 + 0.47 * (BICI - 1), sentada: true, bracoX: -1.05, bracoAbre: -0.05, perna: -0.62, pedal: 0.3, troncoX: 0.42, raioRoda: 0.2 * BICI },
   'nuvem-fofa': { corpoY: 0.36, sentada: true, bracoX: -0.25, bracoAbre: 0.35, perna: -1.3, pedal: 0, troncoX: 0, raioRoda: 0, flutua: 0.035 },
 };

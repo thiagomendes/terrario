@@ -317,6 +317,7 @@ function passo(): void {
     let cx = 0;
     let meiaAlt: number;
     let meiaLarg: number;
+    let pesNoChao = false;
     const bicho = pedido.bicho ? e.bichos[pedido.bicho] : undefined;
     if (bicho) {
       // o bichinho inteiro no quadro (chifre, crina e rabo), visto um pouco de cima
@@ -342,6 +343,9 @@ function passo(): void {
       // (a varinha: folga para as bolhas desenhadas saindo do aro)
       if (pedido.aparencia.premium?.mao === 'varinha-bolhas') meiaAlt *= 1.2;
       meiaLarg = meiaAlt * (larg / alt);
+      // (portão: o guarda-chuva aberto de lado deixa o quadro mais largo que alto; centrado, o
+      // boneco boiava acima do pedestal do cartão. Aí os pés ficam no pé do quadro)
+      pesNoChao = meiaL * (alt / larg) > (y1 - y0) / 2;
     } else {
       const h = alturaBoneco(pedido.aparencia);
       const [f0, f1] = FAIXAS[pedido.recorte];
@@ -351,7 +355,7 @@ function passo(): void {
       meiaAlt = (y1 - y0) / 2 / 0.92;
       meiaLarg = meiaAlt * (larg / alt);
     }
-    const cy = (y0 + y1) / 2;
+    const cy = pesNoChao ? y0 + meiaAlt * 0.92 : (y0 + y1) / 2;
     e.camera.position.set(cx, cy + 0.6, -10);
     e.camera.setTarget(new Vector3(cx, cy, 0));
     e.camera.orthoTop = meiaAlt;

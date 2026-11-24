@@ -63,8 +63,9 @@ export interface Peca {
    * Spec 027: a malha própria (forma 'malha': o pano curvo da gola, a cúpula do lençol com o
    * furo oval do rosto, o sino do lençol), pontos x, y, z em volta do centro e os triângulos.
    * É pano fino: sai com as duas faces (o lado de dentro com a mesma luz do de fora).
+   * `avessoClaro` (spec 036, o guarda-chuva): as duas faces com a luz de cima.
    */
-  malha?: { pos: number[]; ind: number[] };
+  malha?: { pos: number[]; ind: number[]; avessoClaro?: boolean };
   /** Transparência (spec 017: a bolha do capacete); sem nada, opaco. */
   alfa?: number;
   /** Raio dos cantos (só caixa). */

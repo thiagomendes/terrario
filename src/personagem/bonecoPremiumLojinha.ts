@@ -23,6 +23,7 @@
  * A animação dos nós fica em `render/boneco.ts`; os efeitos, em `render/premiumMundo.ts`.
  */
 import type { Junta, Peca, SubjuntaPremium } from './boneco';
+import { ajeitarCabeloDebaixo } from './boneco';
 import type { MedidasBoneco } from './bonecoFantasia';
 import { perfilEstrela, perfilFolha } from './bonecoFantasia';
 import { Pecas, misturarCor } from './bonecoPremium';
@@ -103,7 +104,8 @@ function pintar(lista: Peca[], re: RegExp, cor: string): void {
 export const PONTOS_LOJINHA = {
   aroVarinha: [0, -0.47, 0.02] as V3,
   bocalFoguete: [0, 0.42 * 0.3 - 0.3, -0.34 / 2 - 0.17] as V3,
-  guarda: { raio: 0.82, base: 1.08, altura: 0.34, gomos: 8 },
+  // (portão: o pano maior, para cobrir a cabeça com o cabo saindo da mão ao lado dela)
+  guarda: { raio: 1.02, base: 1.16, altura: 0.38, gomos: 8 },
 } as const;
 
 // ------------------------------------------------------------------ boné de hélice
@@ -112,14 +114,26 @@ function boneHelice(P: Pecas, m: MedidasBoneco): void {
   const AMARELO = '#ffcf3a';
   const VERMELHO = '#ff5a5a';
   const b = m.baseChapeu;
-  // a cúpula amarela cobre a tampa de cabelo inteira; a aba vermelha e a estrela azul na frente
-  // (cores que se destacam de qualquer roupa)
-  P.bola('bone-cupula', 'cabeca', 'cabeca', 0.48, [0, b - 0.06, -0.01], AMARELO, [1, 0.55, 1], { brilho: 0.4 });
-  P.placa('bone-estrela', 'cabeca', 'cabeca', perfilEstrela(0.07), 0.02, [0, b + 0.07, 0.41], AZUL, { rot: [-0.5, 0, 0], brilho: 0.4 });
-  P.caixa('bone-aba', 'cabeca', 'cabeca', [0.6, 0.04, 0.3], [0, b - 0.09, 0.5], VERMELHO, 0.02, { rot: [-0.08, 0, 0], brilho: 0.4 });
+  // portão (o revisor: a cúpula redonda engolia a cabeça e lia como boina ou cogumelo, a aba era
+  // um palito solto e o cabelo varava): um boné de criança em bloco, como os chapéus do jogo. A
+  // copa justa por cima da tampa de cabelo (sem descer até os olhos), com os cantos redondos; a
+  // aba curta, larga e grossa, colada na beira da frente; a estrela azul na testa da copa; em
+  // cima, um domo baixo (sem ele, a copa em caixa lia como uma lata)
+  const yCopa = b - 0.13;
+  const hCopa = 0.24;
+  const dCopa = 0.78;
+  P.caixa('bone-copa', 'cabeca', 'cabeca', [0.82, hCopa, dCopa], [0, yCopa + hCopa / 2, -0.01], AMARELO, 0.12, { brilho: 0.4 });
+  P.bola('bone-copa-topo', 'cabeca', 'cabeca', 0.4, [0, yCopa + hCopa - 0.03, -0.01], AMARELO, [1, 0.32, 0.96], { brilho: 0.4 });
+  P.placa('bone-estrela', 'cabeca', 'cabeca', perfilEstrela(0.075), 0.02, [0, yCopa + hCopa * 0.5, dCopa / 2 - 0.005], AZUL, { brilho: 0.4 });
+  P.caixa('bone-aba', 'cabeca', 'cabeca', [0.66, 0.07, 0.26], [0, yCopa + 0.035, dCopa / 2 + 0.1], VERMELHO, 0.03, { rot: [0.1, 0, 0], brilho: 0.4 });
   // o pino e a hélice (gira no nó dela), duas pás em azul e vermelho
-  P.cone('bone-pino', 'cabeca', 'cabeca', 0.12, 0.028, 0.022, [0, b + 0.24, -0.01], '#e6e9f2', { brilho: 0.4 });
-  const pivo: V3 = [0, b + 0.31, -0.01];
+  const topoCopa = yCopa + hCopa - 0.03 + 0.4 * 0.32;
+  // o cabelo debaixo do boné, como debaixo dos chapéus do jogo (o cacho de cima não passa da
+  // tampa, o coque desce para a nuca) e sem o topete, que varava a copa
+  ajeitarCabeloDebaixo(P.lista, 'chapeu', m.topoTampa, m.cab);
+  P.tirar(/^topete/);
+  P.cone('bone-pino', 'cabeca', 'cabeca', 0.12, 0.028, 0.022, [0, topoCopa + 0.05, -0.01], '#e6e9f2', { brilho: 0.4 });
+  const pivo: V3 = [0, topoCopa + 0.12, -0.01];
   P.bola('bone-botao', 'cabeca', 'cabeca', 0.04, [0, 0, 0], VERMELHO, [1, 0.8, 1], { brilho: 0.4, ...sub('helice', pivo) });
   for (const [s, cor] of [
     [-1, VERMELHO],
@@ -150,7 +164,8 @@ function pijamaNuvem(P: Pecas, m: MedidasBoneco): void {
     P.placa(`pijama-botao${y}`, 'tronco', 'tronco', perfilEstrela(0.03), 0.012, [0, troncoH * y * 2.1, frente + 0.006], '#ffd84a', {
       rot: [0, 0, 0.2],
     });
-  // as nuvenzinhas brancas: no peito, nas costas, nas mangas e nas pernas
+  // as nuvenzinhas brancas: no peito, nas costas e nas mangas (portão: a das pernas ficava
+  // espremida entre o calção e a barra, e de frente, à noite, lia como um retângulo cinza)
   const nuvemEm = (nome: string, junta: Junta, pos: V3, w: number, rotY = 0) =>
     P.placa(nome, junta, undefined, perfilNuvem(w), 0.014, pos, B, { rot: [0, rotY, 0] });
   nuvemEm('pijama-nuvem-peito', 'tronco', [larg * 0.23, troncoH * 0.62, frente + 0.004], 0.16);
@@ -159,7 +174,6 @@ function pijamaNuvem(P: Pecas, m: MedidasBoneco): void {
   for (const s of [-1, 1]) {
     const lado = s < 0 ? 'E' : 'D';
     nuvemEm(`pijama-nuvem-manga${lado}`, s < 0 ? 'bracoE' : 'bracoD', [s * 0.068, -0.1, 0], 0.09, (s * Math.PI) / 2);
-    nuvemEm(`pijama-nuvem-perna${lado}`, s < 0 ? 'pernaE' : 'pernaD', [0, -0.12, 0.095], 0.1);
   }
   // a barra da calça e as pantufas de nuvem (no lugar do sapato)
   P.tirar(/^perna[ED]-sapato$/);
@@ -211,7 +225,8 @@ function asasBorboleta(P: Pecas, m: MedidasBoneco): void {
           pintar: (x, y) => misturarCor(LILAS, ROSA, Math.min(1, Math.hypot(x, y) / (0.5 * K))),
           ...sub(nome, pivo),
         });
-    // as bolinhas brancas e uma lilás-escura em cada asa, dos dois lados
+    // as bolinhas brancas e uma lilás-escura em cada asa, só no lado de trás (portão: de frente,
+    // ao lado do corpo e dos braços, as bolinhas do lado da frente pareciam soltas no ar)
     const bolinhas: Array<[number, number, number, string]> = [
       [0.3, 0.32, 0.045, '#ffffff'],
       [0.18, 0.18, 0.03, '#fff3fb'],
@@ -219,8 +234,7 @@ function asasBorboleta(P: Pecas, m: MedidasBoneco): void {
       [0.16, -0.14, 0.03, '#ffffff'],
     ];
     for (const [bx, by, r, cor] of bolinhas)
-      for (const lado of [1, -1])
-        P.bola(`borboleta-bolinha${s}${bx}${lado}`, 'tronco', undefined, r * K, [s * bx * K, by * K, lado > 0 ? 0.016 : -0.028], cor, [1, 1, 0.3], sub(nome, pivo));
+      P.bola(`borboleta-bolinha${s}${bx}`, 'tronco', undefined, r * K, [s * bx * K, by * K, -0.028], cor, [1, 1, 0.3], sub(nome, pivo));
   }
   // o corpinho da borboleta, onde as asas se prendem, e a hastezinha que o prende às costas
   P.caixa('borboleta-corpo', 'tronco', 'tronco', [0.08, 0.3, 0.08], [0, troncoH * 0.5, zAsa], BORDA, 0.038);
@@ -242,9 +256,15 @@ function mochilaFoguete(P: Pecas, m: MedidasBoneco): void {
   P.cone('foguete-corpo', 'tronco', 'tronco', 0.32, 0.125, 0.135, [0, y, z], BRANCO, { brilho: 0.45 });
   P.cone('foguete-bico', 'tronco', 'tronco', 0.15, 0.13, 0.012, [0, y + 0.235, z], CORAL, { brilho: 0.45 });
   P.cone('foguete-anel', 'tronco', 'tronco', 0.05, 0.138, 0.138, [0, y + 0.12, z], CORAL, { brilho: 0.45 });
-  P.anel('foguete-aro', 'tronco', 'tronco', 0.13, 0.03, [0, y + 0.02, z - 0.13], '#c9cfe0', { rot: [Math.PI / 2, 0, 0], brilho: 0.45 });
-  P.bola('foguete-janela', 'tronco', 'tronco', 0.055, [0, y + 0.02, z - 0.125], AZUL, [1, 1, 0.4], { brilho: 0.8 });
-  P.bola('foguete-reflexo', 'tronco', 'tronco', 0.016, [-0.018, y + 0.04, z - 0.147], '#ffffff', [1, 1, 0.4], { brilho: 0.8 });
+  // portão (o revisor: a janelinha redonda, com o miolo azul e o brilho no meio, lia como um olho
+  // só): duas escotilhas pequenas, uma em cima da outra e de tamanhos diferentes, sem o brilho
+  for (const [nome, dy, r] of [
+    ['', 0.065, 0.038],
+    ['2', -0.035, 0.028],
+  ] as const) {
+    P.anel(`foguete-aro${nome}`, 'tronco', 'tronco', r * 2 + 0.026, 0.02, [0, y + dy, z - 0.13], '#c9cfe0', { rot: [Math.PI / 2, 0, 0], brilho: 0.45 });
+    P.bola(`foguete-janela${nome}`, 'tronco', 'tronco', r, [0, y + dy, z - 0.126], AZUL, [1, 1, 0.4], { brilho: 0.45 });
+  }
   // (T03, pedido do dono: a aleta do meio, logo abaixo da janelinha, lia como nariz ou língua e o
   // foguete virava um rosto. Ficaram duas, dos lados e um tico para trás)
   for (const a of [-Math.PI / 2 - 0.45, Math.PI / 2 + 0.45]) {
@@ -299,12 +319,14 @@ function guardaChuva(P: Pecas): void {
   const LILAS = '#b48cff';
   const BRANCO = '#fbf7ff';
   const j: Junta = 'maoE';
-  // o guarda-chuva inteiro num nó na mão que a animação mantém em pé (o cabo para cima, um tico
-  // inclinado por cima da cabeça) e gira devagar em volta do cabo, como quer que o braço esteja
+  // o guarda-chuva inteiro num nó na mão que a animação mantém em pé (portão: a mão ao lado da
+  // cabeça e o cabo subindo dela quase reto, um tico inclinado para a cabeça, com o pano por
+  // cima) e gira devagar em volta do cabo, como quer que o braço esteja
   const g = sub('guarda', [0, 0, 0]);
   const { raio: R, base: BASE, altura: ALTURA, gomos: n } = PONTOS_LOJINHA.guarda;
   P.cone('guardachuva-cabo', j, 'mao', BASE + ALTURA + 0.06, 0.02, 0.02, [0, (BASE + ALTURA) / 2 - 0.02, 0], '#e6e9f2', { brilho: 0.45, ...g });
-  P.bola('guardachuva-punho', j, 'mao', 0.05, [0, -0.08, 0], LILAS, [1, 1.3, 1], { brilho: 0.45, ...g });
+  // (o punho rente à mão: mais abaixo, encostava no cabelo comprido, na altura do ombro)
+  P.bola('guardachuva-punho', j, 'mao', 0.036, [0, -0.04, 0], LILAS, [1, 1.2, 1], { brilho: 0.45, ...g });
   // a cúpula em oito gomos (lilás e branco), com a beirada em ondinhas
   for (let k = 0; k < n; k++) {
     const a0 = (k / n) * Math.PI * 2;
@@ -320,7 +342,8 @@ function guardaChuva(P: Pecas): void {
       apoio: 'mao',
       forma: 'malha',
       tamanho: [R, ALTURA, R],
-      malha: { pos: [...topo, ...b, ...meio, ...c], ind: [0, 1, 2, 0, 2, 3] },
+      // (o lado de baixo com a luz de cima: na cor do pano, sem o cinza-escuro de sujo)
+      malha: { pos: [...topo, ...b, ...meio, ...c], ind: [0, 1, 2, 0, 2, 3], avessoClaro: true },
       pos: [0, 0, 0],
       cor: k % 2 ? LILAS : BRANCO,
       brilho: 0.45,

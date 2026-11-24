@@ -15,7 +15,7 @@ const nomes = (a: Partial<Aparencia>, premium: PremiumVestido) => plano(a, premi
 
 describe('036 T03: os tesouros novos no boneco', () => {
   it('cada tesouro novo põe as peças dele', () => {
-    expect(nomes({}, { chapeu: 'bone-helice' })).toContain('bone-cupula');
+    expect(nomes({}, { chapeu: 'bone-helice' })).toContain('bone-copa');
     expect(nomes({}, { roupa: 'pijama-nuvem' })).toContain('pijama-nuvem-peito');
     expect(nomes({}, { costas: 'asas-borboleta' })).toContain('borboleta-corpo');
     expect(nomes({}, { costas: 'mochila-foguete' })).toContain('foguete-corpo');
@@ -32,9 +32,10 @@ describe('036 T03: os tesouros novos no boneco', () => {
     // a pipa voa do lado esquerdo, presa na mão esquerda pela linha
     const pipa = plano({}, { mao: 'pipa-lacinhos' }).pecas.find((p) => p.nome === 'pipa-a')!;
     expect(pipa.subjunta!.pivo[0]).toBeLessThan(0);
-    // e o braço esquerdo segura no alto
-    for (const id of ['varinha-bolhas', 'guarda-chuva-gotinhas', 'pipa-lacinhos'])
-      expect(bracoDoTesouro(id, 0)![0]).toBeLessThan(-1.5);
+    // e o braço esquerdo segura no alto: a varinha e a pipa para cima; o guarda-chuva de lado, com
+    // a mão acima do ombro, ao lado da cabeça (portão: o pano por cima vem do cabo, não do braço)
+    for (const id of ['varinha-bolhas', 'pipa-lacinhos']) expect(bracoDoTesouro(id, 0)![0]).toBeLessThan(-1.5);
+    expect(bracoDoTesouro('guarda-chuva-gotinhas', 0)![2]).toBeLessThan(-1.6);
     expect(bracoDoTesouro('passarinho-ombro', 0)).toBeNull();
   });
 
