@@ -1,6 +1,7 @@
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
 import { abrirMundo, assentar, escolherNaRoda, tocar, type Tamanho } from './guia-palco';
 import { CHAMADO, INTRO, ROTEIRO, faseDoShow } from '../src/jogo/show';
+import { telasDoFluxo } from './telas';
 
 /**
  * Spec 026 (o dono, 16 nov 2026: "depois de acender as 3 caixas a câmera parou de funcionar; só
@@ -80,7 +81,8 @@ async function arrastar(page: Page, tamanho: Tamanho, cdp: CDPSession | null): P
   return Math.abs((await yaw(page)) - antes);
 }
 
-for (const tamanho of ['deitado', 'pc'] as const)
+// fluxo: uma tela só, o celular (aqui deitado, que é como se vê o show; ver e2e/telas.ts)
+for (const tamanho of telasDoFluxo(['deitado', 'pc'] as const, (t) => t === 'deitado'))
   test(`Vila Neon (${tamanho}): no show, a câmera gira o tempo todo e o toque não muda nada`, async ({
     browser,
   }) => {

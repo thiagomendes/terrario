@@ -49,7 +49,27 @@ async function andarAte(
       const m = { caixa: 0, bicho: 0, dentroS: 0, pes: [0, 0, 0] };
       let dentroDesde = -1;
       const t0 = performance.now();
-      while (performance.now() - t0 < ms) {
+      // anda pelo menos `ms` e continua até chegar: parado contra a peça (o encosto) ou, na
+      // lhama, depois do ponto de chegada (24 nov: com a placa ocupada por outro teste, os
+      // quadros caem, o boneco anda menos por segundo e parava 0,7 a 1,6 bloco antes do carro
+      // só porque o tempo fixo acabou)
+      const longe = Math.hypot(para[0] - de[0], para[1] - de[1]);
+      const ux = (para[0] - de[0]) / longe;
+      const uz = (para[1] - de[1]) / longe;
+      let ultimo: number[] = e.jogadorPes!();
+      let paradoDesde = -1;
+      const chegou = (p: number[], agora: number) => {
+        if (passar) return (p[0] - de[0]) * ux + (p[2] - de[1]) * uz >= longe;
+        const andou = Math.hypot(p[0] - ultimo[0], p[2] - ultimo[2]);
+        ultimo = p;
+        if (andou > 0.005) paradoDesde = -1;
+        else if (paradoDesde < 0) paradoDesde = agora;
+        return paradoDesde >= 0 && agora - paradoDesde > 400;
+      };
+      for (;;) {
+        const decorrido = performance.now() - t0;
+        if (decorrido > 20_000) break;
+        if (decorrido >= ms && chegou(e.jogadorPes!(), performance.now())) break;
         const p = e.jogadorPes!();
         // vira para o alvo enquanto não passou dele (na lhama, segue reto depois)
         if (!passar) {

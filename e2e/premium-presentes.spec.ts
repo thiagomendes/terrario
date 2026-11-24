@@ -191,6 +191,9 @@ async function jogador(browser: Browser, id: string, apelido: string, aparencia:
   );
   const p = await ctx.newPage();
   p.on('pageerror', (e) => console.log(`[${apelido}] erro: ${String(e)}`));
+  p.on('console', (m) => {
+    if (m.text().startsWith('premium:')) console.log(`[${apelido}] ${m.text()}`);
+  });
   return p;
 }
 const pronto = (p: Page) =>
@@ -252,27 +255,39 @@ test('dois na nuvem: cada uma vê o premium da outra em até 1 s', async ({ brow
   const vestirE = async (p: Page, ids: string[]) =>
     p.evaluate((ids) => {
       const perfil = (window as unknown as { __almaCrianca: Perfil }).__almaCrianca;
+      const t0 = performance.now();
       for (const id of ids) perfil.comprarPremium(id);
+      // (para achar a causa: quanto a compra prendeu a página de quem comprou)
+      console.log(`premium: as três compras prenderam a página ${(performance.now() - t0).toFixed(0)} ms`);
       return performance.now();
     }, ids);
   /** Quanto tempo até a outra tela ver o premium no amigo (ms). */
-  const ateVer = async (p: Page, apelido: string, id: string) =>
-    p.evaluate(
+  const ateVer = async (p: Page, apelido: string, id: string) => {
+    const r = await p.evaluate(
       ([apelido, id]) =>
-        new Promise<number>((ok) => {
+        new Promise<{ ms: number; maiorQuadro: number }>((ok) => {
           const t0 = performance.now();
+          let ultimo = t0;
+          let maiorQuadro = 0;
           const olhar = () => {
+            const agora = performance.now();
+            maiorQuadro = Math.max(maiorQuadro, agora - ultimo);
+            ultimo = agora;
             const o = (window.__brumaluz!.outrosJogadores?.() ?? []).find(
               (x) => x.apelido === apelido,
             ) as { aparencia?: string } | undefined;
-            if (o?.aparencia?.includes(id)) return ok(performance.now() - t0);
-            if (performance.now() - t0 > 5000) return ok(99999);
+            if (o?.aparencia?.includes(id)) return ok({ ms: agora - t0, maiorQuadro });
+            if (agora - t0 > 5000) return ok({ ms: 99999, maiorQuadro });
             requestAnimationFrame(olhar);
           };
           olhar();
         }),
       [apelido, id] as const,
     );
+    // (para achar a causa quando passa de 1 s: o maior quadro parado nesta tela enquanto esperava)
+    console.log(`premium: ${apelido} visto em ${r.ms.toFixed(0)} ms, o maior quadro ${r.maiorQuadro.toFixed(0)} ms`);
+    return r.ms;
+  };
   const [, tBia] = await Promise.all([
     vestirE(ana, ['dragao', 'unicornio', 'tenis-cometa']),
     ateVer(bia, 'Ana', 'dragao'),

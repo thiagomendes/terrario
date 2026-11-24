@@ -111,11 +111,20 @@ test('os veículos se ouvem: toques e motor sobem a saída de verdade', async ({
       if (q === 'sorvete' && s) e.teleportar!(s.x + 2, s.z + 2);
     }, qual);
     if (qual === 'sorvete') await page.waitForTimeout(400);
+    // o nome do toque na lista dos que tocaram de verdade (o som decodificado e a voz aceita)
+    const id = qual === 'sorvete' ? 'sorvete:frase' : qual === 'ambulancia' || qual === 'bombeiros' ? `sirene:${qual}` : qual;
+    const tocou = (i: string) =>
+      page.evaluate((i) => (window.__brumaluz!.somVeiculos?.().tocados ?? []).filter((t) => t === i).length, i);
+    const vezes = await tocou(id);
     await page.evaluate((q) => {
       const e = window.__brumaluz!;
       if (q === 'sorvete') e.tocarSorvete?.('frase');
       else e.tocarToqueVeiculo?.(q);
     }, qual);
+    // a medida começa quando o toque começa: o primeiro de cada um espera o som ser
+    // decodificado, e com 80 ms fixos a janela às vezes pegava só o fim dele (a buzina e a
+    // musiquinha ficavam na beira do limite)
+    await expect.poll(() => tocou(id), { timeout: 3000, message: `o toque ${qual} tocou` }).toBeGreaterThan(vezes);
     await page.waitForTimeout(80);
     const depois = await rms(page, ms);
     const db = 20 * Math.log10(depois / Math.max(1e-6, antes));

@@ -9,6 +9,7 @@ import {
   type Tamanho,
 } from './guia-palco';
 import { alvoDoToque, diagnostico, esperarDica } from './vila-alvo';
+import { telasDoFluxo } from './telas';
 
 /**
  * Spec 026 (parte 3, etapa B): as quatro missões da Casa anos 80 e da rampa, do "brincar" à festa,
@@ -447,7 +448,8 @@ async function feno(page: Page, t: Tamanho): Promise<void> {
   await fotoDeFrente(page, `${t}-feno-2-na-mao-de-frente`, 0.3);
 }
 
-for (const tamanho of ['empe', 'deitado'] as const) {
+// fluxo: só o celular em pé (ver e2e/telas.ts)
+for (const tamanho of telasDoFluxo(['empe', 'deitado'] as const)) {
   if (!SO || SO === 'cinema')
     test(`Vila Neon, ${tamanho}: a sessão de cinema e arrumar o quarto, do brincar à festa`, async ({
       browser,

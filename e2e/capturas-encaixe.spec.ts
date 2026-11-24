@@ -111,7 +111,9 @@ test('encaixe no morador do povoado', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   const erros: string[] = [];
   page.on('pageerror', (e) => erros.push(`pageerror: ${e.message}`));
-  await page.goto('/');
+  // spec 034: o "/" abre a Vila Neon, que tem bairro e não povoado; o povoado com moradores
+  // perto do nascimento é o do Doce Reino (o mesmo do povoados.spec.ts)
+  await page.goto('/?tema=doce-reino');
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 120_000,
   });

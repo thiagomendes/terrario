@@ -193,12 +193,39 @@ for (const t of TAMANHOS) {
       await tocar('[data-alma-confirmar] [data-alma-nao]');
       expect((await perfil(page)).moedas).toBe(70);
       await tocar('[data-alma-detalhe] [data-alma-comprar]');
-      const t0 = Date.now();
+      // o tempo da festa no relógio da página: do clique no "sim" até o botão da festa entrar
+      // na tela. Antes era o relógio do teste, com a espera do toque (o Playwright confere o
+      // botão antes de tocar) e a sondagem de visível somadas, e ficava na beira de 3400 ms.
+      await page.evaluate(() => {
+        const w = window as unknown as { __festa: { ini: number; fim: number } };
+        w.__festa = { ini: 0, fim: 0 };
+        window.addEventListener(
+          'click',
+          (ev) => {
+            if (!w.__festa.ini && (ev.target as Element | null)?.closest?.('[data-alma-sim]'))
+              w.__festa.ini = performance.now();
+          },
+          { capture: true },
+        );
+        const vigia = new MutationObserver(() => {
+          if (w.__festa.ini && document.querySelector('[data-alma-festa] [data-alma-oba]')) {
+            w.__festa.fim = performance.now();
+            vigia.disconnect();
+          }
+        });
+        vigia.observe(document.body, { childList: true, subtree: true });
+      });
       await tocar('[data-alma-confirmar] [data-alma-sim]');
       await expect(page.locator('[data-alma-festa="premium"]')).toBeVisible({ timeout: 4000 });
       await page.locator('[data-alma-festa] [data-alma-oba]').waitFor({ timeout: 4000 });
+      const msFesta = await page.evaluate(() => {
+        const w = window as unknown as { __festa: { ini: number; fim: number } };
+        return w.__festa.fim - w.__festa.ini;
+      });
+      console.log(`lojinha: os botões da festa em ${Math.round(msFesta)} ms`);
       // os botões da festa em até 1,5 s (mais o voo das moedinhas do confirmar)
-      expect(Date.now() - t0).toBeLessThan(3400);
+      expect(msFesta).toBeGreaterThan(0);
+      expect(msFesta).toBeLessThan(3400);
       await page.waitForTimeout(500);
       await foto('loja-7-festa');
       const p1 = await perfil(page);

@@ -1,0 +1,655 @@
+{
+  "comoUsar": [
+    "O mapa das áreas da conferência (dono, 22 nov 2026). Quem usa: scripts/conferir.mjs. Quem confere: tests/e2e-areas.test.ts.",
+    "Cada suíte e2e (e2e/*.spec.ts) fica em uma área só; a paridade fica fora, com gatilhos próprios.",
+    "gatilhos: pasta (termina em /) ou arquivo. Um arquivo mudado no ramo dispara toda área que o tiver.",
+    "Todo arquivo de src/ precisa estar em algum gatilho ou em 'comuns'.",
+    "comuns: os arquivos que quase toda spec toca (a cena, a entrada da página); sozinhos, rodam só a fumaça.",
+    "tudo: mudou um destes, roda o regime antigo inteiro.",
+    "fumaca: roda sempre; cada item é a suíte e, se tiver, o pedaço do título (o grep).",
+    "quarentena: não bloqueia a entrega; roda à parte no fim e diz quantos passaram."
+  ],
+  "areas": {
+    "nucleo-rede": {
+      "nome": "Núcleo, rede e salvamento",
+      "gatilhos": [
+        "src/nucleo/",
+        "src/rede/",
+        "servidor/",
+        "src/workers/",
+        "src/nuvem.ts",
+        "src/pagina.ts",
+        "src/cliente/conexao.ts",
+        "src/cliente/conexaoNuvem.ts",
+        "src/cliente/estado.ts",
+        "src/cliente/replica.ts",
+        "src/cliente/identidade.ts",
+        "src/cliente/recarregarUmaVez.ts",
+        "src/cliente/diferencaEdicoes.ts",
+        "src/jogo/indexeddb.ts",
+        "src/jogo/mundos.ts",
+        "src/jogo/codigos.ts",
+        "src/jogo/apelido.ts",
+        "src/jogo/tempo.ts",
+        "src/jogo/config.ts",
+        "src/render/contexto.ts"
+      ],
+      "suites": [
+        "carregando.spec.ts",
+        "entrada-nuvem.spec.ts",
+        "iphone.spec.ts",
+        "multiplayer.spec.ts",
+        "mundo.spec.ts",
+        "mundos-novos.spec.ts"
+      ]
+    },
+    "andar-construir": {
+      "nome": "Andar, pôr e tirar bloco, mochila",
+      "gatilhos": [
+        "src/player/alvo.ts",
+        "src/player/controle.ts",
+        "src/player/entrada.ts",
+        "src/player/eventos.ts",
+        "src/player/fisica.ts",
+        "src/player/hotbar.ts",
+        "src/player/interacao.ts",
+        "src/player/mineracao.ts",
+        "src/player/minerador.ts",
+        "src/player/movimento.ts",
+        "src/world/blocks.ts",
+        "src/world/edicoes.ts",
+        "src/world/formas.ts",
+        "src/world/portas.ts",
+        "src/world/luz.ts",
+        "src/world/solido.ts",
+        "src/mesh/",
+        "src/art/",
+        "src/fx/",
+        "src/render/destaque.ts",
+        "src/render/efeitos.ts",
+        "src/render/emissivo.ts",
+        "src/render/remalha.ts",
+        "src/render/fila.ts",
+        "src/render/itensSoltos.ts",
+        "src/render/formas.ts",
+        "src/render/construcao.ts",
+        "src/render/blocosBrinquedo.ts",
+        "src/render/itensBrinquedo.ts",
+        "src/render/iconesBrinquedo.ts",
+        "src/jogo/alcance.ts",
+        "src/jogo/inventario.ts",
+        "src/jogo/itens.ts",
+        "src/jogo/catalogo.ts",
+        "src/jogo/receitas.ts",
+        "src/jogo/fornalha.ts",
+        "src/jogo/conteineres.ts",
+        "src/jogo/drops.ts",
+        "src/jogo/ferramentas.ts",
+        "src/jogo/construcao.ts",
+        "src/jogo/sobrevivencia.ts",
+        "src/ui/inventario.ts",
+        "src/ui/criacao.ts",
+        "src/ui/conteiner.ts",
+        "src/ui/gestosInventario.ts",
+        "src/ui/icones.ts",
+        "src/ui/status.ts"
+      ],
+      "suites": [
+        "ajustes-filho.spec.ts",
+        "bloco-some.spec.ts",
+        "cristal.spec.ts",
+        "dar-item.spec.ts",
+        "interacao.spec.ts",
+        "inventario.spec.ts",
+        "mineracao.spec.ts"
+      ]
+    },
+    "temas-e-mundos": {
+      "nome": "Temas, título e mundos (o terreno, o céu e os bichos de todos; a Exploração Lunar)",
+      "gatilhos": [
+        "src/temas/index.ts",
+        "src/temas/todos.ts",
+        "src/temas/ativar.ts",
+        "src/temas/ativarPuro.ts",
+        "src/temas/ativo.ts",
+        "src/temas/nomes.ts",
+        "src/temas/originais.ts",
+        "src/temas/base/",
+        "src/temas/exploracao-lunar/",
+        "src/ui/titulo.ts",
+        "src/ui/mundos.ts",
+        "src/ui/temasUi.ts",
+        "src/ui/dialogo.ts",
+        "src/world/chunk.ts",
+        "src/world/noise.ts",
+        "src/world/provedor.ts",
+        "src/world/estiloSeguro.ts",
+        "src/render/ceu.ts",
+        "src/render/atmosfera.ts",
+        "src/render/agua.ts",
+        "src/render/materialMundo.ts",
+        "src/render/balanco.ts",
+        "src/render/vagalumes.ts",
+        "src/render/precipitacao.ts",
+        "src/render/gerenciador.ts",
+        "src/render/criaturas.ts",
+        "src/render/bichoBrinquedo.ts",
+        "src/render/juntasBicho.ts",
+        "src/render/encaixeBicho.ts",
+        "src/render/coracoes.ts",
+        "src/jogo/criaturas.ts",
+        "src/jogo/populacao.ts",
+        "src/jogo/clima.ts",
+        "src/jogo/contato.ts",
+        "src/audio/somAgua.ts"
+      ],
+      "suites": [
+        "capturas-034.spec.ts",
+        "capturas-brinquedo.spec.ts",
+        "capturas-temas.spec.ts",
+        "dialogo.spec.ts",
+        "exploracao.spec.ts",
+        "temas.spec.ts"
+      ]
+    },
+    "mundo-vila-neon": {
+      "nome": "Vila Neon",
+      "gatilhos": [
+        "src/temas/vila-neon/",
+        "src/world/vilaNeon.ts",
+        "src/world/vilaSolidos.ts",
+        "src/world/vilaCasa.ts",
+        "src/world/vilaParque.ts",
+        "src/world/vilaRampa.ts",
+        "src/world/publicoVila.ts",
+        "src/render/vila/",
+        "src/nucleo/vila.ts",
+        "src/nucleo/vilaCompras.ts",
+        "src/nucleo/vilaMissoes.ts",
+        "src/nucleo/casa.ts",
+        "src/nucleo/casaMissoes.ts",
+        "src/nucleo/parque.ts",
+        "src/jogo/casa.ts",
+        "src/jogo/missoesCasa.ts",
+        "src/jogo/missoesParque.ts",
+        "src/jogo/parque.ts",
+        "src/jogo/rampa.ts",
+        "src/jogo/rinque.ts",
+        "src/jogo/show.ts",
+        "src/jogo/bate.ts",
+        "src/jogo/coreografia.ts",
+        "src/cliente/vila.ts",
+        "src/cliente/bate.ts",
+        "src/ui/alma/vila.ts",
+        "src/ui/alma/arteVila.ts",
+        "src/ui/alma/revista.ts",
+        "src/ui/alma/dicaToque.ts",
+        "src/audio/somVila.ts",
+        "src/audio/somCasa.ts",
+        "src/audio/somParque.ts",
+        "src/audio/somRua.ts"
+      ],
+      "suites": [
+        "arte-vila-fotos.spec.ts",
+        "vila-ajustes.spec.ts",
+        "vila-bate-amigos.spec.ts",
+        "vila-bate-provas.spec.ts",
+        "vila-bate.spec.ts",
+        "vila-casa-amigos.spec.ts",
+        "vila-casa-fotos.spec.ts",
+        "vila-casa-medida.spec.ts",
+        "vila-casa-missoes.spec.ts",
+        "vila-casa.spec.ts",
+        "vila-colisao.spec.ts",
+        "vila-dica-toque.spec.ts",
+        "vila-missoes.spec.ts",
+        "vila-neon-campo.spec.ts",
+        "vila-neon-fotos.spec.ts",
+        "vila-neon-noite.spec.ts",
+        "vila-neon.spec.ts",
+        "vila-parque-fotos.spec.ts",
+        "vila-parque-videos.spec.ts",
+        "vila-parque.spec.ts",
+        "vila-patins.spec.ts",
+        "vila-provas-separado.spec.ts",
+        "vila-rua.spec.ts",
+        "vila-show-camera.spec.ts",
+        "vila-show-real.spec.ts",
+        "vila-skate.spec.ts",
+        "vila-tecladista.spec.ts"
+      ]
+    },
+    "mundo-cidade-grande": {
+      "nome": "Cidade Grande (obras, prédios e veículos)",
+      "gatilhos": [
+        "src/temas/cidade-grande/",
+        "src/world/cidade.ts",
+        "src/world/ruasCidade.ts",
+        "src/world/obras.ts",
+        "src/world/horizonte.ts",
+        "src/world/plantas/",
+        "src/render/horizonte.ts",
+        "src/render/veiculos.ts",
+        "src/render/veiculosMiniatura.ts",
+        "src/render/veiculosModelos.ts",
+        "src/render/solidos.ts",
+        "src/render/fantasmasObra.ts",
+        "src/jogo/veiculos.ts",
+        "src/jogo/transito.ts",
+        "src/jogo/miraObra.ts",
+        "src/jogo/exclusivos.ts",
+        "src/cliente/veiculos.ts",
+        "src/cliente/obrasDaVolta.ts",
+        "src/ui/progressoObra.ts",
+        "src/audio/somVeiculos.ts",
+        "src/audio/somObra.ts",
+        "src/esboco/cidade.ts",
+        "src/esboco/veiculos.ts",
+        "src/esboco/veiculosEstetica.ts"
+      ],
+      "suites": [
+        "canteiro.spec.ts",
+        "cidade-grande.spec.ts",
+        "cidade-horizonte.spec.ts",
+        "cidade-predios.spec.ts",
+        "cidade-tema.spec.ts",
+        "esboco-cidade.spec.ts",
+        "esboco-estetica.spec.ts",
+        "esboco-tamanhos.spec.ts",
+        "esboco-veiculos.spec.ts",
+        "frota-final.spec.ts",
+        "som-veiculos.spec.ts",
+        "veiculos.spec.ts"
+      ]
+    },
+    "mundo-rancho-alegre": {
+      "nome": "Rancho Alegre (roça e criação)",
+      "gatilhos": [
+        "src/temas/rancho-alegre/",
+        "src/world/sitio.ts",
+        "src/jogo/plantio.ts",
+        "src/jogo/criacao.ts"
+      ],
+      "suites": ["bichos-passo.spec.ts", "criacao.spec.ts", "plantio.spec.ts"]
+    },
+    "mundo-doce-reino": {
+      "nome": "Doce Reino (o canto das missões e os povoados)",
+      "gatilhos": [
+        "src/temas/doce-reino/",
+        "src/world/cantoMissoes.ts",
+        "src/world/povoado.ts",
+        "src/world/construcoes.ts",
+        "src/ui/alma/canto.ts",
+        "src/ui/alma/arteCanto.ts",
+        "src/jogo/povoados.ts",
+        "src/jogo/trocas.ts",
+        "src/ui/trocas.ts",
+        "src/render/moradorBoneco.ts"
+      ],
+      "suites": ["missoes-dinos-doce.spec.ts", "povoados.spec.ts"]
+    },
+    "mundo-noite-das-fantasias": {
+      "nome": "Noite das Fantasias (027)",
+      "gatilhos": [
+        "src/temas/noite-das-fantasias/",
+        "src/world/noiteFantasias.ts",
+        "src/world/baileSolidos.ts",
+        "src/render/baile/",
+        "src/render/lampioes.ts",
+        "src/nucleo/baile.ts",
+        "src/nucleo/baileMissoes.ts",
+        "src/jogo/baile.ts",
+        "src/cliente/baile.ts",
+        "src/ui/alma/baile.ts",
+        "src/ui/alma/arteFesta.ts",
+        "src/audio/somBaile.ts",
+        "src/personagem/bonecoFesta.ts",
+        "src/personagem/bonecoPeludo.ts",
+        "src/personagem/abraco.ts"
+      ],
+      "suites": [
+        "abraco-027.spec.ts",
+        "bento-pelo-027.spec.ts",
+        "bichos-027.spec.ts",
+        "comer-027.spec.ts",
+        "compras-027.spec.ts",
+        "fantasias-027.spec.ts",
+        "lampioes-027.spec.ts",
+        "moradores-027.spec.ts",
+        "noite-fantasias-campo.spec.ts",
+        "noite-fantasias-fotos.spec.ts",
+        "noite-fantasias-som.spec.ts",
+        "noite-fantasias.spec.ts",
+        "outros-mundos-027.spec.ts",
+        "varinha-027.spec.ts"
+      ]
+    },
+    "missoes-guia": {
+      "nome": "Missões e guia (pegadas, placa, mãozinha, quadro)",
+      "gatilhos": [
+        "src/jogo/guia.ts",
+        "src/jogo/diario.ts",
+        "src/render/guiaMissao.ts",
+        "src/ui/alma/guia.ts",
+        "src/ui/alma/maoObra.ts",
+        "src/ui/diario.ts",
+        "src/audio/somGuia.ts"
+      ],
+      "suites": [
+        "convite-feitas.spec.ts",
+        "guia-chegada.spec.ts",
+        "guia-missao.spec.ts",
+        "guia-video.spec.ts",
+        "passeio-c3.spec.ts"
+      ]
+    },
+    "alma-lojinha": {
+      "nome": "Alma do jogo e lojinha (moedinhas, nível, baú, premium)",
+      "gatilhos": [
+        "src/jogo/alma.ts",
+        "src/nucleo/conta.ts",
+        "src/personagem/almaCrianca.ts",
+        "src/personagem/bonecoPremium.ts",
+        "src/personagem/tesouroEFantasia.ts",
+        "src/ui/alma/index.ts",
+        "src/ui/alma/hud.ts",
+        "src/ui/alma/bau.ts",
+        "src/ui/alma/loja.ts",
+        "src/ui/alma/festa.ts",
+        "src/ui/alma/festas.ts",
+        "src/ui/alma/arte.ts",
+        "src/ui/alma/figuras.ts",
+        "src/ui/meusTesouros.ts",
+        "src/ui/foto.ts",
+        "src/render/bichoPremium.ts",
+        "src/render/premiumLuzes.ts",
+        "src/render/premiumMundo.ts"
+      ],
+      "suites": [
+        "alma.spec.ts",
+        "capturas-premium.spec.ts",
+        "lojinha.spec.ts",
+        "meus-tesouros.spec.ts",
+        "premium-presentes.spec.ts",
+        "tesouro-fantasia.spec.ts"
+      ]
+    },
+    "comprar-comer": {
+      "nome": "Comprar e comer",
+      "gatilhos": [
+        "src/jogo/compra.ts",
+        "src/jogo/refeicao.ts",
+        "src/render/refeicao.ts",
+        "src/render/vila/compras.ts",
+        "src/nucleo/vilaCompras.ts",
+        "src/ui/alma/dicaComer.ts"
+      ],
+      "suites": ["comprar-comer-fotos.spec.ts", "comprar-comer.spec.ts"]
+    },
+    "camera-roleta": {
+      "nome": "Câmera, mira e roleta do menu",
+      "gatilhos": [
+        "src/player/camera.ts",
+        "src/ui/roleta.ts",
+        "src/ui/toque.ts",
+        "src/ui/dicaMira.ts",
+        "src/render/modoFoto.ts"
+      ],
+      "suites": [
+        "camera.spec.ts",
+        "capturas-camera.spec.ts",
+        "medidas-033-camera.spec.ts",
+        "medidas-033-roleta.spec.ts",
+        "mira-toque.spec.ts",
+        "roleta-mundos.spec.ts",
+        "roleta.spec.ts"
+      ]
+    },
+    "gestos-roda": {
+      "nome": "Gestos e roda",
+      "gatilhos": [
+        "src/personagem/gestos.ts",
+        "src/render/gestosJogo.ts",
+        "src/render/balaoGesto.ts",
+        "src/ui/menuRoda.ts",
+        "src/ui/roda.ts",
+        "src/ui/iconesGestos.ts"
+      ],
+      "suites": ["capturas-gestos.spec.ts", "gestos.spec.ts", "menu-roda.spec.ts"]
+    },
+    "nuvem-amigos": {
+      "nome": "Nuvem e amigos (achar o amigo, convite, construções protegidas)",
+      "gatilhos": [
+        "src/jogo/acharAmigo.ts",
+        "src/jogo/caminho.ts",
+        "src/jogo/permissao.ts",
+        "src/render/acharAmigo.ts",
+        "src/render/estrelinhas.ts",
+        "src/render/outrosJogadores.ts",
+        "src/render/tintaProtecao.ts",
+        "src/world/protecao.ts",
+        "src/player/avisosProtecao.ts",
+        "src/ui/amigos.ts",
+        "src/ui/carinhasAmigos.ts",
+        "src/ui/cadeado.ts",
+        "src/esboco/amigos.ts"
+      ],
+      "suites": [
+        "achar-amigo-nuvem.spec.ts",
+        "achar-amigo-video.spec.ts",
+        "achar-amigo.spec.ts",
+        "amigos-sem-atrito.spec.ts",
+        "capturas-multiplayer.spec.ts",
+        "capturas-protecao.spec.ts",
+        "construcoes-protegidas.spec.ts",
+        "esboco-amigos.spec.ts"
+      ]
+    },
+    "personagem": {
+      "nome": "Personagem e fantasias (o boneco, o editor, o encaixe)",
+      "gatilhos": [
+        "src/personagem/aparencia.ts",
+        "src/personagem/boneco.ts",
+        "src/personagem/bonecoFantasia.ts",
+        "src/personagem/fantasias.ts",
+        "src/personagem/modelo.ts",
+        "src/personagem/persistencia.ts",
+        "src/personagem/poses.ts",
+        "src/personagem/rastros.ts",
+        "src/personagem/textura.ts",
+        "src/personagem/vida.ts",
+        "src/player/animacao.ts",
+        "src/render/boneco.ts",
+        "src/render/personagem.ts",
+        "src/render/fotoBoneco.ts",
+        "src/ui/personagem.ts",
+        "src/ui/abaFantasias.ts",
+        "src/ui/sugestaoFantasia.ts"
+      ],
+      "suites": [
+        "capturas-encaixe.spec.ts",
+        "capturas-fantasias.spec.ts",
+        "capturas-luz.spec.ts",
+        "capturas-personagem.spec.ts",
+        "fantasias-aba.spec.ts",
+        "persistencia-personagem.spec.ts",
+        "personagem.spec.ts"
+      ]
+    },
+    "leiaute-interface": {
+      "nome": "Leiaute e interface (HUD, barra, mapa, pausa, nitidez; as três telas)",
+      "gatilhos": [
+        "index.html",
+        "public/",
+        "src/ui/interface.ts",
+        "src/ui/brinquedo.ts",
+        "src/ui/barra.ts",
+        "src/ui/mapa.ts",
+        "src/ui/pausa.ts",
+        "src/ui/configuracoes.ts",
+        "src/ui/atalhos.ts",
+        "src/ui/pixicones.ts",
+        "src/ui/telaCheia.ts",
+        "src/ui/telaLigada.ts",
+        "src/render/resolucao.ts",
+        "src/render/mapaChunk.ts",
+        "src/jogo/mapa.ts"
+      ],
+      "suites": [
+        "barra.spec.ts",
+        "fumaca-telas.spec.ts",
+        "fumaca.spec.ts",
+        "nitidez-celular.spec.ts",
+        "selo-nitidez.spec.ts",
+        "visual.spec.ts"
+      ]
+    },
+    "som": {
+      "nome": "Som (motor, trilha, vozes, sons da interface)",
+      "gatilhos": [
+        "src/audio/amostras.ts",
+        "src/audio/creditosSons.ts",
+        "src/audio/indiceSons.ts",
+        "src/audio/ligador.ts",
+        "src/audio/materiais.ts",
+        "src/audio/motor.ts",
+        "src/audio/realejo.ts",
+        "src/audio/reguaTrilha.ts",
+        "src/audio/reguaVozes.ts",
+        "src/audio/resposta.ts",
+        "src/audio/sinaisTrilha.ts",
+        "src/audio/somDoTema.ts",
+        "src/audio/somInterface.ts",
+        "src/audio/sons.ts",
+        "src/audio/trilha.ts",
+        "src/audio/trilhaMundo.ts",
+        "src/audio/variacao.ts",
+        "src/audio/vozBoba.ts",
+        "src/audio/vozesGravadas.ts"
+      ],
+      "suites": [
+        "audio.spec.ts",
+        "sons-resto.spec.ts",
+        "trilha-iphone.spec.ts",
+        "trilha-regua.spec.ts",
+        "trilha.spec.ts",
+        "vozes-regua.spec.ts",
+        "vozes.spec.ts"
+      ]
+    },
+    "desempenho": {
+      "nome": "Desempenho (medidas; quase todas só com variável de ambiente)",
+      "gatilhos": ["src/medida/"],
+      "suites": [
+        "desempenho-027.spec.ts",
+        "desempenho-achar-amigo.spec.ts",
+        "desempenho-brinquedo.spec.ts",
+        "desempenho-premium.spec.ts",
+        "medida-webgpu.spec.ts",
+        "partida-027.spec.ts"
+      ]
+    }
+  },
+  "comuns": ["src/main.ts", "src/render/cena.ts", "src/temas/tipos.ts"],
+  "tudo": [
+    "package.json",
+    "package-lock.json",
+    "playwright.config.ts",
+    "vite.config.ts",
+    "tsconfig.json",
+    "docker/",
+    "scripts/e2e-gpu.sh"
+  ],
+  "paridade": {
+    "suite": "paridade.spec.ts",
+    "gatilhos": [
+      "src/nucleo/",
+      "src/rede/",
+      "servidor/",
+      "src/workers/",
+      "src/cliente/conexao.ts",
+      "src/cliente/estado.ts",
+      "src/cliente/replica.ts",
+      "e2e/paridade/"
+    ],
+    "fechoDoNucleo": true,
+    "explicacao": "Também roda quando muda um arquivo que o núcleo (src/nucleo/) ou o servidor (servidor/src/) importa, direto ou não (src/jogo/, src/world/ e parte de src/temas/): o script segue os imports."
+  },
+  "fumaca": [
+    { "suite": "temas.spec.ts", "titulo": "cria, joga, salva e reabre um mundo", "porque": "abre os seis mundos, tira um bloco, salva e reabre" },
+    { "suite": "interacao.spec.ts", "porque": "apontar, quebrar, colocar e trocar de item" },
+    { "suite": "mira-toque.spec.ts", "titulo": "o toque age no bloco embaixo do dedo", "porque": "o dedo de verdade: ara, planta e quebra" },
+    { "suite": "gestos.spec.ts", "titulo": "celular: segurar o botão da roda", "porque": "a roda de gestos com o dedo" },
+    { "suite": "camera.spec.ts", "titulo": "mira do centro: coloca e quebra", "porque": "pôr e tirar bloco pela mira, em terceira pessoa" },
+    { "suite": "vila-colisao.spec.ts", "porque": "andar de verdade, batendo no carro, na barraca e no rádio" },
+    { "suite": "mundo.spec.ts", "titulo": "edições, posição e hora sobrevivem", "porque": "o mundo salvo volta igual" },
+    { "suite": "vila-neon.spec.ts", "titulo": "em pé: f1 do brincar à festa", "porque": "uma missão de ponta a ponta no mundo padrão, com o dedo" },
+    { "suite": "missoes-dinos-doce.spec.ts", "titulo": "fase 2: e1, em pé: do brincar à festa", "porque": "a missão do Doce Reino, do brincar à festa" },
+    { "suite": "guia-chegada.spec.ts", "titulo": "r1 no Rancho", "porque": "o guia: andar pela trilha até a lavoura e o ✓" },
+    { "suite": "guia-chegada.spec.ts", "titulo": "c5: a placa na cabeça da padeira", "porque": "o guia na Cidade: a placa e a trilha até a moradora" },
+    { "suite": "noite-fantasias.spec.ts", "titulo": "T18: a campainha dá o docinho e a lanterna acende na hora (empe", "porque": "a Noite das Fantasias: a campainha e a lanterna" },
+    { "suite": "alma.spec.ts", "titulo": "laço do Rancho: r1 até a Caipira", "porque": "moedinhas, a festa e reabrir o jogo mantém tudo" },
+    { "suite": "comprar-comer.spec.ts", "titulo": "sobrevivência: comprar e comer com fome", "porque": "comprar na barraca com o dedo e comer com fome, a fome sobe" },
+    { "suite": "lojinha.spec.ts", "titulo": "lojinha premium (empe)", "porque": "a lojinha no celular" },
+    { "suite": "multiplayer.spec.ts", "titulo": "dois navegadores no mesmo mundo", "porque": "entrar na nuvem com um amigo" },
+    { "suite": "entrada-nuvem.spec.ts", "titulo": "B: o primeiro quadro perdido", "porque": "a nuvem se acerta sozinha quando um quadro se perde" },
+    { "suite": "achar-amigo-nuvem.spec.ts", "porque": "o amigo de verdade na nuvem: carinha, trilha, pular e chamar" },
+    { "suite": "fumaca-telas.spec.ts", "porque": "uma foto de leiaute por tela, conferindo o HUD" }
+  ],
+  "quarentena": [
+    {
+      "suite": "noite-fantasias.spec.ts",
+      "titulo": "T20: n1 a n5 de ponta a ponta, com o dedo e moedinhas de verdade (deitado)",
+      "motivo": "a página deitada perde o contexto WebGL na ponte da placa do WSL (a placa inteira trava uns 2 min; T20, T22 e T23 da 027); só roda no --tudo (o fluxo é em pé)",
+      "nota": "conferir no aparelho"
+    },
+    {
+      "suite": "vila-missoes.spec.ts",
+      "titulo": "Vila Neon, deitado:",
+      "motivo": "a página deitada perde o contexto WebGL na ponte da placa do WSL (Unable to create VAO na T23 da 027); só roda no --tudo (o fluxo é em pé)",
+      "nota": "conferir no aparelho"
+    },
+    {
+      "suite": "guia-chegada.spec.ts",
+      "titulo": "c6 em pé: chega no canteiro 4",
+      "motivo": "defeito do jogo, não do teste: no celular em pé, a criança chega pela trilha virada de lado para a obra e os fantasmas da camada de baixo ficam fora da tela (à esquerda) ou atrás do boneco; a mãozinha não acha lugar e não aparece (3 de 3 em 24 nov, com o diagnóstico no log)",
+      "nota": "sai da quarentena quando a mãozinha (src/ui/alma/maoObra.ts) ou a chegada no canteiro for consertada"
+    },
+    {
+      "suite": "guia-chegada.spec.ts",
+      "titulo": "c3 inteira andando",
+      "motivo": "provável defeito do jogo: às vezes a criança para na padaria (a 0,7 do ponto), o guia diz que chegou, o ✓ do núcleo não vem e o chegou volta a falso sem pegadas: fica parada na porta (1 de 3 em 24 nov, 1 de 2 na 027)",
+      "nota": "conferir a regra de chegar do cliente contra a do núcleo"
+    },
+    {
+      "suite": "premium-presentes.spec.ts",
+      "titulo": "dois na nuvem: cada uma vê o premium",
+      "motivo": "defeito do jogo: quando a amiga veste a capa de estrelas, o pinguim e a camiseta, a tela de quem vê fica parada de 730 a 870 ms (o maior quadro, medido no teste) montando o boneco dela; com isso vê em 1,1 a 3,5 s, e o limite é 1 s (5 de 5 em 23 e 24 nov; o outro lado, 0,3 a 0,8 s)",
+      "nota": "provável compilação dos materiais na primeira vez; sai da quarentena com o conserto"
+    },
+    {
+      "suite": "lampioes-027.spec.ts",
+      "titulo": "cem lampiões e cem caldeirões",
+      "motivo": "a cena parada oscila de 179 a 186 chamadas de desenho (os bichos andando), mais que o limite de +2; com a espera pela cena assentada passou 1 de 3. A malha dos lampiões sobe só 6 para 8",
+      "nota": "precisa medir as chamadas só das peças (por malha), não da cena inteira"
+    },
+    {
+      "suite": "vila-bate.spec.ts",
+      "titulo": "bate-bate de guiar",
+      "motivo": "provável defeito do jogo: o erro entre a previsão do carrinho e o núcleo passa às vezes de 1 bloco (1,22 em 24 nov, 1 de 3), o acerto vira um pulo; a velocidade dobrada, a outra causa, foi consertada em src/cliente/bate.ts",
+      "nota": "conferir a previsão da batida com o carrinho de morador (src/cliente/bate.ts contra src/jogo/bate.ts)"
+    },
+    {
+      "suite": "vila-neon.spec.ts",
+      "titulo": "em pé: f2 do brincar à festa",
+      "motivo": "achado em 24 nov (1 de 3): depois das duas lhamas, a trilha até a grade não chega em 60 s, seis vezes seguidas (a criança simulada fica presa no caminho), e a festa não vem",
+      "nota": "conferir se o caminho da trilha passa por algo que segura o boneco (src/jogo/caminho.ts e as peças da Vila)"
+    },
+    {
+      "suite": "som-veiculos.spec.ts",
+      "titulo": "os veículos se ouvem",
+      "motivo": "a trilha varia de frase para frase e o antes vai de 0,008 a 0,038: o mesmo toque mede de 1,5 a 13 dB; o sorvete, que fica por desenho uns 5 dB acima da rua, cai mais (2 de 4 em 23 e 24 nov). O toque agora só é medido quando toca de verdade",
+      "nota": "conferir de ouvido no aparelho; a medida precisaria da trilha parada ou da voz do toque isolada"
+    }
+  ]
+}

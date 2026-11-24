@@ -54,14 +54,17 @@ Jogo voxel de brinquedo no navegador, para crianças (os testadores são os dois
    - nenhum agente parado à toa: a vigia em segundo plano avisa quando um agente para (ver "Boletim para o dono").
 5. **Revisão de código só quando mexe no núcleo, na rede ou no servidor**, por um `engenheiro-nucleo-rede` novo, com o orquestrador intermediando até o consenso. Nas outras áreas, o próprio especialista confere o seu trabalho, e o orquestrador olha o resultado.
 6. **Nada voltou para trás, por área** (decisão do dono, 22 nov 2026: testar o que mudou, e não tudo, de dia, e medir se a qualidade cai):
-   - sempre: o Vitest inteiro, o `npm run build` e a fumaça (uns 15 min na placa);
-   - as áreas que o ramo tocou (o mapa das áreas fica em `e2e/areas.json`);
-   - a paridade 36/36 (`PARIDADE=conferir`, `e2e/paridade.spec.ts`) só quando mexe no núcleo, na rede ou no servidor;
-   - as três telas só nos testes de leiaute; o resto roda no celular em pé;
-   - os instáveis da quarentena rodam à parte e não seguram a entrega;
-   - em pedaços de no máximo 2 trabalhadores; nada de teste depois das 21h30 (a ventoinha);
-   - o que falhar é conferido contra a `main`;
-   - registrar na Situação o tempo da conferência e, depois, os defeitos que escaparam (no ar ou na rodada em família).
+   - `node scripts/conferir.ts` faz tudo pelo `git diff` do ramo (`--seco` mostra o plano; `--areas a,b` junta áreas; `--tudo` é o regime antigo):
+     - sempre: o Vitest inteiro, o `npm run build` e a fumaça (uns 11 min na placa);
+     - as áreas que o ramo tocou (o mapa fica em `e2e/areas.json`) e as suítes que a spec mexeu;
+     - a paridade 36/36 só quando mexe no núcleo, na rede, no servidor ou no que o núcleo importa;
+     - a quarentena (com o motivo de cada teste no mapa) roda à parte e não segura a entrega.
+   - Mudança em `package.json`, configuração ou `docker/` liga o `--tudo` sozinha. Fora isso, o `--tudo` roda uma vez por semana, de dia, para medir o que as áreas deixaram passar.
+   - As três telas só nos testes de leiaute (`e2e/telas.ts`); o resto roda no celular em pé.
+   - Suíte nova entra numa área, e arquivo novo de `src/` num gatilho (o `tests/e2e-areas.test.ts` cai se faltar).
+   - Em pedaços de no máximo 2 trabalhadores; nada de teste depois das 21h30 (a ventoinha).
+   - O que falhar fora da quarentena é conferido contra a `main`. Instável vai para a quarentena com o motivo e só sai dela consertado.
+   - Registrar na Situação o tempo da conferência e, depois, os defeitos que escaparam (no ar, na rodada em família ou no `--tudo` da semana).
    - Nunca pular, desligar ou afrouxar teste para passar: achar a causa.
 7. **Portão visual:**
    - fotos em pé de dia e de noite, e deitado (celular 390×844 e 844×390, computador 1280×720);

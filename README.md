@@ -83,6 +83,8 @@ Roteiros pesados, fora da bateria normal: `CAPTURAS_TEMAS=1 npx playwright test 
 
 Dentro do container, o comando completo é `npx vitest run && npx playwright test`. As capturas dos e2e ficam em `test-results/screens`.
 
+A conferência de uma spec (no computador do dono, na placa de vídeo) é por área: `node scripts/conferir.ts` roda o Vitest, o build, a fumaça, as áreas que o ramo tocou (o mapa é o `e2e/areas.json`), a paridade quando mexeu no núcleo e a quarentena à parte, e mostra o tempo de cada parte. `--seco` só mostra o plano; `--areas a,b` junta áreas; `--tudo` roda tudo, nas três telas (`E2E_TELAS=todas`), como antes.
+
 ## Relatórios
 
 - `docs/validacao-visual.md`: direção visual e desempenho das specs 001 a 005.

@@ -132,13 +132,21 @@ test('cem lampiões e cem caldeirões postos num pedaço: no máximo duas chamad
   console.log(`LAMPIOES leituras antes ${JSON.stringify(leituras)}`);
   // mesmo assentada, a cena oscila 1 ou 2 chamadas (um bicho que entra ou sai da vista): o antes
   // e o depois são a mediana de 5 leituras, a 1 s uma da outra
+  // (23 nov, caiu na main: as 5 do antes subiam 185, 185, 186, 187, 188, a cena ainda
+  // chegando, e a subida caía nos lampiões: 186 -> 189. Agora a janela só vale assentada, com as
+  // 5 leituras a no máximo 2 uma da outra; senão, mede de novo, até 6 vezes.)
   const chamadasNoTempo = async () => {
-    const m: number[] = [];
-    for (let k = 0; k < 5; k++) {
-      m.push(await chamadas(page));
-      await page.waitForTimeout(1000);
+    let m: number[] = [];
+    for (let tentativa = 0; tentativa < 6; tentativa++) {
+      m = [];
+      for (let k = 0; k < 5; k++) {
+        m.push(await chamadas(page));
+        await page.waitForTimeout(1000);
+      }
+      console.log(`LAMPIOES leituras ${JSON.stringify(m)}`);
+      if (Math.max(...m) - Math.min(...m) <= 2) break;
     }
-    console.log(`LAMPIOES leituras ${JSON.stringify(m)}`);
+    expect(Math.max(...m) - Math.min(...m), 'a cena assentou (5 leituras a até 2 uma da outra)').toBeLessThanOrEqual(2);
     return [...m].sort((a, b) => a - b)[2];
   };
   const antes = await chamadasNoTempo();

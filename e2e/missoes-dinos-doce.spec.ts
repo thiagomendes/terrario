@@ -9,6 +9,7 @@ import {
   tocar,
   type Tamanho,
 } from './guia-palco';
+import { telasDoFluxo } from './telas';
 
 /**
  * Spec 031: as missões do Doce Reino (spec 034: a parte da Era dos Dinos saiu com ela). Fase 1
@@ -48,7 +49,8 @@ async function quadro(page: Page, nome: string): Promise<void> {
 }
 
 for (const [tema, nome, primeira] of [['doce-reino', 'doce', 'e1']] as const)
-  for (const tamanho of ['deitado', 'empe'] as const)
+  // fluxo: só o celular em pé (ver e2e/telas.ts)
+  for (const tamanho of telasDoFluxo(['deitado', 'empe'] as const))
     test(`fase 1: ${nome}, ${tamanho}: o canto, o quadro e o começo da trilha`, async ({
       browser,
     }) => {
