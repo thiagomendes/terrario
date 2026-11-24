@@ -37,7 +37,7 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
 | T06 A vitrine, o provador e Meus tesouros | **pronta (24 nov)**: as abas só com desenho, a estrelinha de novo, o provador montado e o da pipa, a linha da pipa na figura, Meus tesouros com os 18 e o "o que sai" com a fantasia. Os detalhes abaixo |
 | T07 Sons dos itens | **pronta (24 nov)**: as rodinhas, o pedal, a hélice, as bolhas, o foguete, as gotinhas e a pipa, feitos em código e mais baixos que os passos. Os detalhes abaixo |
 | T00 Medidas de antes | **feita (24 nov)**, na `main` 2ed1739. Os números estão junto com os da T08 |
-| T08 Desempenho | **medida (24 nov)**: os brinquedos sozinhos passam (-6% de quadros, +17 chamadas), montar passa (50 a 95 ms), a vitrine passa (cartões em 0,1 s). **Duas metas falham com os itens novos juntos** (-14% a -19% de quadros, +39 a +47 chamadas), como já falhavam os premium de hoje na `main` (-23%, +71). E há picos ao descer. As causas estão abaixo |
+| T08 Desempenho | **medida (24 nov)**: os brinquedos sozinhos passam (-6% de quadros, +17 chamadas), montar passa (50 a 95 ms), a vitrine passa (cartões em 0,1 s). **Duas metas falham com os itens novos juntos** (-14% a -19% de quadros, +39 a +47 chamadas), como já falhavam os premium de hoje na `main` (-23%, +71). E há picos ao descer. As causas estão abaixo. **Depois de juntar as malhas**, a mão ficou com -13% e +23 e os montados com -14% e +32: as duas metas ainda falham, e o descer passou nas 6 vezes |
 | T09 Conferência por área | **feita (24 nov)**: nada voltou para trás por causa do ramo. Levou 79 min, mais 45 min conferindo contra a `main`. Uma suíte instável que também falha na `main` foi para a quarentena. Os detalhes abaixo |
 
 ### T01 (24 nov 2026, `engenheiro-nucleo-rede`)
@@ -259,6 +259,23 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
   - A trava não vem só da primeira compilação: a segunda vez ainda custa uns 0,2 s por boneco com a CPU 4×.
   - **A causa:** o `definirPerfis` (`src/render/outrosJogadores.ts`, perto da linha 209) refaz no mesmo quadro o boneco de todos os amigos que mudaram, com o `aplicarAparencia`.
   - **Na nuvem** chega um amigo por vez, e é o caso da quarentena (`premium-presentes`, de 730 a 870 ms sem desacelerar). Refazer um boneco por quadro, ou compilar os materiais antes, tiraria a trava. Fica na quarentena.
+- **Depois de juntar as malhas** (24 nov, a12e065, com o merge 333db1b; a mesma suíte, 3 rodadas; os números brutos estão no fim do `medidas.txt`). A máquina rodou mais rápida nesta vez (nada com 33,8 quadros): por isso a régua é cada cenário contra o "nada" da mesma rodada.
+  - **Os números:**
+
+    | Cenário | Queda de quadros | Chamadas |
+    |---|---|---|
+    | andar | -7% | +16 |
+    | montados | -14% (antes -19%) | +32 (antes +47) |
+    | mão | -13% (antes -14%) | +23 (antes +39) |
+    | hoje | -17% | +53 |
+
+  - **Contra as metas:**
+    - **as chamadas** caíram 15 e 16. Com os itens novos, **ainda passam de +20**: +23 na mão, rente à meta, e +32 nos montados;
+    - **a queda de quadros** também **ainda passa de 10%**, de 13% a 14%;
+  - **Montar e descer:**
+    - **descer** passou nas 6 vezes, de 38 a 60 ms;
+    - **montar** passou em 5 de 6, de 43 a 84 ms, e uma vez foi a 158 ms. A cena parada também teve um pico de 165 ms, o mesmo sinal da medida de antes;
+  - **A trava de vestir** caiu um pouco: 0,42 a 0,60 s nos montados e 0,32 a 0,47 s na mão.
 
 ### T09 (24 nov 2026, `testador`)
 - **O mapa das áreas** (`e2e/areas.json`) ganhou o que é da 036:
