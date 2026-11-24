@@ -363,13 +363,25 @@
         "src/ui/foto.ts",
         "src/render/bichoPremium.ts",
         "src/render/premiumLuzes.ts",
-        "src/render/premiumMundo.ts"
+        "src/render/premiumMundo.ts",
+        "src/personagem/bonecoPremiumLojinha.ts",
+        "src/personagem/brinquedoAndar.ts",
+        "src/personagem/montar.ts",
+        "src/render/efeitosLojinha.ts",
+        "src/render/seguirVoando.ts",
+        "src/ui/alma/lojaNovidades.ts",
+        "src/esboco/lojinha.ts",
+        "src/esboco/lojinhaBichos.ts",
+        "src/esboco/lojinhaPecas.ts"
       ],
       "suites": [
         "alma.spec.ts",
+        "capturas-036.spec.ts",
         "capturas-premium.spec.ts",
+        "esboco-lojinha.spec.ts",
         "lojinha.spec.ts",
         "meus-tesouros.spec.ts",
+        "montar-036.spec.ts",
         "premium-presentes.spec.ts",
         "tesouro-fantasia.spec.ts"
       ]
@@ -413,7 +425,8 @@
         "src/render/balaoGesto.ts",
         "src/ui/menuRoda.ts",
         "src/ui/roda.ts",
-        "src/ui/iconesGestos.ts"
+        "src/ui/iconesGestos.ts",
+        "src/ui/iconesAndar.ts"
       ],
       "suites": ["capturas-gestos.spec.ts", "gestos.spec.ts", "menu-roda.spec.ts"]
     },
@@ -521,6 +534,7 @@
         "src/audio/somDoTema.ts",
         "src/audio/somInterface.ts",
         "src/audio/sons.ts",
+        "src/audio/somItens.ts",
         "src/audio/trilha.ts",
         "src/audio/trilhaMundo.ts",
         "src/audio/variacao.ts",
@@ -542,6 +556,7 @@
       "gatilhos": ["src/medida/"],
       "suites": [
         "desempenho-027.spec.ts",
+        "desempenho-036.spec.ts",
         "desempenho-achar-amigo.spec.ts",
         "desempenho-brinquedo.spec.ts",
         "desempenho-premium.spec.ts",

@@ -36,6 +36,8 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
 | T05 Os brinquedos de andar | **pronta (24 nov)**: os 4 modelos do esboço e as animações, +15 chamadas de desenho com 4 amigos montados. Os detalhes abaixo |
 | T06 A vitrine, o provador e Meus tesouros | **pronta (24 nov)**: as abas só com desenho, a estrelinha de novo, o provador montado e o da pipa, a linha da pipa na figura, Meus tesouros com os 18 e o "o que sai" com a fantasia. Os detalhes abaixo |
 | T07 Sons dos itens | **pronta (24 nov)**: as rodinhas, o pedal, a hélice, as bolhas, o foguete, as gotinhas e a pipa, feitos em código e mais baixos que os passos. Os detalhes abaixo |
+| T00 Medidas de antes | **feita (24 nov)**, na `main` 2ed1739. Os números estão junto com os da T08 |
+| T08 Desempenho | **medida (24 nov)**: os brinquedos sozinhos passam (-6% de quadros, +17 chamadas), montar passa (50 a 95 ms), a vitrine passa (cartões em 0,1 s). **Duas metas falham com os itens novos juntos** (-14% a -19% de quadros, +39 a +47 chamadas), como já falhavam os premium de hoje na `main` (-23%, +71). E há picos ao descer. As causas estão abaixo |
 
 ### T01 (24 nov 2026, `engenheiro-nucleo-rede`)
 - **O catálogo:** os 12 no `PREMIUM` (`src/jogo/alma.ts`), com os ids, preços e efeitos da spec; as categorias `andar`, `chapeu` e `mao` no fim de `CATEGORIAS_PREMIUM`. A vitrine já lista os 18, sem a figura dos novos até a T03 e sem as abas até a T06.
@@ -209,5 +211,52 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
   - a velocidade vem do caminho andado (um teleporte não vira corrida).
 - **Os testes:** novo `tests/audio/somItens.test.ts`; os sons novos passam pela régua da 019 (`somResto.test.ts`: curtos e abaixo do golpe).
 - **Falta:** o aperitivo de sons ao dono (gravar o áudio pede o navegador com som; fica com o orquestrador).
+
+### T00 e T08 (24 nov 2026, `testador`)
+- **Como foi medido:** a suíte nova `e2e/desempenho-036.spec.ts` (`MEDIR_DESEMPENHO=1`, `E2E_SEM_VSYNC=1`), igual na `main` 2ed1739 (T00) e no ramo 6f5d877 (T08). Vila Neon de dia, celular em pé 390×844, CPU 4×, distância e qualidade de fábrica do celular, na placa.
+  - Os 4 amigos ficam à vista, de 6 a 14 blocos, e a câmera gira devagar por 8 s. São 3 rodadas alternadas por cenário:
+    - **nada:** sem premium;
+    - **hoje:** os 6 de antes da 036;
+    - **andar:** só os 4 brinquedos, montados;
+    - **montados:** um em cada brinquedo, mais o boné, o pijama, as asas ou o foguete e o passarinho;
+    - **mão:** a pé, com a varinha, o guarda-chuva e a pipa, mais o boné, o pijama, as asas ou o foguete.
+  - Os números brutos estão em `capturas-036/t08-desempenho/medidas.txt`. A primeira medida da T00, com a qualidade alta e a distância 7, deu 5 quadros com nada e foi descartada.
+- **Os números** (médias das 3 rodadas; a `main` e o ramo saem de rodadas diferentes, por isso cada um compara com o próprio "nada"):
+
+  | Cenário | Quadros por segundo | Queda | Chamadas | A mais |
+  |---|---|---|---|---|
+  | `main` nada | 25,0 | | 185 | |
+  | `main` hoje | 19,1 | -23% | 256 | +71 |
+  | ramo nada | 26,8 | | 184 | |
+  | ramo hoje | 22,2 | -17% | 238 | +54 |
+  | ramo andar | 25,3 | **-6%** | 202 | **+17** |
+  | ramo montados | 21,7 | **-19%** | 232 | **+47** |
+  | ramo mão | 23,0 | **-14%** | 223 | **+39** |
+
+- **Contra as metas:**
+  - **queda de no máximo 10%:** passa com os brinquedos sozinhos (-6%). **Falha com os itens novos** (-14% e -19%). Os premium de hoje já caíam 23% na `main`; no ramo eles caem 17% e gastam 17 chamadas a menos;
+  - **no máximo +20 chamadas:** passa com os brinquedos sozinhos (+17, a T05 achou +15). **Falha com os itens novos** (+39 e +47);
+    - **a causa:** cada peça nova é uma ou mais malhas próprias por boneco, e cada malha desenha de novo na sombra. O `custo.md` da T03 dá o boné com 2 malhas, as asas, o foguete e a pipa com 3 cada, e o passarinho com 2. Um amigo montado com boné, asas e passarinho soma umas 12 chamadas, e 4 amigos passam de 40;
+    - **onde está:** `src/personagem/bonecoPremiumLojinha.ts`, nas peças em nós próprios. Juntar as malhas do mesmo nó e do mesmo material, como a T05 fez no brinquedo, deve trazer de volta para perto de +20;
+  - **o quadro mais longo abaixo de 100 ms ao montar e descer** (os 4 juntos, 10 vezes cada nas duas rodadas):
+    - montar passa: de 50 a 95 ms;
+    - descer: 7 das 10 vezes passam, de 47 a 87 ms; **3 vezes passaram de 100 ms** (104, 175 e 263 ms);
+    - a cena parada também tem picos de 177 a 239 ms em 1 de cada 4 janelas de 8 s, sem nada mudando. Por isso não se prova que o pico vem do descer. O suspeito é o puf (`aoMontar`) e o boneco voltando à pose a pé, os 4 no mesmo quadro;
+  - **montar em menos de 0,5 s:** passa. A T04 mediu 4 ms do toque até o brinquedo, e o `e2e/montar-036.spec.ts` confere menos de 500 ms (na T09);
+  - **a vitrine em no máximo 1 s:** passa. Os cartões ficam na tela em 97 a 106 ms (a `main` levava de 85 a 137 ms). As figuras do 3D ficam prontas em 2,2 a 2,3 s com a CPU 4× (a `main`, com 6 cartões, levava 4,2 s). Enquanto o estúdio das fotos nasce, há um quadro parado de 0,97 a 1,03 s, logo depois de os cartões aparecerem (a `main` tinha 0,87 a 0,91 s): a criança vê a vitrine parada por 1 s, como já via na `main`;
+- **A trava de vestir:** é o quadro mais longo nos 5 s depois de os 4 amigos trocarem de roupa todos juntos:
+
+  | Cenário | Primeira vez | Segunda e terceira |
+  |---|---|---|
+  | `main` hoje | 1,5 s | 0,8 a 0,9 s |
+  | ramo hoje | 1,4 s | 0,9 s |
+  | ramo andar | 0,36 s | 0,28 a 0,33 s |
+  | ramo montados | 0,69 s | 0,55 a 0,60 s |
+  | ramo mão | 0,62 s | 0,40 a 0,51 s |
+
+  - Os itens novos travam menos que os de hoje.
+  - A trava não vem só da primeira compilação: a segunda vez ainda custa uns 0,2 s por boneco com a CPU 4×.
+  - **A causa:** o `definirPerfis` (`src/render/outrosJogadores.ts`, perto da linha 209) refaz no mesmo quadro o boneco de todos os amigos que mudaram, com o `aplicarAparencia`.
+  - **Na nuvem** chega um amigo por vez, e é o caso da quarentena (`premium-presentes`, de 730 a 870 ms sem desacelerar). Refazer um boneco por quadro, ou compilar os materiais antes, tiraria a trava. Fica na quarentena.
 
 Falta sempre, ao fim, a **rodada em família**.
