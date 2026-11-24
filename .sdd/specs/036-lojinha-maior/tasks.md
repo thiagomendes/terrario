@@ -53,7 +53,18 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
   - o cabo do guarda-chuva saía do alto da cabeça;
   - o ícone das fantasias tinha a forma de máscara de bandido.
 
-  Também foram consertados os médios: o ícone de chapéu, as figuras cortadas, a varinha sem bolhas, "Meus tesouros" deitado, o selo no rosto, as pernas no carrinho, o boné e as fotos de prova. Ficaram fora, por não serem da 036: o rosto dos bonecos, o unicórnio sem graça de noite, as bolhas escuras de noite e o balão do carrossel por cima da criança montada. Falta a 2ª rodada. |
+  Também foram consertados os médios: o ícone de chapéu, as figuras cortadas, a varinha sem bolhas, "Meus tesouros" deitado, o selo no rosto, as pernas no carrinho, o boné e as fotos de prova. Ficaram fora, por não serem da 036: o rosto dos bonecos, o unicórnio sem graça de noite, as bolhas escuras de noite e o balão do carrossel por cima da criança montada.
+  - **2ª rodada (24 nov, outro revisor novo):** os consertos da 1ª rodada passaram. Bloqueava só o cartão do boné, com o boneco cortado na cintura (o recorte "busto"), consertado em 9c357a5 e conferido pelo orquestrador.
+  - Ficam para depois:
+    - a pipa no provador deitado;
+    - o aviso da troca por cima das figuras em Meus tesouros deitado;
+    - os bonecos na borda de trás do disco;
+    - as gotinhas perto do cabelo;
+    - a copa larga do boné;
+    - o balão do carrossel;
+    - o brilho no cabelo de noite.
+  - O revisor também apontou dois itens antigos, que vão para o backlog com decisão do dono: a camiseta de aquário e o tênis de 20 moedinhas.
+  - O esboço saiu do código (46499d0). |
 | T09 Conferência por área | **feita (24 nov)**: nada voltou para trás por causa do ramo. Levou 79 min, mais 45 min conferindo contra a `main`. Uma suíte instável que também falha na `main` foi para a quarentena. **Na conferência final** (38 min), nada voltou para trás: um teste da fumaça foi consertado no próprio teste, e um caiu pela ponte da placa e depois passou 3 de 3. Os detalhes abaixo |
 
 ### T01 (24 nov 2026, `engenheiro-nucleo-rede`)
