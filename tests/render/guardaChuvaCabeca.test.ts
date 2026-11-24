@@ -17,13 +17,13 @@ import '../../src/temas/todos';
  * passa escondido atrás dela: nos 9 penteados dos dois corpos, parado, andando e correndo,
  * nenhuma parte do guarda-chuva fica dentro do contorno da cabeça (com o cabelo) visto de frente
  * e de costas, na altura e no fundo em que está (o que passa atrás ou na frente dela, a até um
- * palmo, conta).
- * E o pano cobre a cabeça (o meio dela fica debaixo do pano).
+ * palmo, conta). O pano cobre a cabeça (o meio dela fica debaixo do pano) e, com o cabo tombado
+ * para dentro, o centro dele fica perto do eixo da cabeça (`CENTRO_MAX`).
  *
  * O boneco de verdade (o desenho, num motor sem tela), com a pose do jogo aplicada quadro a
- * quadro. A cabeça vira gavetas de 4 cm de altura e 8 de fundo, cada uma com a largura dela; o guarda-chuva é
- * amostrado ao longo das arestas dos triângulos (o cabo é um cilindro: só as pontas dele não
- * diriam se ele atravessa).
+ * quadro. A cabeça vira gavetas de 4 cm de altura e 8 de fundo, cada uma com a largura dela; o
+ * guarda-chuva é amostrado ao longo das arestas dos triângulos (o cabo é um cilindro: só as pontas
+ * dele não diriam se ele atravessa).
  */
 const quadros = (b: ReturnType<typeof criarBoneco>, modo: 'parado' | 'andando' | 'correndo', n: number, t0: number) => {
   for (let i = 0; i < n; i++) {
@@ -79,6 +79,15 @@ const FOLGA = 0.03;
 const FATIA = 0.04;
 const FUNDO = 0.08;
 const PERTO = 0.12;
+/**
+ * De frente, o quanto o centro do pano pode ficar longe do eixo da cabeça, nas cabeças de até
+ * 0,40 de meia largura com o cabelo (6 dos 9 penteados). O braço do boneco alcança só uns 0,53
+ * para o lado e a cabeça tem 0,37 de meia largura: o cabo reto que não encosta nela tomba no
+ * máximo uns 11 graus até o alto do cabelo. Nos cabelos largos (os compridos dos lados e o
+ * volumoso) o cabo tomba menos, e só valem a folga e o pano por cima do meio da cabeça.
+ */
+const CENTRO_MAX = 0.36;
+const CABECA_ESTREITA = 0.4;
 
 describe('036 (portão): o guarda-chuva na mão, por cima da cabeça, sem encostar nela', () => {
   for (const corpo of ['feminino', 'masculino'] as const)
@@ -101,6 +110,7 @@ describe('036 (portão): o guarda-chuva na mão, por cima da cabeça, sem encost
         let t = 0;
         let pior = Infinity;
         let onde = '';
+        let centroPior = 0;
         for (const modo of ['parado', 'andando', 'correndo'] as const) {
           quadros(b, modo, 90, t);
           t += 1.5;
@@ -113,12 +123,14 @@ describe('036 (portão): o guarda-chuva na mão, por cima da cabeça, sem encost
             // de cada uma
             const fatias = new Map<string, [number, number]>();
             let topo = -Infinity;
+            let largura = 0;
             for (const m of daCabeca)
               for (const p of pontos(m, paraCabeca, 4)) {
                 const i = `${Math.floor(p.y / FATIA)},${Math.floor(p.z / FUNDO)}`;
                 const f = fatias.get(i) ?? [Infinity, -Infinity];
                 fatias.set(i, [Math.min(f[0], p.x), Math.max(f[1], p.x)]);
                 topo = Math.max(topo, p.y);
+                largura = Math.max(largura, Math.abs(p.x));
               }
             let cobreMeio = false;
             for (const m of guarda)
@@ -144,22 +156,34 @@ describe('036 (portão): o guarda-chuva na mão, por cima da cabeça, sem encost
                     );
                 }
               }
-            // o pano por cima do meio da cabeça: um triângulo dele, acima do topo, no prumo do meio
+            // o pano por cima do meio da cabeça: um triângulo dele no prumo do meio, e ali acima do
+            // topo do cabelo (o pano inclinado junto com o cabo)
             for (const m of guarda) {
               const v = pontos(m, paraCabeca, 0);
               // (sem amostrar as arestas, cada triângulo dá os três cantos em seguida)
               for (let i = 0; i + 2 < v.length && !cobreMeio; i += 3) {
                 const [a, b, c] = [v[i], v[i + 1], v[i + 2]];
-                if (Math.min(a.y, b.y, c.y) <= topo) continue;
                 const lado = (p: Vector3, q: Vector3) => (q.x - p.x) * -p.z - (q.z - p.z) * -p.x;
-                const s = [lado(a, b), lado(b, c), lado(c, a)];
-                if (s.every((x) => x >= 0) || s.every((x) => x <= 0)) cobreMeio = true;
+                const s = [lado(b, c), lado(c, a), lado(a, b)];
+                const area = s[0] + s[1] + s[2];
+                if (Math.abs(area) < 1e-9 || !(s.every((x) => x >= 0) || s.every((x) => x <= 0))) continue;
+                // (a altura do pano no meio, pelos pesos de cada canto)
+                if ((a.y * s[0] + b.y * s[1] + c.y * s[2]) / area > topo) cobreMeio = true;
               }
             }
             if (!cobreMeio) problemas.push(`cabelo ${cabeloEstilo} ${modo}: o pano não cobre o meio da cabeça`);
+            // de frente, o centro do pano (a ponta de cima) perto do eixo da cabeça
+            let ponta = new Vector3(0, -Infinity, 0);
+            for (const m of guarda) for (const p of pontos(m, paraCabeca, 0)) if (p.y > ponta.y) ponta = p;
+            centroPior = Math.max(centroPior, Math.abs(ponta.x));
+            if (largura <= CABECA_ESTREITA && Math.abs(ponta.x) > CENTRO_MAX)
+              problemas.push(`cabelo ${cabeloEstilo} ${modo}: o centro do pano a ${Math.abs(ponta.x).toFixed(2)} do eixo da cabeça`);
           }
         }
-        if (process.env.DIAG) console.log(`DIAG ${corpo} cabelo ${cabeloEstilo}: a menor distância ao contorno ${pior.toFixed(3)} em ${onde}`);
+        if (process.env.DIAG)
+          console.log(
+            `DIAG ${corpo} cabelo ${cabeloEstilo}: a menor distância ao contorno ${pior.toFixed(3)} em ${onde}; o centro do pano até ${centroPior.toFixed(2)} do eixo`,
+          );
         b.descartar();
         scene.dispose();
       }

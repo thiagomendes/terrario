@@ -307,8 +307,47 @@ interface FontePeca {
   cv: boolean;
 }
 
-/** Spec 036 (portão): o quanto o cabo do guarda-chuva tomba para o lado da cabeça (seno). */
-const INCLINA_GUARDA = -0.07;
+/**
+ * Spec 036 (portão): o quanto o cabo do guarda-chuva pode tombar para o lado da cabeça (seno):
+ * no máximo uns 24 graus; nas cabeças de cabelo bem largo, um tico para fora.
+ */
+const INCLINA_MAX = 0.4;
+const INCLINA_MIN = -0.07;
+/** O cabo passa pela beira de fora do punho fechado, e não pelo meio dele. */
+const DENTRO_DO_PUNHO = 0.03;
+/** A folga entre o cabo e a cabeça: 3 cm, mais a grossura do cabo e o balanço dele. */
+const FOLGA_GUARDA = 0.08;
+/** A altura de cada fatia do perfil da cabeça. */
+const PERFIL_FATIA = 0.04;
+
+/**
+ * Spec 036 (portão): a meia largura da cabeça com o cabelo (e o que vai nela) em cada altura, no
+ * espaço da cabeça: [y de baixo da fatia, maior |x|]. Feita uma vez por desenho da cabeça (muda
+ * quando o boneco é refeito), dos cantos das malhas dela.
+ */
+const perfisDaCabeca = new WeakMap<TransformNode, { chave: string; perfil: Array<[number, number]> }>();
+function perfilDaCabeca(cabeca: TransformNode, paraCabeca: Matrix): Array<[number, number]> {
+  const malhas = cabeca.getChildMeshes(false).filter((m) => m.isEnabled() && m.getTotalVertices() > 0);
+  const chave = malhas.map((m) => `${m.uniqueId}:${m.getTotalVertices()}`).join(',');
+  const ja = perfisDaCabeca.get(cabeca);
+  if (ja && ja.chave === chave) return ja.perfil;
+  const fatias = new Map<number, number>();
+  const p = new Vector3();
+  for (const m of malhas) {
+    m.computeWorldMatrix(true);
+    const mat = m.getWorldMatrix().multiply(paraCabeca);
+    const pos = m.getVerticesData('position');
+    if (!pos) continue;
+    for (let i = 0; i < pos.length; i += 3) {
+      Vector3.TransformCoordinatesFromFloatsToRef(pos[i], pos[i + 1], pos[i + 2], mat, p);
+      const k = Math.floor(p.y / PERFIL_FATIA);
+      fatias.set(k, Math.max(fatias.get(k) ?? 0, Math.abs(p.x)));
+    }
+  }
+  const perfil = [...fatias].map(([k, w]): [number, number] => [k * PERFIL_FATIA, w]);
+  perfisDaCabeca.set(cabeca, { chave, perfil });
+  return perfil;
+}
 
 /** Spec 036 (T05): a passada 1 é andar (blocos por segundo; a física anda a 4,3). */
 const VEL_ANDAR_BONECO = 4.3;
@@ -379,7 +418,7 @@ export function criarBoneco(
   /** Spec 036: o tesouro da mão esquerda (o braço segura em cima). */
   let maoPremium: string | undefined;
   /** Spec 036: as fases das peças que se mexem sozinhas. */
-  const fase036 = { helice: 0, borboleta: 0, guarda: 0, passaro: 1.2, batendo: 0, t: 0 };
+  const fase036 = { helice: 0, borboleta: 0, guarda: 0, passaro: 1.2, batendo: 0, t: 0, tomba: null as number | null };
   let malhas: Mesh[] = [];
   /** Spec 027 (T22): monta o boneco de longe (só com esqueleto; null sem ele). */
   let montarDeLonge: (() => Mesh[]) | null = null;
@@ -871,8 +910,21 @@ export function criarBoneco(
       const inv = juntas.cabeca.getWorldMatrix().clone().invert();
       const mao = Vector3.TransformCoordinates(juntas.maoE.getAbsolutePosition(), inv);
       const hh = Math.hypot(mao.x, mao.z) || 1;
-      const dx = (-mao.x / hh) * INCLINA_GUARDA + Math.sin(t * 1.3) * 0.015;
-      const dz = (-mao.z / hh) * INCLINA_GUARDA + Math.sin(t * 0.9) * 0.015;
+      // portão (o orquestrador: o pano todo de lado parecia guarda-sol de praia): o cabo tomba
+      // para dentro o quanto a cabeça deixa. A largura da cabeça com o cabelo em cada altura (o
+      // perfil, no espaço da cabeça) diz até onde ele pode ir sem encostar nela, do punho até o
+      // alto do cabelo; daí para cima segue reto, e o pano chega mais perto do meio da cabeça
+      const perfil = perfilDaCabeca(juntas.cabeca, inv);
+      const xCabo = hh + DENTRO_DO_PUNHO;
+      let tomba = INCLINA_MAX;
+      for (const [y, w] of perfil) {
+        const dy = y + PERFIL_FATIA - mao.y;
+        if (dy > 0.02) tomba = Math.min(tomba, (xCabo - w - FOLGA_GUARDA) / dy);
+      }
+      tomba = Math.max(INCLINA_MIN, tomba);
+      f.tomba = f.tomba === null ? tomba : f.tomba + (tomba - f.tomba) * Math.min(1, dt * 5);
+      const dx = (-mao.x / hh) * f.tomba + Math.sin(t * 1.3) * 0.012;
+      const dz = (-mao.z / hh) * f.tomba + Math.sin(t * 0.9) * 0.012;
       const dir = new Vector3(dx, Math.sqrt(Math.max(0, 1 - dx * dx - dz * dz)), dz);
       const eixo = Vector3.Cross(Vector3.Up(), dir);
       const alinhar =
@@ -890,7 +942,10 @@ export function criarBoneco(
       mGuarda.decompose(undefined, q);
       s.guarda.rotationQuaternion = q;
       // o cabo passa pela beira de fora do punho fechado (o lado longe da cabeça), e não pelo meio
-      const fora = Vector3.TransformNormal(new Vector3((mao.x / hh) * 0.03, 0, (mao.z / hh) * 0.03), juntas.cabeca.getWorldMatrix());
+      const fora = Vector3.TransformNormal(
+        new Vector3((mao.x / hh) * DENTRO_DO_PUNHO, 0, (mao.z / hh) * DENTRO_DO_PUNHO),
+        juntas.cabeca.getWorldMatrix(),
+      );
       s.guarda.position.copyFrom(Vector3.TransformNormal(fora, juntas.maoE.getWorldMatrix().clone().invert()));
     }
     if (s.pipa) {
