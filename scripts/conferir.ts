@@ -7,7 +7,8 @@
  *   node scripts/conferir.ts --seco          # só mostra o plano, não roda nada
  *
  * Outras opções: --base <ref> (padrão origin/main), --lote <n> (arquivos por rodada do e2e,
- * padrão 12), --sem-quarentena, --sem-vitest, --so-fumaca.
+ * padrão 12), --sem-quarentena, --sem-vitest, --so-fumaca, --mudados a,b (no lugar do diff,
+ * para simular uma mudança).
  *
  * Roda, nesta ordem: o Vitest inteiro e o build (sempre); a fumaça (sempre); as áreas que o
  * ramo tocou (o mapa é o e2e/areas.json); a paridade, se mexeu no núcleo, na rede, no
@@ -50,14 +51,18 @@ const git = (...a: string[]) => {
   if (r.status !== 0) throw new Error(`git ${a.join(' ')}: ${r.stderr}`);
   return r.stdout.split('\n').filter(Boolean);
 };
-const mudados = [
-  ...new Set([
-    ...git('diff', '--name-only', `${BASE}...HEAD`),
-    // e o que ainda não foi para commit (mudado ou novo)
-    ...git('diff', '--name-only', 'HEAD'),
-    ...git('ls-files', '--others', '--exclude-standard'),
-  ]),
-].sort();
+// --mudados a,b: no lugar do diff, estes arquivos (para simular uma mudança e medir)
+const simulados = valor('--mudados');
+const mudados = simulados
+  ? simulados.split(',').filter(Boolean)
+  : [
+      ...new Set([
+        ...git('diff', '--name-only', `${BASE}...HEAD`),
+        // e o que ainda não foi para commit (mudado ou novo)
+        ...git('diff', '--name-only', 'HEAD'),
+        ...git('ls-files', '--others', '--exclude-standard'),
+      ]),
+    ].sort();
 
 const mapa = lerMapa(RAIZ);
 const plano = planejar(RAIZ, mapa, mudados, { forcadas, tudo: TUDO });
