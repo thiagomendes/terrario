@@ -33,6 +33,7 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
 | T02 O Unicórnio-pônei | **pronta (24 nov)**: a borda, o brilho e o tremor, cada um com a causa achada. Os detalhes abaixo |
 | T03 As peças no boneco e os efeitos | **pronta (24 nov)**: as 7 peças, o passarinho no ombro, os efeitos e as figuras. Os detalhes abaixo |
 | T04 Montar e descer | **pronta (24 nov)**, com um brinquedo provisório: a roda, comprar já monta, o puf e os sons, o descer sozinho, a mão guardada, os amigos sem refazer o boneco, a volta da queda. Os detalhes abaixo |
+| T05 Os brinquedos de andar | **pronta (24 nov)**: os 4 modelos do esboço e as animações, +15 chamadas de desenho com 4 amigos montados. Os detalhes abaixo |
 
 ### T01 (24 nov 2026, `engenheiro-nucleo-rede`)
 - **O catálogo:** os 12 no `PREMIUM` (`src/jogo/alma.ts`), com os ids, preços e efeitos da spec; as categorias `andar`, `chapeu` e `mao` no fim de `CATEGORIAS_PREMIUM`. A vitrine já lista os 18, sem a figura dos novos até a T03 e sem as abas até a T06.
@@ -144,5 +145,22 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
   - com um tesouro da mão, montar e descer refazem o boneco (o tesouro sai da aparência), aqui e nos amigos; sem ele, não. Medir na T08;
   - o provador faz descer (o provador montado é da T06); **o modo foto não faz descer** (orquestrador, 24 nov: a foto em cima do brinquedo), só impede montar enquanto está aberto (`precisaDescer`, corrigido depois da T04);
   - o ícone do "Descer" é provisório, no estilo dos ícones da roda.
+
+### T05 (24 nov 2026, `artista-voxel`)
+- **As fotos:** `capturas-036/t05-brinquedos/` (com o `indice.md`): cada brinquedo parado e andando, de três-quartos e de lado, de dia e de noite, no celular em pé; uma tela deitada e uma no computador; o vídeo dos 4 andando (`brinquedos-andando.webm`); o custo (`custo.md`). Saem de `e2e/capturas-036.spec.ts` (`CAPTURAS_036=t05`).
+- **Os modelos** (`src/personagem/brinquedoAndar.ts`, no lugar das caixinhas da T04): o patinete de luz, o carrinho de pedal (aberto, sem teto), a bicicletinha (1,2 vez maior que no esboço, a correção da spec) e a nuvem fofa (sem carinha), saídos do esboço, todos na junta `prancha` e no nó `brinquedo`. As partes que giram ficam em nós dentro dele (`andarRodaF`, `andarRodaT`, `andarRodinhaE` com as duas rodinhas de apoio no mesmo eixo, `andarPedal`); a nuvem boia com o nó do brinquedo inteiro.
+- **As animações:** o estado do andar (`avancarAndar`, pela passada da criança) é um só para a pose e para os nós:
+  - as rodas giram pelo caminho andado sobre o raio (sem patinar);
+  - o pedal gira e as pernas vão e voltam na mesma volta (o carrinho e a bicicletinha);
+  - o patinete dá o impulso com o pé esquerdo a cada 1,3 s andando; parado, o pé descansa para trás;
+  - a nuvem e a criança boiam juntas (um seno só, 0,035 de altura), e andando ficam nuvenzinhas para trás (o pool da fumacinha, em `efeitosLojinha.ts`).
+- **O brilho contido:** as rodinhas do patinete (`menta`) e os faróis do carrinho (`farol`) são luzes novas do `premiumLuzes.ts`, abaixo de 1 e fora do mapa do brilho; o resto é plástico. Sem arco-íris (violeta, azul, menta, branco).
+- **O custo** (na placa, `custo.md`): montado, o boneco soma 5 malhas no patinete, 3 no carrinho, 5 na bicicletinha e 0 na nuvem (de 3 a 11,7 mil triângulos). Com 4 amigos montados, um em cada brinquedo, **+15 chamadas de desenho** por quadro sobre os mesmos 4 a pé (a meta é +20). Para chegar lá: o brinquedo inteiro num brilho só (uma malha por nó), as duas rodinhas de apoio num nó e a nuvem sem nó próprio (antes eram +23).
+- **Montar não refaz o boneco:** o `tests/render/montarBoneco.test.ts` continua verde.
+- **Os testes:** `tests/personagem/brinquedoAndar.test.ts` ganhou as animações (as rodas sem patinar, nada gira parado, as pernas no pedal na mesma volta, o impulso e o pé descansando, a nuvem boiando sem tranco, a bicicletinha maior) e aceita os nós dentro do brinquedo; `tests/render/premiumPlacas.test.ts` com os de andar.
+- **Ficou fraco:**
+  - as rodinhas do patinete ficam acesas o tempo todo (a luz é uma por cena, para todos os bonecos: não dá para acender só quando roda);
+  - os faróis do carrinho também ficam acesos de dia (mansos);
+  - a figura do passarinho voando na lojinha não foi refeita: é uma linha no `fotoBoneco.ts` (aplicar a pose parada também com o passarinho), que está com o `desenvolvedor-jogo` na T06.
 
 Falta sempre, ao fim, a **rodada em família**.

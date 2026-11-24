@@ -266,6 +266,20 @@ export function efeitosLojinha(scene: Scene): EfeitosLojinha {
           }
         }
       }
+      // T05: montada na nuvem fofa e andando, nuvenzinhas ficam para trás e se desfazem (o mesmo
+      // pool da fumacinha: branquinhas, foscas, encolhendo até sumir)
+      if (premium.andar === 'nuvem-fofa' && nos.brinquedo?.isEnabled() && andando > 0.3) {
+        e.fumaca -= dt;
+        if (e.fumaca <= 0) {
+          e.fumaca = 0.11;
+          const lado = (sorteio(e) - 0.5) * 0.7;
+          aux.copyFrom(raiz).addInPlace(frente.scale(-0.7)).addInPlace(direita.scale(lado));
+          aux.y += 0.32 + sorteio(e) * 0.14;
+          aux2.copyFrom(frente).scaleInPlace(-0.3);
+          aux2.y = 0.08;
+          soltar('fumaca', aux, aux2, 0.06, 0.15 + sorteio(e) * 0.05, 1.2);
+        }
+      }
       // a linha da pipa: da mão até a ponta de baixo da pipa
       if (premium.mao === 'pipa-lacinhos' && nos.maoE && nos.pipa) {
         atualizar(nos.maoE);

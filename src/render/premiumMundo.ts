@@ -648,7 +648,11 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     if (
       u.visivel &&
       perto &&
-      (p.costas === 'mochila-foguete' || p.mao === 'varinha-bolhas' || p.mao === 'guarda-chuva-gotinhas' || p.mao === 'pipa-lacinhos')
+      (p.costas === 'mochila-foguete' ||
+        p.mao === 'varinha-bolhas' ||
+        p.mao === 'guarda-chuva-gotinhas' ||
+        p.mao === 'pipa-lacinhos' ||
+        p.andar === 'nuvem-fofa')
     )
       (lojinha ??= efeitosLojinha(scene)).doBoneco(u.fx036, p, u.nos, r, yaw, Math.min(1, u.vel / 4.3), dt);
 

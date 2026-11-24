@@ -161,7 +161,10 @@ export type IdLuzPremium =
    */
   | 'vela'
   /** Spec 036: a chaminha da mochila-foguete (morna e mansa, tremulando). */
-  | 'chama';
+  | 'chama'
+  /** Spec 036 (T05): as rodinhas de luz do patinete (verde-água mansa) e os faróis do carrinho. */
+  | 'menta'
+  | 'farol';
 /**
  * Spec 023: os nós que só os premium têm (as asas batem; o resto segue a junta). Spec 036: a
  * hélice do boné, as asas de borboleta, o guarda-chuva, a pipa e o rabo dela, e o passarinho com
@@ -183,7 +186,14 @@ export type SubjuntaPremium =
    * Spec 036 (T04): o brinquedo de andar inteiro (na junta `prancha`). Montado uma vez quando o
    * brinquedo é vestido; montar e descer só acendem e apagam este nó (o boneco não é refeito).
    */
-  | 'brinquedo';
+  | 'brinquedo'
+  /** Spec 036 (T05): o que gira dentro do brinquedo (as rodas, o pedal, a nuvem que boia). */
+  | 'andarRodaF'
+  | 'andarRodaT'
+  | 'andarRodinhaE'
+  | 'andarRodinhaD'
+  | 'andarPedal'
+  | 'andarNuvem';
 
 export interface PlanoBoneco {
   juntas: Record<Junta, { pai: Junta | null; pos: [number, number, number] }>;

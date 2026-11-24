@@ -28,7 +28,7 @@ import {
   type TexturaPremium,
 } from '../personagem/boneco';
 import { ALTURA_PRANCHA } from '../personagem/bonecoFantasia';
-import { poseNoBrinquedo } from '../personagem/brinquedoAndar';
+import { avancarAndar, boiarNuvem, estadoAndar, poseNoBrinquedo } from '../personagem/brinquedoAndar';
 import { luzPremium, texturaAquario } from './premiumLuzes';
 import type { Pose } from '../personagem/poses';
 import {
@@ -306,6 +306,9 @@ interface FontePeca {
   deslocar?: [number, number, number];
   cv: boolean;
 }
+
+/** Spec 036 (T05): a passada 1 é andar (blocos por segundo; a física anda a 4,3). */
+const VEL_ANDAR_BONECO = 4.3;
 
 /**
  * Spec 036: o braço esquerdo segurando o tesouro da mão (x, y, z como no Babylon; z negativo
@@ -912,12 +915,22 @@ export function criarBoneco(
   }
 
   /**
-   * Spec 036 (T04): os nós do brinquedo de andar que se mexem com o andar (as rodinhas, o pedal,
-   * a nuvem que balança). Vazio até a T05, que cria os nós (`pai: 'brinquedo'`) e os gira aqui
-   * pela passada de `vista`, como `animarTesouros` faz com a hélice.
+   * Spec 036 (T05): os nós do brinquedo de andar que se mexem com o andar: as rodas e as rodinhas
+   * giram pelo caminho andado, o pedal pela volta dele (as pernas, na pose, acompanham a mesma
+   * volta) e a nuvem boia junto com a criança. O estado anda em `aplicarPose`, antes da pose.
    */
-  function animarBrinquedo(_dt: number, _vista: ExtrasPose['vista'] | undefined): void {
-    // (a T05 liga as animações aqui)
+  const andar = estadoAndar();
+  function animarBrinquedo(): void {
+    const s = subjuntas;
+    for (const r of [s.andarRodaF, s.andarRodaT]) if (r) r.rotation.x = andar.roda;
+    // (as rodinhas de apoio são menores: giram mais depressa no mesmo chão)
+    if (s.andarRodinhaE) s.andarRodinhaE.rotation.x = (andar.roda * 2.5) % (Math.PI * 2);
+    if (s.andarPedal) s.andarPedal.rotation.x = andar.pedal;
+    // a nuvem boia inteira (o nó do brinquedo), junto com o corpo da criança
+    if (andarVestido === 'nuvem-fofa' && s.brinquedo) {
+      s.brinquedo.position.y = boiarNuvem(andar);
+      s.brinquedo.rotation.z = Math.sin(andar.t * 1.1) * 0.03;
+    }
   }
 
   function aplicarPose(pose: Pose, extras?: ExtrasPose): void {
@@ -939,9 +952,12 @@ export function criarBoneco(
         alvo.bracoE = [alvo.bracoE[0] * 0.3 - 0.1, alvo.bracoE[1], alvo.bracoE[2] - 0.28];
       }
     }
-    // spec 036 (T04): montada no brinquedo de andar, a altura dele e as mãos no guidão (a T05
-    // anima o impulso e o pedal em `poseNoBrinquedo`)
-    if (montado && andarVestido) poseNoBrinquedo(andarVestido, alvo, pose);
+    // spec 036: montada no brinquedo de andar, a altura dele, as mãos no guidão, o impulso do
+    // patinete e o pedal (T05: o andar anda antes, pela passada: 1 andando, 1,5 correndo)
+    if (montado && andarVestido) {
+      if (extras) avancarAndar(andar, andarVestido, dt, (extras.vista?.passada ?? 0) * VEL_ANDAR_BONECO);
+      poseNoBrinquedo(andarVestido, alvo, pose, andar);
+    }
     // spec 036: o tesouro da mão esquerda (a varinha, o guarda-chuva, a pipa): o braço segura no
     // alto, menos durante um gesto (o gesto manda no braço)
     const segura = maoPremium ? bracoDoTesouro(maoPremium, pose.tempo ?? 0) : null;
@@ -1008,7 +1024,7 @@ export function criarBoneco(
       }
     }
     animarTesouros(dt, extras?.vista);
-    if (montado) animarBrinquedo(dt, extras?.vista);
+    if (montado) animarBrinquedo();
     // spec 032: a carinha feliz depois de comer (os olhos fecham sorrindo)
     const pisca = pose.piscar ? 0.1 : 1 - (pose.feliz ?? 0) * 0.78;
     for (const o of olhos) o.scaling.y = (baseY.get(o) ?? 1) * pisca;

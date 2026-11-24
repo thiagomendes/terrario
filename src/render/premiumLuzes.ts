@@ -55,6 +55,10 @@ const BASE: Record<IdLuzPremium, string> = {
   vela: '#f09410',
   // spec 036: a chaminha da mochila-foguete, morna e mansa (abaixo do brilho que borra)
   chama: '#e8a850',
+  // spec 036 (T05): as rodinhas do patinete e os faróis do carrinho, mansos (abaixo de 1 e fora
+  // do mapa do brilho, como tudo do boneco)
+  menta: '#4cc8b2',
+  farol: '#e8dfb4',
 };
 
 function daCena(scene: Scene): LuzesDaCena {

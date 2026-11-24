@@ -430,6 +430,186 @@ test('T02: o tremor do pinguim (celular em pé) e o vídeo dele com a criança v
   console.log(`TREMOR ${JSON.stringify(medidas)}`);
 });
 
+// ------------------------------------------------------------------------------ T05
+const PASTA_T05 = process.env.T05_PASTA ?? 'capturas-036/t05-brinquedos';
+const SO_T05 = process.env.T05_SO?.split(',');
+const BRINQUEDOS: Array<[string, string, object]> = [
+  ['patinete', 'patinete-luz', MENINO],
+  ['carrinho', 'carrinho-pedal', MENINA],
+  ['bicicleta', 'bicicletinha', MENINO],
+  ['nuvem', 'nuvem-fofa', MENINA],
+];
+
+/** Veste o brinquedo e monta (a roda faz o mesmo: `personagem.montar`). */
+async function montarNo(page: Page, base: object, id: string) {
+  await vestir(page, base, { andar: id });
+  await page.evaluate(() => window.__brumaluz!.personagem!.montar!());
+  await page.waitForFunction((id) => window.__brumaluz!.personagem!.montado!() === id, id);
+}
+
+test('T05: cada brinquedo parado e andando, de três-quartos e de lado, de dia e de noite (celular em pé)', async ({ browser }) => {
+  test.skip(!QUAL.includes('t05'));
+  test.setTimeout(1_200_000);
+  const { page, O } = await abrirGramado(browser, 'empe');
+  for (const [quando, hora] of [
+    ['dia', DIA],
+    ['noite', NOITE],
+  ] as const) {
+    await page.evaluate((h) => (window.__brumaluz!.hora = h), hora);
+    for (const [nome, id, base] of BRINQUEDOS) {
+      if (SO_T05 && !SO_T05.includes(nome)) continue;
+      await sairDoEstudio(page);
+      await noMeio(page, O, 0, 5);
+      await montarNo(page, base, id);
+      await page.waitForTimeout(1800);
+      // parado: a câmera de estúdio de três-quartos e de lado
+      const c: Peca036 = { nome, quem: base, premium: {}, alvoY: 0.85, dist: 4.2, alt: 0.7 };
+      for (const [vista, giro] of [
+        ['parado-tres-quartos', 0.75],
+        ['parado-lado', Math.PI / 2],
+      ] as const) {
+        await estudioNaCrianca(page, O, c, giro);
+        await page.waitForTimeout(700);
+        await foto(page, PASTA_T05, `${nome}-${vista}-${quando}`);
+      }
+      await sairDoEstudio(page);
+      // andando: a câmera do jogo; para trás e para o lado (o corpo vira para a câmera, de
+      // três-quartos) e de lado (para a direita da câmera)
+      for (const [vista, frente, lado] of [
+        ['andando-tres-quartos', -0.75, 0.66],
+        ['andando-lado', 0, 1],
+      ] as const) {
+        await noMeio(page, O, 0, 5.2, 0.3);
+        await page.waitForTimeout(800);
+        await page.evaluate(([f, d]) => window.__brumaluz!.controleDireto!.mover(f, d), [frente, lado] as const);
+        await page.waitForTimeout(1500);
+        await foto(page, PASTA_T05, `${nome}-${vista}-${quando}`);
+        await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(0, 0));
+      }
+    }
+  }
+  await page.context().close();
+});
+
+test('T05: uma tela deitada e uma no computador, montada, com a câmera do jogo', async ({ browser }) => {
+  test.skip(!QUAL.includes('t05') || !!SO_T05);
+  test.setTimeout(600_000);
+  for (const [tamanho, nome, base, id] of [
+    ['deitado', 'deitado-bicicleta', MENINO, 'bicicletinha'],
+    ['pc', 'computador-nuvem', MENINA, 'nuvem-fofa'],
+  ] as const) {
+    const { page, O } = await abrirGramado(browser, tamanho);
+    await noMeio(page, O, 2.6, 4.8, 0.28);
+    await montarNo(page, base, id);
+    await page.waitForTimeout(2500);
+    await foto(page, PASTA_T05, `${nome}-dia`);
+    await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(-0.6, 0.8));
+    await page.waitForTimeout(1500);
+    await foto(page, PASTA_T05, `${nome}-andando-dia`);
+    await page.context().close();
+  }
+});
+
+test('T05: o vídeo dos 4 brinquedos andando (computador)', async ({ browser }) => {
+  test.skip(!QUAL.includes('t05') || !!SO_T05 || !!process.env.SEM_VIDEO);
+  test.setTimeout(600_000);
+  mkdirSync(PASTA_T05, { recursive: true });
+  const { page, O } = await abrirGramado(browser, 'pc');
+  await noMeio(page, O, 2.4, 5, 0.3);
+  await montarNo(page, MENINO, 'patinete-luz');
+  await page.waitForTimeout(2500);
+  await comecarGravacao(page);
+  for (const [, id, base] of BRINQUEDOS) {
+    await noMeio(page, O, 2.4, 5, 0.3);
+    await montarNo(page, base, id);
+    await page.waitForTimeout(900);
+    // anda numa curva (de lado e voltando), e para um tico
+    await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(-0.4, 0.9));
+    await page.waitForTimeout(2000);
+    await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(-0.9, -0.3));
+    await page.waitForTimeout(1600);
+    await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(0, 0));
+    await page.waitForTimeout(900);
+  }
+  await pararGravacao(page, `${PASTA_T05}/brinquedos-andando.webm`);
+  await page.context().close();
+});
+
+test('T05: o custo (malhas, triângulos e chamadas de desenho com 4 amigos montados)', async ({ browser }) => {
+  test.skip(!QUAL.includes('t05') || !!SO_T05);
+  test.setTimeout(600_000);
+  mkdirSync(PASTA_T05, { recursive: true });
+  const { page, O } = await abrirGramado(browser, 'empe');
+  const medirBoneco = () =>
+    page.evaluate(() => {
+      const scene = window.__brumaluz!.cenaBabylon!() as unknown as {
+        meshes: Array<{ name: string; isEnabled(): boolean; isVisible: boolean; getTotalIndices(): number }>;
+      };
+      let malhas = 0;
+      let tri = 0;
+      for (const m of scene.meshes) {
+        if (!m.isEnabled() || !m.isVisible || !/^personagem-(?!premium|mao)/.test(m.name)) continue;
+        malhas++;
+        tri += m.getTotalIndices() / 3;
+      }
+      return { malhas, tri: Math.round(tri) };
+    });
+  const linhas = ['| Brinquedo | Malhas do boneco montado | Triângulos |', '|---|---|---|'];
+  await noMeio(page, O, 0, 5);
+  await vestir(page, MENINO, {});
+  await page.waitForTimeout(2000);
+  const b0 = await medirBoneco();
+  linhas.push(`| a pé, sem nada | ${b0.malhas} | ${b0.tri} |`);
+  for (const [nome, id, base] of BRINQUEDOS) {
+    await montarNo(page, base, id);
+    await page.waitForTimeout(1500);
+    const m = await medirBoneco();
+    linhas.push(`| ${nome} | ${m.malhas} (+${m.malhas - b0.malhas}) | ${m.tri} (+${m.tri - b0.tri}) |`);
+  }
+  // as chamadas de desenho por quadro: 4 amigos a pé e os mesmos 4 montados, cada um num brinquedo
+  await vestir(page, MENINO, {});
+  const chamadas = async (montados: boolean) => {
+    await page.evaluate(
+      ({ O, montados, ids }) => {
+        const e = window.__brumaluz!;
+        e.amigosDeTeste!(
+          ids.map((id, i) => ({
+            id: `amigo${i}`,
+            aparencia: montados ? { corpo: i % 2 ? 'feminino' : 'masculino', premium: { andar: id }, montado: true } : { corpo: i % 2 ? 'feminino' : 'masculino' },
+            x: O[0] - 3 + i * 2,
+            y: O[1],
+            z: O[2] + 4,
+            yaw: Math.PI,
+          })),
+        );
+      },
+      { O, montados, ids: BRINQUEDOS.map(([, id]) => id) },
+    );
+    await page.waitForTimeout(3000);
+    return page.evaluate(
+      () =>
+        new Promise<number>((ok) => {
+          const e = window.__brumaluz!;
+          const d0 = e.desenho!().chamadas;
+          let n = 0;
+          const passo = () => {
+            if (++n < 60) requestAnimationFrame(passo);
+            else ok(Math.round((e.desenho!().chamadas - d0) / n));
+          };
+          requestAnimationFrame(passo);
+        }),
+    );
+  };
+  await noMeio(page, O, Math.PI, 5, 0.3);
+  const aPe = await chamadas(false);
+  const montados = await chamadas(true);
+  await foto(page, PASTA_T05, 'custo-4-amigos-montados');
+  linhas.push('', `Chamadas de desenho por quadro (a mesma câmera, com sombras): 4 amigos a pé ${aPe}; os mesmos 4 montados, um em cada brinquedo, ${montados} (+${montados - aPe}). Meta da spec: no máximo +20.`);
+  writeFileSync(`${PASTA_T05}/custo.md`, `${linhas.join('\n')}\n`);
+  console.log(`CUSTO\n${linhas.join('\n')}`);
+  await page.context().close();
+});
+
 // ------------------------------------------------------------------------------ T03
 const PASTA_T03 = process.env.T03_PASTA ?? 'capturas-036/t03-pecas';
 const SO_T03 = process.env.T03_SO?.split(',');

@@ -49,6 +49,10 @@ describe('placas dos premium (spec 023)', () => {
     { roupa: 'pijama-nuvem', costas: 'asas-borboleta', chapeu: 'bone-helice', mao: 'pipa-lacinhos' },
     { costas: 'mochila-foguete', mao: 'varinha-bolhas', bicho: 'passarinho-ombro' },
     { mao: 'guarda-chuva-gotinhas' },
+    // spec 036 (T05): os brinquedos de andar (as estrelinhas do patinete, a bandeirinha, a folha)
+    { andar: 'patinete-luz' },
+    { andar: 'carrinho-pedal' },
+    { andar: 'bicicletinha' },
   ];
   for (const corpo of ['feminino', 'masculino'] as const)
     for (const premium of vestidos)
