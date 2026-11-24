@@ -64,6 +64,11 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
 - **Os testes:**
   - novos: `tests/personagem/montar.test.ts`, `tests/rede/versao-036.test.ts`, os blocos 036 de `alma.test.ts`, `tesouroEFantasia.test.ts` e `premiumPlacas.test.ts`;
   - mudou um caso de `almaCrianca.test.ts`: o perfil reescrito à mão sem o unicórnio agora o recebe de volta pela chave à parte, de propósito.
+- **A conferência:**
+  - o `npx tsc --noEmit -p .` está limpo;
+  - o Vitest inteiro está verde: 242 arquivos e 2231 testes;
+  - antes, numa rodada com a máquina cheia (a paridade na placa e outro agente), 3 testes de tempo tinham caído. Eram o `fila`, o `politicaCelular` e o `cobertura` (o atlas levou 168 ms, e o teto é 150). Passaram sozinhos e na rodada inteira de depois;
+  - a paridade deu **36/36** (`PARIDADE=conferir`, 1 trabalhador, 19 min). O hash dos temas não mudou.
 - **Para a T06:** o `e2e/lojinha.spec.ts` ("os seis cartões à vista, sem rolar") e outros testes de tela da vitrine vão falhar com os 18 até as abas entrarem.
 - **Para a T04:**
   - ao reconectar na nuvem, o "entrar" leva a aparência guardada, sem o montado (nem os patins, como já é hoje): o amigo vê a criança a pé até a próxima aparência;
