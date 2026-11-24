@@ -95,7 +95,8 @@ const FOTO_PREMIUM: Record<
   // a pipa com o boneco inteiro, para o que fica no alto caber no quadro)
   // (portão visual: o passarinho voa perto do ombro; o quadro pega ele inteiro)
   'passarinho-ombro': { recorte: 'corpo', giro: -0.55, tudo: true },
-  'bone-helice': { recorte: 'busto', giro: 0.5 },
+  // (portão: em busto, o boneco cortado na cintura parecia enterrado no pedestal do cartão)
+  'bone-helice': { recorte: 'corpo', giro: 0.5 },
   'pijama-nuvem': { recorte: 'corpo', giro: 0.36 },
   'asas-borboleta': { recorte: 'corpo', giro: Math.PI - 0.75, tudo: true },
   'mochila-foguete': { recorte: 'corpo', giro: Math.PI - 1.1 },

@@ -125,7 +125,9 @@ function boneHelice(P: Pecas, m: MedidasBoneco): void {
   P.caixa('bone-copa', 'cabeca', 'cabeca', [0.82, hCopa, dCopa], [0, yCopa + hCopa / 2, -0.01], AMARELO, 0.12, { brilho: 0.4 });
   P.bola('bone-copa-topo', 'cabeca', 'cabeca', 0.4, [0, yCopa + hCopa - 0.03, -0.01], AMARELO, [1, 0.32, 0.96], { brilho: 0.4 });
   P.placa('bone-estrela', 'cabeca', 'cabeca', perfilEstrela(0.075), 0.02, [0, yCopa + hCopa * 0.5, dCopa / 2 - 0.005], AZUL, { brilho: 0.4 });
-  P.caixa('bone-aba', 'cabeca', 'cabeca', [0.66, 0.07, 0.26], [0, yCopa + 0.035, dCopa / 2 + 0.1], VERMELHO, 0.03, { rot: [0.1, 0, 0], brilho: 0.4 });
+  // (portão, 2ª rodada: na foto do cartão, vista de cima, a aba fina lia como um risco solto; mais
+  // grossa e entrando na copa, ela lê como aba de qualquer ângulo)
+  P.caixa('bone-aba', 'cabeca', 'cabeca', [0.68, 0.1, 0.3], [0, yCopa + 0.05, dCopa / 2 + 0.08], VERMELHO, 0.04, { rot: [0.08, 0, 0], brilho: 0.4 });
   // o pino e a hélice (gira no nó dela), duas pás em azul e vermelho
   const topoCopa = yCopa + hCopa - 0.03 + 0.4 * 0.32;
   // o cabelo debaixo do boné, como debaixo dos chapéus do jogo (o cacho de cima não passa da
@@ -139,7 +141,7 @@ function boneHelice(P: Pecas, m: MedidasBoneco): void {
     [-1, VERMELHO],
     [1, AZUL],
   ] as const)
-    P.placa(`bone-pa${s}`, 'cabeca', 'cabeca', perfilFolha(0.3), 0.018, [s * 0.16, 0, 0], cor, {
+    P.placa(`bone-pa${s}`, 'cabeca', 'cabeca', perfilFolha(0.3), 0.032, [s * 0.16, 0, 0], cor, {
       rot: [Math.PI / 2, 0.25 * s, Math.PI / 2],
       brilho: 0.4,
       ...sub('helice', pivo),
