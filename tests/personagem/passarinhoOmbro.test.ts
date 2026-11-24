@@ -7,7 +7,9 @@ import { PITCH_BAIXO, PITCH_CIMA } from '../../src/player/camera';
 /**
  * Spec 036 (T03): o passarinho de ombro nunca passa na frente do rosto, de nenhum ângulo da
  * câmera do jogo (a volta inteira em torno da criança, do mais baixo ao mais alto que ela
- * chega). No esboço, de três-quartos, ele cobria a quina do rosto.
+ * chega). No esboço, de três-quartos, ele cobria a quina do rosto. Depois da decisão do dono (24
+ * nov) ele voa pertinho do ombro, batendo as asinhas e boiando: a conta leva a volta inteira das
+ * asas e o sobe e desce.
  *
  * A conta (no espaço do tronco, na pose de repouso, sem a escala do boneco): cada pontinho do
  * rosto (a frente da cabeça, da testa ao queixo) que a câmera vê, olhando para ela, não pode
@@ -27,10 +29,14 @@ function passaroEmBolinhas(plano: PlanoBoneco): Array<{ c: V3; r: number }> {
   for (const p of plano.pecas as Peca[]) {
     const s = p.subjunta;
     if (!s || !s.nome.startsWith('passaro')) continue;
-    // (as asinhas estão num nó dentro do corpo)
-    const local: V3 = s.nome === 'passaro' ? p.pos : [s.pivo[0] + p.pos[0], s.pivo[1] + p.pos[1], s.pivo[2] + p.pos[2]];
-    const r = p.forma === 'esfera' ? Math.max(...p.tamanho) : Math.max(p.tamanho[0], p.tamanho[1]) / 2;
-    bolinhas.push({ c: noCorpo(local), r });
+    // (as asinhas estão num nó dentro do corpo e batem em volta dele: a bolinha delas é a volta
+    // inteira que a asa faz em torno do pivô)
+    const asa = s.nome !== 'passaro';
+    const local: V3 = asa ? s.pivo : p.pos;
+    const tam = p.forma === 'esfera' ? Math.max(...p.tamanho) : Math.max(p.tamanho[0], p.tamanho[1]) / 2;
+    const r = asa ? Math.hypot(...p.pos) + tam : tam;
+    // (+0,04: o sobe e desce e o balanço do voo)
+    bolinhas.push({ c: noCorpo(local), r: r + 0.04 });
   }
   return bolinhas;
 }

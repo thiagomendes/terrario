@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { aparenciaPadrao, type Aparencia, type PremiumVestido } from '../../src/personagem/aparencia';
 import { planoBoneco } from '../../src/personagem/boneco';
 import { oQueSai } from '../../src/personagem/tesouroEFantasia';
+import { girar } from '../../src/personagem/bonecoPremium';
 import { bracoDoTesouro } from '../../src/render/boneco';
 
 /**
@@ -52,6 +53,52 @@ describe('036 T03: os tesouros novos no boneco', () => {
     for (const id of ['realeza-flores', 'realeza-mar', 'realeza-neve'])
       expect(oQueSai(com(id), {}, { premium: 'bone-helice' }).length, id).toBeGreaterThan(0);
     for (const id of ['roqueira-palco', 'danca-neon']) expect(oQueSai(com(id), {}, { premium: 'bone-helice' }), id).toEqual([]);
+  });
+
+  it('as asas de borboleta não encostam na cabeça nem no cabelo, batendo, em nenhum penteado', () => {
+    const tocam: string[] = [];
+    for (const corpo of ['feminino', 'masculino'] as const)
+      for (let cabeloEstilo = 0; cabeloEstilo < 9; cabeloEstilo++) {
+        const pl = plano({ corpo, cabeloEstilo }, { costas: 'asas-borboleta' });
+        const jc = pl.juntas.cabeca.pos;
+        // a cabeça e o cabelo em caixas (no espaço do tronco, um tico de folga)
+        const caixas = pl.pecas
+          .filter((p) => p.junta === 'cabeca' && p.forma !== 'placa' && !p.subjunta)
+          .map((p) => {
+            const h: [number, number, number] =
+              p.forma === 'caixa'
+                ? [p.tamanho[0] / 2, p.tamanho[1] / 2, p.tamanho[2] / 2]
+                : p.forma === 'cilindro'
+                  ? [p.tamanho[1], p.tamanho[0] / 2, p.tamanho[1]]
+                  : [p.tamanho[0], p.tamanho[1], p.tamanho[2]];
+            const c = [jc[0] + p.pos[0], jc[1] + p.pos[1], jc[2] + p.pos[2]];
+            return { nome: p.nome, min: c.map((v, i) => v - h[i] - 0.01), max: c.map((v, i) => v + h[i] + 0.01) };
+          });
+        for (const a of [0.1, 0.35, 0.6])
+          for (const p of pl.pecas.filter((q) => q.subjunta?.nome === 'borbE' || q.subjunta?.nome === 'borbD')) {
+            const s = p.subjunta!.nome === 'borbD' ? 1 : -1;
+            const pts: Array<[number, number, number]> = p.perfil
+              ? p.perfil.map(([x, y]) => [x + p.pos[0], y + p.pos[1], p.pos[2]] as [number, number, number])
+              : [[p.pos[0], p.pos[1] + p.tamanho[1], p.pos[2]]];
+            for (const q of pts) {
+              const g = girar(q, [0, s * a, s * 0.08]);
+              const w = [g[0] + p.subjunta!.pivo[0], g[1] + p.subjunta!.pivo[1], g[2] + p.subjunta!.pivo[2]];
+              const c = caixas.find((b) => w.every((v, i) => v > b.min[i] && v < b.max[i]));
+              if (c) {
+                tocam.push(`${corpo} cabelo ${cabeloEstilo}: ${p.nome} em ${c.nome}`);
+                break;
+              }
+            }
+          }
+      }
+    expect([...new Set(tocam)]).toEqual([]);
+  });
+
+  it('a mochila-foguete não tem a aleta do meio debaixo da janelinha (lia como nariz)', () => {
+    const aletas = plano({}, { costas: 'mochila-foguete' }).pecas.filter((p) => p.nome.startsWith('foguete-aleta'));
+    expect(aletas).toHaveLength(2);
+    // as duas ficam dos lados, nunca no meio das costas do foguete
+    for (const a of aletas) expect(Math.abs(a.pos[0])).toBeGreaterThan(0.1);
   });
 
   it('o pijama troca os sapatos pelas pantufas de nuvem', () => {

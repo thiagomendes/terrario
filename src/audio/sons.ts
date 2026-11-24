@@ -61,7 +61,16 @@ export type EventoSom =
   | 'mordida'
   | 'crocante'
   | 'gole'
-  | 'fofo';
+  | 'fofo'
+  /**
+   * Spec 036 (T04): o som de cada brinquedo de andar ao montar (o puf vem junto): o "zum" das
+   * rodinhas do patinete, a buzininha fofa do carrinho, a campainha da bicicletinha e o "fuf" da
+   * nuvem.
+   */
+  | 'zum'
+  | 'buzininha'
+  | 'campainha'
+  | 'fuf';
 
 export const EVENTOS_SOM: readonly EventoSom[] = [
   'golpe',
@@ -106,6 +115,10 @@ export const EVENTOS_SOM: readonly EventoSom[] = [
   'crocante',
   'gole',
   'fofo',
+  'zum',
+  'buzininha',
+  'campainha',
+  'fuf',
 ];
 
 export const VARIACOES_POR_EVENTO = 4;
@@ -201,6 +214,11 @@ const BASE_EVENTO: Record<EventoSom, BaseEvento> = {
   crocante: { ganho: 0.3, duracao: 0.24, ruido: 0.85, escalaTom: 1, grupoAudio: 'efeitos' },
   gole: { ganho: 0.26, duracao: 0.34, ruido: 0.7, escalaTom: 1, grupoAudio: 'efeitos' },
   fofo: { ganho: 0.22, duracao: 0.26, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
+  // spec 036 (T04): os brinquedos de andar ao montar (curtos e macios, abaixo do golpe de bloco)
+  zum: { ganho: 0.18, duracao: 0.4, ruido: 0.5, escalaTom: 1, grupoAudio: 'efeitos' },
+  buzininha: { ganho: 0.14, duracao: 0.36, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  campainha: { ganho: 0.12, duracao: 0.7, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  fuf: { ganho: 0.2, duracao: 0.4, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
 };
 
 const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
@@ -240,6 +258,10 @@ const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
   crocante: { frequencia: 520, filtroHz: 3200 },
   gole: { frequencia: 380, filtroHz: 900 },
   fofo: { frequencia: 660, filtroHz: 1400 },
+  zum: { frequencia: 330, filtroHz: 1600 },
+  buzininha: { frequencia: 523.25, filtroHz: 2400 },
+  campainha: { frequencia: 1318.5, filtroHz: 6000 },
+  fuf: { frequencia: 300, filtroHz: 900 },
 };
 
 export const AMPLITUDE_TOM = 0.12;
@@ -958,6 +980,33 @@ function desenharNovo(
       pecas.push(ruido(ctx, out, t0, 'lowpass', par.filtroHz, 0.7, 0.6, 0.18, 0.06));
       pecas.push(tom(ctx, out, t0 + 0.08, 'sine', f * 1.5, f * 1.5, 0.08, 0.16, 0.02));
       break;
+    case 'zum':
+      // spec 036: o patinete parte: as rodinhas rolando (um chiado que sobe e passa) e um tom que
+      // sobe junto, macio
+      pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 1.4, 0.4, 0.36, 0.08));
+      pecas.push(tom(ctx, out, t0, 'triangle', f, f * 1.6, 0.25, 0.32, 0.06));
+      break;
+    case 'buzininha':
+      // o carrinho de pedal: "fon-fon" de buzininha de brinquedo (duas notas curtas e redondas)
+      for (const at of [0, 0.17]) {
+        pecas.push(tom(ctx, out, t0 + at, 'triangle', f, f, 0.45, 0.13, 0.01));
+        pecas.push(tom(ctx, out, t0 + at, 'sine', f * 1.5, f * 1.5, 0.15, 0.12, 0.01));
+      }
+      break;
+    case 'campainha':
+      // a bicicletinha: "trim-trim" de campainha (dois toquinhos de sino)
+      for (const at of [0, 0.14])
+        for (const [mult, vol] of [
+          [1, 0.45],
+          [2.4, 0.12],
+        ] as const)
+          pecas.push(tom(ctx, out, t0 + at, 'sine', f * mult, f * mult, vol, 0.5 / mult ** 0.3, 0.003));
+      break;
+    case 'fuf':
+      // a nuvem fofa: um sopro macio de almofada e um tiquinho de brilho por cima
+      pecas.push(ruido(ctx, out, t0, 'lowpass', par.filtroHz, 0.7, 0.65, 0.34, 0.05));
+      pecas.push(tom(ctx, out, t0 + 0.1, 'sine', f * 3, f * 3.4, 0.06, 0.22, 0.03));
+      break;
     default:
       pecas.push(tom(ctx, out, t0, 'sine', f, f, 0.3, 0.05));
   }
@@ -1015,6 +1064,11 @@ export const SONS_NOVOS_019: readonly EventoSom[] = [
   'plim',
   'nivel',
   'vitrine',
+  // (spec 036: os brinquedos de andar ao montar, pelo mesmo caminho)
+  'zum',
+  'buzininha',
+  'campainha',
+  'fuf',
 ];
 
 let observador: ((evento: EventoSom) => void) | null = null;

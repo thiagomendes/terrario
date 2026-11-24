@@ -27,6 +27,7 @@ import type { MedidasBoneco } from './bonecoFantasia';
 import { perfilEstrela, perfilFolha } from './bonecoFantasia';
 import { Pecas, misturarCor } from './bonecoPremium';
 import type { PremiumVestido } from './aparencia';
+import { vestirBrinquedoAndar } from './brinquedoAndar';
 
 type V3 = [number, number, number];
 type P2 = [number, number];
@@ -182,10 +183,14 @@ function asasBorboleta(P: Pecas, m: MedidasBoneco): void {
   const LILAS = '#b48cff';
   const ROSA = '#ff9fd2';
   const BORDA = '#7a4fd0';
-  const K = 1.4;
+  const K = 1.25;
+  // (T03, pedido do dono: no esboço a asa de cima subia atrás da cabeça e parecia atravessá-la.
+  // Agora saem das omoplatas, mais baixas, e ficam atrás da nuca e do cabelo comprido: nenhuma
+  // parte encosta na cabeça, de nenhum ângulo nem batendo, `tests/personagem/tesourosNoBoneco`)
+  const zAsa = -prof / 2 - ASAS_ATRAS;
   for (const s of [-1, 1]) {
     const nome: SubjuntaPremium = s < 0 ? 'borbE' : 'borbD';
-    const pivo: V3 = [s * 0.05, troncoH - 0.12, -prof / 2 - 0.03];
+    const pivo: V3 = [s * 0.04, troncoH * 0.5, zAsa];
     // (espelhada, a volta do contorno inverte: a da esquerda volta ao sentido de sempre)
     const espelhar = (pts: P2[]) => {
       const e = pts.map(([x, y]) => [x * s, y] as P2);
@@ -217,9 +222,12 @@ function asasBorboleta(P: Pecas, m: MedidasBoneco): void {
       for (const lado of [1, -1])
         P.bola(`borboleta-bolinha${s}${bx}${lado}`, 'tronco', undefined, r * K, [s * bx * K, by * K, lado > 0 ? 0.016 : -0.028], cor, [1, 1, 0.3], sub(nome, pivo));
   }
-  // o corpinho no meio das costas, onde as asas se prendem
-  P.caixa('borboleta-corpo', 'tronco', 'tronco', [0.08, 0.3, 0.06], [0, troncoH - 0.2, -prof / 2 - 0.03], BORDA, 0.035);
+  // o corpinho da borboleta, onde as asas se prendem, e a hastezinha que o prende às costas
+  P.caixa('borboleta-corpo', 'tronco', 'tronco', [0.08, 0.3, 0.08], [0, troncoH * 0.5, zAsa], BORDA, 0.038);
+  P.caixa('borboleta-haste', 'tronco', 'tronco', [0.05, 0.05, ASAS_ATRAS], [0, troncoH * 0.55, -prof / 2 - ASAS_ATRAS / 2], BORDA, 0.02);
 }
+/** O quanto as asas de borboleta ficam atrás das costas (para longe da nuca e do cabelo). */
+const ASAS_ATRAS = 0.27;
 
 // ------------------------------------------------------------------ mochila-foguete
 function mochilaFoguete(P: Pecas, m: MedidasBoneco): void {
@@ -237,7 +245,9 @@ function mochilaFoguete(P: Pecas, m: MedidasBoneco): void {
   P.anel('foguete-aro', 'tronco', 'tronco', 0.13, 0.03, [0, y + 0.02, z - 0.13], '#c9cfe0', { rot: [Math.PI / 2, 0, 0], brilho: 0.45 });
   P.bola('foguete-janela', 'tronco', 'tronco', 0.055, [0, y + 0.02, z - 0.125], AZUL, [1, 1, 0.4], { brilho: 0.8 });
   P.bola('foguete-reflexo', 'tronco', 'tronco', 0.016, [-0.018, y + 0.04, z - 0.147], '#ffffff', [1, 1, 0.4], { brilho: 0.8 });
-  for (const a of [-Math.PI / 2, Math.PI / 2, Math.PI]) {
+  // (T03, pedido do dono: a aleta do meio, logo abaixo da janelinha, lia como nariz ou língua e o
+  // foguete virava um rosto. Ficaram duas, dos lados e um tico para trás)
+  for (const a of [-Math.PI / 2 - 0.45, Math.PI / 2 + 0.45]) {
     const x = Math.sin(a) * 0.14;
     const zz = z + Math.cos(a) * 0.14;
     P.placa(
@@ -392,8 +402,13 @@ function pipaLacinhos(P: Pecas): void {
 }
 
 // ------------------------------------------------------------------ passarinho de ombro
-/** Onde o passarinho mora: na ponta do ombro direito, no tronco (pivô dos pés e o giro). */
-export const OMBRO_PASSARINHO = { pivo: (troncoH: number): V3 => [0.45, troncoH - 0.03, -0.02], rot: [0, 0.5, -0.3] as V3 };
+/**
+ * Onde o passarinho voa (decisão do dono, 24 nov: "não consegue chegar no ombro por causa da
+ * cabeça; faz ele voando mesmo, próximo"): pertinho do ombro direito, um pouco acima e para fora,
+ * um tico para trás (de frente e de lado não tapa o rosto), virado para a frente e para fora e com
+ * o corpinho inclinado de quem voa. Preso ao tronco: anda, pula e vira junto com a criança.
+ */
+export const OMBRO_PASSARINHO = { pivo: (troncoH: number): V3 => [0.55, troncoH + 0.1, -0.1], rot: [0.18, 0.4, -0.12] as V3 };
 
 function passarinho(P: Pecas, m: MedidasBoneco): void {
   const AZUL = '#5cb8ff';
@@ -424,20 +439,21 @@ function passarinho(P: Pecas, m: MedidasBoneco): void {
   P.placa('passaro-pena1', j, undefined, perfilFolha(0.1 * k), 0.012, cab(0.01, 0.15, -0.01), AZUL_ESC, { rot: [-0.3, 0, -0.35], brilho: 0.45, ...corpo });
   P.placa('passaro-pena2', j, undefined, perfilFolha(0.08 * k), 0.012, cab(-0.025, 0.14, -0.02), AZUL_ESC, { rot: [-0.3, 0, 0.35], brilho: 0.45, ...corpo });
   bola('rabo', 0.08, V(0, 0.1, -0.18), AZUL_ESC, [0.75, 0.25, 1.4], { rot: [0.45, 0, 0] });
-  for (const s of [-1, 1]) bola(`pe${s}`, 0.022, V(s * 0.05, 0, 0.03), LARANJA, [1, 0.5, 1.6]);
-  // as asinhas, cada uma num nó (batem de vez em quando)
+  // (voando, os pezinhos recolhidos para trás)
+  for (const s of [-1, 1]) bola(`pe${s}`, 0.022, V(s * 0.045, 0.02, -0.03), LARANJA, [1, 0.5, 1.4], { rot: [0.6, 0, 0] });
+  // as asinhas, cada uma num nó: abertas para os lados, batendo (a animação em render/boneco.ts)
   for (const [nome, s] of [
     ['passaroAsaE', -1],
     ['passaroAsaD', 1],
   ] as const)
-    P.bola(`passaro-asa${s}`, j, undefined, 0.1 * k, V(s * 0.015, -0.05, -0.02), AZUL_ESC, [0.32, 0.75, 1.1], {
+    P.bola(`passaro-asa${s}`, j, undefined, 0.12 * k, V(s * 0.01, -0.07, -0.02), AZUL_ESC, [0.3, 0.9, 1.1], {
       brilho: 0.45,
-      ...sub(nome, V(s * 0.13, 0.17, -0.01), { pai: 'passaro' }),
+      ...sub(nome, V(s * 0.12, 0.18, -0.01), { pai: 'passaro' }),
     });
 }
 
 // ------------------------------------------------------------------ vestir
-/** Os tesouros novos da 036 no plano (os de andar ficam para a T05). */
+/** Os tesouros novos da 036 no plano (os de andar, provisórios, em `brinquedoAndar.ts`). */
 export function vestirPremiumLojinha(premium: PremiumVestido, lista: Peca[], m: MedidasBoneco): void {
   const antes = new Set(lista);
   vestirTesouros(premium, lista, m);
@@ -464,4 +480,6 @@ function vestirTesouros(premium: PremiumVestido, lista: Peca[], m: MedidasBoneco
   if (premium.mao === 'guarda-chuva-gotinhas') guardaChuva(P);
   if (premium.mao === 'pipa-lacinhos') pipaLacinhos(P);
   if (premium.bicho === 'passarinho-ombro') passarinho(P, m);
+  // T04: o brinquedo de andar (provisório; os modelos de verdade são da T05, no mesmo lugar)
+  if (premium.andar) vestirBrinquedoAndar(premium.andar, lista);
 }

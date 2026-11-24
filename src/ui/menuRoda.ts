@@ -82,6 +82,11 @@ export interface ExtraRoda {
   visivel?(): boolean;
   /** Escolher não abre tela nenhuma (o mouse volta para a câmera). */
   semTela?: true;
+  /**
+   * Spec 036 (T04): à vista, a roda abre com este item no meio (montar e descer em 2 toques:
+   * abrir a roda e tocar no meio). Entre vários, vale o de número maior.
+   */
+  inicio?: number;
 }
 export const EXTRAS_RODA: ExtraRoda[] = [];
 
@@ -253,7 +258,15 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
         ...extras.map((x) => ({ id: x.id, nome: x.nome, icone: x.icone, tecla: undefined })),
       );
     }
-    l = { itens: itensRoda, manter: (id) => id === 'gestos', aoEscolher: escolherDoMenu };
+    const inicio = extras
+      .filter((x) => x.inicio !== undefined)
+      .reduce<ExtraRoda | null>((a, x) => (!a || x.inicio! > a.inicio! ? x : a), null);
+    l = {
+      itens: itensRoda,
+      manter: (id) => id === 'gestos',
+      aoEscolher: escolherDoMenu,
+      inicio: inicio?.id,
+    };
     listasMenu.set(chave, l);
     return l;
   }

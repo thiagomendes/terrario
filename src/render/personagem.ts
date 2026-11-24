@@ -20,6 +20,13 @@ export const MAXIMO_MALHAS_PERSONAGEM = 12;
 export interface Personagem {
   raiz: TransformNode;
   aplicarAparencia(aparencia: Aparencia): void;
+  /**
+   * Spec 036 (T04): monta ou desce do brinquedo de andar já vestido, sem refazer o boneco (só
+   * acende o brinquedo e troca a pose). Sem brinquedo vestido, não faz nada.
+   */
+  definirMontado?(montado: boolean): void;
+  /** Spec 036 (T04): a criança está montada agora (no desenho)? */
+  montado?(): boolean;
   aplicarPose(pose: Pose, extras?: ExtrasPose): void;
   posicionar(x: number, y: number, z: number, yaw: number): void;
   definirVisivel(visivel: boolean): void;

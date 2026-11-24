@@ -178,7 +178,12 @@ export type SubjuntaPremium =
   | 'rabopipa'
   | 'passaro'
   | 'passaroAsaE'
-  | 'passaroAsaD';
+  | 'passaroAsaD'
+  /**
+   * Spec 036 (T04): o brinquedo de andar inteiro (na junta `prancha`). Montado uma vez quando o
+   * brinquedo é vestido; montar e descer só acendem e apagam este nó (o boneco não é refeito).
+   */
+  | 'brinquedo';
 
 export interface PlanoBoneco {
   juntas: Record<Junta, { pai: Junta | null; pos: [number, number, number] }>;

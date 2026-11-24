@@ -150,3 +150,47 @@ describe('spec 014: o capacete e o colete do canteiro passam no saneamento e no 
     expect(visto?.fantasia).toEqual({ id: 'colete-obra', cor: 3 });
   });
 });
+
+describe.each<Modo>(['local', 'nuvem'])('spec 036 (T04): montar e descer muito seguidos (%s)', (modo) => {
+  const aPe = { modelo: 'andarilho', premium: { andar: 'bicicletinha' } };
+  const montada = { ...aPe, montado: true };
+  /** A aparência que os amigos têm de `quem` depois de a janela fechar. */
+  function final(n: Nucleo, quem: string, ve: string): Record<string, unknown> | undefined {
+    let a: Record<string, unknown> | undefined;
+    for (let i = 0; i < PASSOS_JANELA * 2 + 2; i++) a = passo(n, quem, ve) ?? a;
+    return a;
+  }
+
+  it('montou e desceu dentro da janela: fica a pé (a última)', () => {
+    const { n, quem, ve } = montar(modo);
+    n.comando(quem, { t: 'aparencia', aparencia: aPe });
+    expect(passo(n, quem, ve)?.montado).toBeUndefined();
+    n.comando(quem, { t: 'aparencia', aparencia: montada });
+    n.comando(quem, { t: 'aparencia', aparencia: aPe });
+    // a de agora já é a pé: nada sai
+    for (let i = 0; i < PASSOS_JANELA * 2; i++) expect(passo(n, quem, ve)).toBeUndefined();
+  });
+
+  it('montou, desceu e montou de novo: fica montada (a última), uma saída só', () => {
+    const { n, quem, ve } = montar(modo);
+    n.comando(quem, { t: 'aparencia', aparencia: aPe });
+    passo(n, quem, ve);
+    let saidas = 0;
+    for (const [i, a] of [montada, aPe, montada, aPe, montada].entries()) {
+      n.comando(quem, { t: 'aparencia', aparencia: a });
+      if (passo(n, quem, ve)) saidas++;
+      void i;
+    }
+    expect(saidas).toBeLessThanOrEqual(1);
+    const visto = final(n, quem, ve) ?? lerAparencia(n, quem);
+    expect(visto?.montado).toBe(true);
+    expect((visto?.premium as Record<string, unknown>)?.andar).toBe('bicicletinha');
+  });
+});
+
+/** A aparência inteira que o núcleo guarda de `quem`. */
+function lerAparencia(n: Nucleo, quem: string): Record<string, unknown> | undefined {
+  n.reiniciarQuadros(quem);
+  n.passo();
+  return [...n.quadros().values()][0]?.perfis?.[quem]?.aparencia;
+}

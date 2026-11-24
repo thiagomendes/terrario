@@ -61,6 +61,17 @@ export const podeMontar = (s: SituacaoMontar): boolean => motivoSemMontar(s) ===
 export const precisaDescer = (s: SituacaoMontar): boolean =>
   !!s.aparencia.montado && !podeMontar(s);
 
+/**
+ * A aparência passada a limpo em texto, sem o `montado` (quem desenha o amigo só refaz o boneco
+ * quando esta chave muda; o montado sozinho só acende o brinquedo e troca a pose).
+ */
+export function chaveSemMontado(a: Aparencia): { chave: string; montado: boolean } {
+  if (!a.montado) return { chave: JSON.stringify(a), montado: false };
+  const { montado: _m, ...resto } = a;
+  void _m;
+  return { chave: JSON.stringify(resto), montado: true };
+}
+
 /** O brinquedo de andar em que ela está montada agora, ou null. */
 export function brinquedoMontado(a: Pick<Aparencia, 'premium' | 'montado'>): string | null {
   return a.montado && a.premium?.andar ? a.premium.andar : null;

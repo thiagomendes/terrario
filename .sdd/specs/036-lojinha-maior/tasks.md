@@ -32,6 +32,7 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
 | T01 Catálogo, regras e rede | **pronta (24 nov)**. Os detalhes abaixo |
 | T02 O Unicórnio-pônei | **pronta (24 nov)**: a borda, o brilho e o tremor, cada um com a causa achada. Os detalhes abaixo |
 | T03 As peças no boneco e os efeitos | **pronta (24 nov)**: as 7 peças, o passarinho no ombro, os efeitos e as figuras. Os detalhes abaixo |
+| T04 Montar e descer | **pronta (24 nov)**, com um brinquedo provisório: a roda, comprar já monta, o puf e os sons, o descer sozinho, a mão guardada, os amigos sem refazer o boneco, a volta da queda. Os detalhes abaixo |
 
 ### T01 (24 nov 2026, `engenheiro-nucleo-rede`)
 - **O catálogo:** os 12 no `PREMIUM` (`src/jogo/alma.ts`), com os ids, preços e efeitos da spec; as categorias `andar`, `chapeu` e `mao` no fim de `CATEGORIAS_PREMIUM`. A vitrine já lista os 18, sem a figura dos novos até a T03 e sem as abas até a T06.
@@ -118,5 +119,24 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
   - a figura da pipa na lojinha não tem a linha (a linha é efeito do mundo; no estúdio da foto não há);
   - com várias peças ao mesmo tempo o boneco passa de 5 malhas a mais (as asas e a pipa têm nós próprios); vale conferir na T08;
   - as bolhas de noite ficam acinzentadas (seguem a luz do lugar, como o resto).
+
+### T04 (24 nov 2026, `desenvolvedor-jogo`)
+- **A roda** (`main.ts`, `ui/iconesAndar.ts`): um item por brinquedo **comprado** ("Andar de patinete", com o desenho dele), só quando ela pode montar nele e não está nele; montada, o "Descer". Sem brinquedo comprado, a roda não muda. Escolher um brinquedo que não está vestido veste pelo perfil (o caminho da lojinha) e já monta: trocar de brinquedo também é 2 toques.
+  - **2 toques de verdade:** a roleta abria sempre no Mapa, e o item de andar ficava a 3 ou 4 toques. A lista agora pode dizer o seu começo (`ListaRoda.inicio`, `ExtraRoda.inicio`): com brinquedo, a roda abre no brinquedo; montada, no "Descer". Depois, ela volta onde a criança deixou, como antes. Sem brinquedo, nada muda.
+- **Comprar ou vestir já monta** (`vestirPremiumNoBoneco` com festa): quando pode, com o puf e o som do brinquedo no lugar do brilho de vestir. Ao abrir o jogo, ela entra a pé.
+- **Montar e descer** (`cena.ts`, `montarNoBrinquedo` e `descerDoBrinquedo`): o puf (um anel de fumacinha clara nos pés, com brilhinhos ao montar) e os sons novos feitos em código (`sons.ts`): o "zum" do patinete, a buzininha do carrinho, a campainha da bicicletinha e o "fuf" da nuvem, todos abaixo do golpe de bloco; descer é o puf. Medido: **4 ms** do toque até o brinquedo aparecer (meta 500 ms).
+- **Não refaz o boneco:** o brinquedo entra no plano uma vez, quando vestido, no nó `brinquedo` da junta `prancha` (`personagem/brinquedoAndar.ts`), apagado; o `definirMontado` do `render/boneco.ts` só acende o nó e troca a pose. Nos amigos, o `outrosJogadores` guarda a chave da aparência sem o `montado`: montar e descer só chamam o `definirMontado` (e o puf, sem som).
+- **O descer sozinho:** a cada quadro, só com ela montada, o `precisaDescer` do `montar.ts`. Os brinquedos de tema registrados: o parque (carrossel, roda-gigante, bate-bate) e a casa (sofá e trilho). Na ação dela, antes do núcleo: o toque de sentar no parque, calçar os patins, pegar o skate e o toque no Bento (o abraço). O provador desce antes de vestir o look.
+- **O tesouro da mão:** montada, sai da aparência e fica guardado; ao descer volta o que o perfil diz que ela veste. Vestir outro tesouro da mão montada também fica guardado.
+- **A volta da queda:** depois do bem-vindo, a aparência de agora vai de novo (`cena.reenviarAparencia`, no `nuvem.ts`).
+- **O `INTERVALO_APARENCIA`:** conferido, fica com a última (montar e descer dentro da janela não sai nada; montar, descer e montar sai montada), nos dois modos (`tests/nucleo/aparencia-limite.test.ts`). Nada mudou no núcleo, na rede nem no servidor.
+- **Onde a T05 liga** (`personagem/brinquedoAndar.ts`): `vestirBrinquedoAndar` (os modelos, na `prancha`, no nó `brinquedo`; rodinhas e pedal em nós com `pai: 'brinquedo'`), `MONTARIA` (as medidas do esboço), `poseNoBrinquedo` (o impulso e o pedal) e, no `render/boneco.ts`, `animarBrinquedo` (vazio, chamado só montada).
+- **Os testes:** novos `tests/personagem/brinquedoAndar.test.ts`, `tests/render/montarBoneco.test.ts` (as mesmas malhas antes e depois de montar) e o caso 036 em `outrosJogadores.test.ts` e `aparencia-limite.test.ts`; `tests/render`, `tests/personagem`, `tests/audio`, `tests/ui`, `tests/rede` verdes. E2E `e2e/montar-036.spec.ts`: a Vila Neon no celular em pé (comprar já monta, a roda nos 2 toques, sem refazer, a mão guardada, o carrossel sem nenhum quadro montada e sentada, voar desce, recarregar entra a pé) e duas crianças no Rancho Alegre na nuvem (a Bia vê montar e descer sem o boneco ser refeito, e depois da queda da internet da Ana).
+- **As fotos:** `capturas-036/t04-montar/`.
+- **Ficou fraco:**
+  - os brinquedos são caixinhas provisórias (a T05);
+  - com um tesouro da mão, montar e descer refazem o boneco (o tesouro sai da aparência), aqui e nos amigos; sem ele, não. Medir na T08;
+  - o modo foto e o provador fazem descer (é a regra do `montar.ts`); vale o dono saber que a foto não pega a criança montada;
+  - o ícone do "Descer" é provisório, no estilo dos ícones da roda.
 
 Falta sempre, ao fim, a **rodada em família**.
