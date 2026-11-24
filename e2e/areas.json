@@ -369,16 +369,12 @@
         "src/personagem/montar.ts",
         "src/render/efeitosLojinha.ts",
         "src/render/seguirVoando.ts",
-        "src/ui/alma/lojaNovidades.ts",
-        "src/esboco/lojinha.ts",
-        "src/esboco/lojinhaBichos.ts",
-        "src/esboco/lojinhaPecas.ts"
+        "src/ui/alma/lojaNovidades.ts"
       ],
       "suites": [
         "alma.spec.ts",
         "capturas-036.spec.ts",
         "capturas-premium.spec.ts",
-        "esboco-lojinha.spec.ts",
         "lojinha.spec.ts",
         "meus-tesouros.spec.ts",
         "montar-036.spec.ts",

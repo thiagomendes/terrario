@@ -254,8 +254,6 @@ async function iniciar(app: HTMLElement): Promise<void> {
   if (esboco === 'amigos') (await import('./esboco/amigos')).prepararEsbocoAmigos();
   // esboço 014d (só com ?esboco=estetica): a estética firme dos veículos ao lado da de hoje
   if (esboco === 'estetica') (await import('./esboco/veiculosEstetica')).prepararEsbocoEstetica();
-  // esboço da spec 036 (só com ?esboco=lojinha): os candidatos a item novo da lojinha premium
-  if (esboco === 'lojinha') (await import('./esboco/lojinha')).prepararEsbocoLojinha();
   // spec 023 (T14): a lojinha premium na roda do menu, de qualquer mundo (a roda é montada
   // com a cena; a alma, que abre a lojinha, vem depois e ouve o pedido)
   // spec 030: o quadro de missões (só onde há missões) e o baú moram na roda do menu
