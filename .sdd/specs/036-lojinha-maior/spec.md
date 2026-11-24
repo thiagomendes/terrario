@@ -81,7 +81,7 @@ O dono também reclamou do **Unicórnio-pônei**: ele tem uma borda estranha, br
 - **Os ids:** `patinete-luz`, `carrinho-pedal`, `bicicletinha`, `nuvem-fofa`, `passarinho-ombro`, `bone-helice`, `pijama-nuvem`, `asas-borboleta`, `mochila-foguete`, `varinha-bolhas`, `guarda-chuva-gotinhas` e `pipa-lacinhos`. Nenhum colide com tipo de peça ou fantasia; depois de publicados, só mudam pelo `PREMIUM_RENOMEADOS`.
 - **Os brinquedos de andar são só enfeite:** a mesma velocidade, o mesmo pulo e o mesmo caminho de quem anda a pé. Num jogo com amigos, ninguém fica mais rápido por ter comprado. A nuvem flutua baixinho só no desenho; não atravessa água nem buraco.
 - **Montar e descer:**
-  - a roda ganha um item por brinquedo vestido ("Andar de patinete", com o desenho dele) e, montada, o "Descer"; sem brinquedo vestido, nada muda;
+  - a roda ganha um item por brinquedo comprado ("Andar de patinete", com o desenho dele; escolher um que não está vestido veste e monta, então trocar de brinquedo também leva 2 toques) e, montada, o "Descer"; a roda abre no brinquedo (ou no "Descer"); sem brinquedo comprado, nada muda;
   - comprar ou vestir um brinquedo de andar já monta a criança, quando pode montar;
   - montar e descer têm um puf e um som curto;
   - recarregar a página entra a pé, como os patins.
