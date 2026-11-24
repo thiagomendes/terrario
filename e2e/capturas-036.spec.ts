@@ -464,8 +464,10 @@ test('T05: cada brinquedo parado e andando, de três-quartos e de lado, de dia e
       await page.waitForTimeout(1800);
       // parado: a câmera de estúdio de três-quartos e de lado
       const c: Peca036 = { nome, quem: base, premium: {}, alvoY: 0.85, dist: 4.2, alt: 0.7 };
+      // (portão visual: o patinete de três-quartos pelo outro lado; do lado de sempre, um cacto
+      // do gramado ficava entre a câmera e ele)
       for (const [vista, giro] of [
-        ['parado-tres-quartos', 0.75],
+        ['parado-tres-quartos', nome === 'patinete' ? -0.75 : 0.75],
         ['parado-lado', Math.PI / 2],
       ] as const) {
         await estudioNaCrianca(page, O, c, giro);

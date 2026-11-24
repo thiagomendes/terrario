@@ -86,18 +86,22 @@ const FOTO_PREMIUM: Record<
   'camiseta-aquario': { recorte: 'corpo', giro: 0.36 },
   'tenis-cometa': { recorte: 'corpo', giro: 0.75 },
   'capa-estrelas': { recorte: 'corpo', giro: Math.PI - 1.05 },
-  dragao: { recorte: 'corpo', giro: 0.62 },
+  // (portão visual: as asas inteiras no quadro, sem o corte reto da borda)
+  dragao: { recorte: 'corpo', giro: 0.62, tudo: true },
   pinguim: { recorte: 'corpo', giro: 0.5, bicho: 'pinguim' },
   unicornio: { recorte: 'corpo', giro: 0.62, bicho: 'unicornio' },
   // spec 036: os tesouros novos no boneco da criança, cada um do lado em que aparece melhor (as
   // costas de quina por trás; o passarinho no ombro direito, de frente para ele; o guarda-chuva e
   // a pipa com o boneco inteiro, para o que fica no alto caber no quadro)
-  'passarinho-ombro': { recorte: 'busto', giro: -0.55 },
+  // (portão visual: o passarinho voa perto do ombro; o quadro pega ele inteiro)
+  'passarinho-ombro': { recorte: 'corpo', giro: -0.55, tudo: true },
   'bone-helice': { recorte: 'busto', giro: 0.5 },
   'pijama-nuvem': { recorte: 'corpo', giro: 0.36 },
-  'asas-borboleta': { recorte: 'corpo', giro: Math.PI - 0.75 },
+  'asas-borboleta': { recorte: 'corpo', giro: Math.PI - 0.75, tudo: true },
   'mochila-foguete': { recorte: 'corpo', giro: Math.PI - 1.1 },
-  'varinha-bolhas': { recorte: 'corpo', giro: 0.7, tudo: true },
+  // (portão visual: quase de frente, a mão da varinha fica ao lado do rosto, não na frente dele;
+  // as bolhas saindo do aro são desenhadas na foto, no `fotoBoneco.ts`)
+  'varinha-bolhas': { recorte: 'corpo', giro: 0.12, tudo: true },
   'guarda-chuva-gotinhas': { recorte: 'corpo', giro: 0.5, tudo: true },
   'pipa-lacinhos': { recorte: 'corpo', giro: Math.PI - 0.5, tudo: true },
 };

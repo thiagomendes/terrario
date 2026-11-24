@@ -298,24 +298,72 @@ test('Rancho Alegre na nuvem: a amiga vê montar e descer sem refazer o boneco, 
     null,
     { timeout: 90_000 },
   );
-  // a Ana na frente da Bia, um pouco de lado (o boneco da Bia não a tapa), de lado para a câmera
+  // portão visual: um pedaço plano e seco do Rancho perto da Bia (nada de barranco nem de água
+  // entre as duas), achado pelas alturas do chão de cada coluna
+  const plano = await bia.evaluate(() => {
+    const e = window.__brumaluz!;
+    const [px, , pz] = e.jogadorPes!();
+    const AGUA = 67;
+    const chao = (x: number, z: number) => {
+      for (let y = 110; y > 1; y--) {
+        const b = e.bloco!(x, y, z);
+        if (b) return b === AGUA ? -1 : y;
+      }
+      return -1;
+    };
+    // (o capim e as flores contam como um degrau: o pedaço vale com no máximo 1 bloco de
+    // diferença; o mais liso e mais perto ganha)
+    let melhor: [number, number, number] | null = null;
+    let nota = Infinity;
+    for (let dx = -60; dx <= 60; dx += 3)
+      for (let dz = -60; dz <= 60; dz += 3) {
+        const cx = Math.floor(px) + dx;
+        const cz = Math.floor(pz) + dz;
+        let min = Infinity;
+        let max = -Infinity;
+        for (let ix = -3; ix <= 3 && max - min <= 1; ix++)
+          for (let iz = -6; iz <= 4 && max - min <= 1; iz++) {
+            const h = chao(cx + ix, cz + iz);
+            if (h < 0) {
+              max = Infinity;
+              break;
+            }
+            min = Math.min(min, h);
+            max = Math.max(max, h);
+          }
+        if (max - min > 1) continue;
+        const n = (max - min) * 100 + Math.hypot(dx, dz);
+        if (n < nota) {
+          nota = n;
+          melhor = [cx + 0.5, max + 1, cz + 0.5];
+        }
+      }
+    return melhor;
+  });
+  expect(plano, 'um pedaço plano no Rancho').not.toBeNull();
+  // a Bia de um lado e a Ana à frente, um pouco à direita, de lado para a câmera: as duas no plano
   const olharAna = async () => {
-    const [x, y, z] = await bia.evaluate(() => window.__brumaluz!.jogadorPes!());
+    const [x, y, z] = plano!;
+    await bia.evaluate(
+      ([x, y, z]) => {
+        const e = window.__brumaluz!;
+        e.voar?.(false);
+        e.teleportar!(x - 1, z - 5, y + 0.2);
+        // (a câmera olha entre ela e a Ana: o boneco da Bia fica no meio, a Ana à direita)
+        e.apontar!(Math.atan2(1, 9), 0.28);
+      },
+      [x, y, z] as const,
+    );
     await ana.evaluate(
       ([x, y, z]) => {
         const e = window.__brumaluz!;
         e.voar?.(false);
-        e.teleportar!(x + 4, z + 5, y + 0.3);
+        e.teleportar!(x + 1.5, z + 1.5, y + 0.2);
         e.apontar!(-Math.PI / 2, 0.1);
       },
       [x, y, z] as const,
     );
-    // (a câmera da Bia olha entre ela e a Ana: o boneco da Bia fica no meio, a Ana à direita)
-    await bia.evaluate(() => {
-      window.__brumaluz!.voar?.(false);
-      window.__brumaluz!.apontar!(Math.atan2(1.2, 5), 0.25);
-    });
-    await bia.waitForTimeout(2000);
+    await bia.waitForTimeout(2200);
   };
   await ana.evaluate(() => {
     window.__brumaluz!.voar?.(false);
@@ -357,7 +405,11 @@ test('Rancho Alegre na nuvem: a amiga vê montar e descer sem refazer o boneco, 
     const v = (await anaNaBia(bia))!;
     expect(v.desenho).toBe(quer);
     expect(v.refeitos, 'o boneco da Ana não foi refeito na tela da Bia').toBe(visto0.refeitos);
-    if (!quer) await bia.screenshot({ path: `${PASTA}/12-bia-ve-ana-a-pe.png` });
+    if (!quer) {
+      await olharAna();
+      expect((await anaNaBia(bia))!.desenho).toBe(false);
+      await bia.screenshot({ path: `${PASTA}/12-bia-ve-ana-a-pe.png` });
+    }
   }
 
   // a internet da Ana cai e volta: a Bia continua vendo a Ana montada (a aparência de agora vai

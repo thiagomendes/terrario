@@ -216,6 +216,40 @@ for (const t of TAMANHOS) {
       await expect(page.locator('.alma-lcard[data-premium="bone-helice"] [data-alma-novo]')).toHaveCount(0);
       await expect(page.locator('[data-alma-aba="chapeu"] [data-alma-novo]')).toHaveCount(0);
 
+      // portão visual (036): abrir o detalhe de qualquer aba não faz a tela escorregar (em pé
+      // a vitrine inteira rolava para a esquerda e para cima): nada rola, e o X e as abas ficam
+      // dentro da tela
+      const parada = () =>
+        page.evaluate(() => {
+          const r = (el: Element | null) => {
+            const c = el?.getBoundingClientRect();
+            return c ? [c.left, c.top, c.right, c.bottom] : null;
+          };
+          const loja = document.querySelector('[data-alma-loja]')!;
+          return {
+            rolou: [scrollX, scrollY, loja.scrollLeft, loja.scrollTop, document.documentElement.scrollTop],
+            fechar: r(document.querySelector('[data-alma-detalhe] .caixa > [data-alma-fechar]')),
+            abas: [...document.querySelectorAll('[data-alma-aba]')].map(r),
+            w: innerWidth,
+            h: innerHeight,
+          };
+        });
+      const dentro = (c: number[] | null, w: number, h: number) =>
+        !!c && c[0] >= -0.5 && c[1] >= -0.5 && c[2] <= w + 0.5 && c[3] <= h + 0.5;
+      for (const aba of Object.keys(POR_ABA)) {
+        await tocar(`[data-alma-aba="${aba}"]`);
+        await tocar(`[data-alma-prateleira][data-aba="${aba}"] .alma-lcard >> nth=-1`);
+        await expect(page.locator('[data-alma-detalhe] .caixa')).toBeVisible();
+        await page.waitForTimeout(450);
+        const m = await parada();
+        expect(m.rolou, `a aba ${aba}: nada rolou`).toEqual([0, 0, 0, 0, 0]);
+        expect(dentro(m.fechar, m.w, m.h), `a aba ${aba}: o X dentro da tela`).toBe(true);
+        for (const a of m.abas) expect(dentro(a, m.w, m.h), `a aba ${aba}: as abas dentro da tela`).toBe(true);
+        await figurasProntas(page, '[data-alma-detalhe]');
+        await foto(`loja-2d-detalhe-${aba}`);
+        await tocar('[data-alma-detalhe] .caixa > [data-alma-fechar]');
+      }
+
       // spec 036: o provador do brinquedo de andar, montada (só na tela dela)
       await tocar('[data-alma-aba="andar"]');
       await tocar('.alma-lcard[data-premium="bicicletinha"]');
