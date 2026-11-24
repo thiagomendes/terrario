@@ -121,6 +121,11 @@ describe('036: o "pode montar"', () => {
     expect(precisaDescer(situacao({ aparencia: montada }))).toBe(false);
     expect(precisaDescer(situacao({ aparencia: montada, brinquedos: ['roda-gigante'] }))).toBe(true);
     expect(precisaDescer(situacao({ aparencia: montada, nadando: true }))).toBe(true);
+    // o modo foto não faz descer (a foto em cima do brinquedo); só não deixa montar
+    expect(precisaDescer(situacao({ aparencia: montada, modoFoto: true }))).toBe(false);
+    expect(podeMontar(situacao({ modoFoto: true }))).toBe(false);
+    // com outro motivo junto, desce
+    expect(precisaDescer(situacao({ aparencia: montada, modoFoto: true, voando: true }))).toBe(true);
     expect(precisaDescer(situacao({ brinquedos: ['roda-gigante'] }))).toBe(false);
     expect(brinquedoMontado(montada)).toBe('bicicletinha');
     expect(brinquedoMontado(comBrinquedo())).toBeNull();

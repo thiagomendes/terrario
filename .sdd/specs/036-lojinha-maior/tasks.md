@@ -136,7 +136,7 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
 - **Ficou fraco:**
   - os brinquedos são caixinhas provisórias (a T05);
   - com um tesouro da mão, montar e descer refazem o boneco (o tesouro sai da aparência), aqui e nos amigos; sem ele, não. Medir na T08;
-  - o modo foto e o provador fazem descer (é a regra do `montar.ts`); vale o dono saber que a foto não pega a criança montada;
+  - o provador faz descer (o provador montado é da T06); **o modo foto não faz descer** (orquestrador, 24 nov: a foto em cima do brinquedo), só impede montar enquanto está aberto (`precisaDescer`, corrigido depois da T04);
   - o ícone do "Descer" é provisório, no estilo dos ícones da roda.
 
 Falta sempre, ao fim, a **rodada em família**.

@@ -7,7 +7,7 @@
  * Pode montar quem está a pé: com um brinquedo de andar vestido, sem patins nem skate, fora de
  * todo brinquedo de tema (sentada, guiando, no trilho, no sofá: cada um se registra em
  * `criarBrinquedosDeTema`), fora da casa por dentro, sem nadar, sem voar, sem estar desmaiada, e
- * fora do provador e do modo foto. Os brinquedos de andar são só enfeite: montar não muda a
+ * fora do provador e do modo foto (montada, o modo foto não a faz descer). Os brinquedos de andar são só enfeite: montar não muda a
  * velocidade, o pulo nem o caminho, então esta regra é só do cliente (o núcleo não a confere).
  */
 import type { Aparencia } from './aparencia';
@@ -57,9 +57,16 @@ export function motivoSemMontar(s: SituacaoMontar): MotivoSemMontar | null {
 /** A criança pode montar (ou continuar montada) agora? */
 export const podeMontar = (s: SituacaoMontar): boolean => motivoSemMontar(s) === null;
 
-/** Montada e não pode mais: desce sozinha (na ação dela, antes de o núcleo responder). */
-export const precisaDescer = (s: SituacaoMontar): boolean =>
-  !!s.aparencia.montado && !podeMontar(s);
+/**
+ * Montada e não pode mais: desce sozinha (na ação dela, antes de o núcleo responder). O modo foto
+ * não faz descer (orquestrador, 24 nov 2026: a criança quer a foto em cima do brinquedo); ele só
+ * impede montar de novo enquanto está aberto.
+ */
+export function precisaDescer(s: SituacaoMontar): boolean {
+  if (!s.aparencia.montado) return false;
+  const m = motivoSemMontar(s);
+  return m !== null && m !== 'foto';
+}
 
 /**
  * A aparência passada a limpo em texto, sem o `montado` (quem desenha o amigo só refaz o boneco
