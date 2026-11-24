@@ -164,7 +164,8 @@ function pijamaNuvem(P: Pecas, m: MedidasBoneco): void {
     P.placa(`pijama-botao${y}`, 'tronco', 'tronco', perfilEstrela(0.03), 0.012, [0, troncoH * y * 2.1, frente + 0.006], '#ffd84a', {
       rot: [0, 0, 0.2],
     });
-  // as nuvenzinhas brancas: no peito, nas costas, nas mangas e nas pernas
+  // as nuvenzinhas brancas: no peito, nas costas e nas mangas (portão: a das pernas ficava
+  // espremida entre o calção e a barra, e de frente, à noite, lia como um retângulo cinza)
   const nuvemEm = (nome: string, junta: Junta, pos: V3, w: number, rotY = 0) =>
     P.placa(nome, junta, undefined, perfilNuvem(w), 0.014, pos, B, { rot: [0, rotY, 0] });
   nuvemEm('pijama-nuvem-peito', 'tronco', [larg * 0.23, troncoH * 0.62, frente + 0.004], 0.16);
@@ -173,7 +174,6 @@ function pijamaNuvem(P: Pecas, m: MedidasBoneco): void {
   for (const s of [-1, 1]) {
     const lado = s < 0 ? 'E' : 'D';
     nuvemEm(`pijama-nuvem-manga${lado}`, s < 0 ? 'bracoE' : 'bracoD', [s * 0.068, -0.1, 0], 0.09, (s * Math.PI) / 2);
-    nuvemEm(`pijama-nuvem-perna${lado}`, s < 0 ? 'pernaE' : 'pernaD', [0, -0.12, 0.095], 0.1);
   }
   // a barra da calça e as pantufas de nuvem (no lugar do sapato)
   P.tirar(/^perna[ED]-sapato$/);
