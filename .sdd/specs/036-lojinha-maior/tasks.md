@@ -28,7 +28,7 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
 | Parte | Estado |
 |---|---|
 | Esboço | o dono escolheu 10 em 23 nov e mais 2 em 24 nov (os 12 da spec) |
-| Spec | revisada pelo engenheiro de núcleo e rede em 24 nov (15 apontamentos, todos acolhidos: a compra fica no aparelho, a `VERSAO_REDE` fica em 18, as regras de cabeça e de mão, o `montado` na aparência, a chave à parte dos comprados); esperando o dono |
+| Spec | revisada pelo engenheiro de núcleo e rede em 24 nov (15 apontamentos, todos acolhidos: a compra fica no aparelho, a `VERSAO_REDE` fica em 18, as regras de cabeça e de mão, o `montado` na aparência, a chave à parte dos comprados); **aprovada pelo dono em 24 nov**, com as três regras recomendadas (brinquedos só enfeite, montada faz tudo menos o abraço, comprar já monta) |
 | Código | não começou |
 
 Falta sempre, ao fim, a **rodada em família**.

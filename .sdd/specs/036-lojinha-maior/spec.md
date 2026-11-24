@@ -1,7 +1,7 @@
 ---
 id: 036-lojinha-maior
 title: 'Lojinha maior: 12 itens novos, com brinquedos de andar, e o Unicórnio-pônei consertado'
-status: DRAFT
+status: APPROVED
 base_branch: main
 branch: feat/036-lojinha-maior
 created_at: 2026-11-24T14:00:00Z
