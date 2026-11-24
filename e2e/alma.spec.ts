@@ -517,6 +517,7 @@ test('laço da Cidade: c1 no ritmo de criança até o capacete, a festa da miss�
   });
   await page.evaluate((k) => window.__brumaluz!.selecionarSlot!(k), mao);
   let postos = 0;
+  let maquina = 0;
   let parar = async () => undefined as void;
   const obraTotal = (
     await page.evaluate(() =>
@@ -537,17 +538,30 @@ test('laço da Cidade: c1 no ritmo de criança até o capacete, a festa da miss�
       await page.keyboard.press('Escape');
       await page.waitForTimeout(300);
     }
-    if (await encherUm(page, lista)) {
+    // (o tempo do teste procurando de onde mirar e tirando a foto não é tempo da criança: sai da
+    // conta. Com a placa ocupada ele chegou a 0,9 min e levou a c1 a 3,2 min, 24 nov)
+    const a0 = Date.now();
+    const encheu = await encherUm(page, lista);
+    if (encheu) {
       postos++;
       // a bolinha do cartão andou (o núcleo mandou) e faz o plim
       if (postos === 5) await foto(page, 'laco-cidade-1-cartao-andando');
       if (postos === obraTotal - 3) parar = filmar(page, 'cidade');
-      await page.waitForTimeout(RITMO);
     }
+    maquina += Date.now() - a0;
+    if (encheu) await page.waitForTimeout(RITMO);
   }
+  // (para achar a causa quando a festa não vem: quantos blocos faltaram)
+  console.log(
+    `alma: c1 com ${postos} de ${obraTotal} blocos postos; faltam ${
+      (await page.evaluate(() => (window.__brumaluz!.fantasmasPerto?.() ?? []).filter((f) => f.canteiro === 1))).length
+    }`,
+  );
   await festa(page, 'missao', 'laco-cidade-2-festa-missao', false, '[data-alma-vestir]');
-  const minutos = (Date.now() - t0) / 60_000;
-  console.log(`alma: c1 em ${minutos.toFixed(1)} min (${postos} blocos, um a cada ${RITMO} ms)`);
+  const minutos = (Date.now() - t0 - maquina) / 60_000;
+  console.log(
+    `alma: c1 em ${minutos.toFixed(1)} min de criança (${postos} blocos, um a cada ${RITMO} ms; mais ${(maquina / 60_000).toFixed(1)} min do teste mirando)`,
+  );
   if (RITMO >= 6000) expect(minutos).toBeLessThan(3);
   // o nível 2 vem logo depois (na fila, sem sobrepor)
   await festa(page, 'nivel', 'laco-cidade-3-festa-nivel', false);
