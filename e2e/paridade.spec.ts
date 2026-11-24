@@ -1042,14 +1042,20 @@ const SESSOES: Record<string, Sessao> = {
         await window.__par.esperar(1500);
       });
       etapas.chuvaVerao = await retrato(page, { hora: true });
-      // passa da meia-noite com o relógio parado: conta um dia
+      // passa da meia-noite com o relógio parado: conta um dia. O núcleo conta o dia quando um
+      // passo vê a hora de antes depois de 0,9 e a de agora antes de 0,1: espera o núcleo
+      // aplicar as 0,95 (um passo de 50 ms com elas) antes de mandar as 0,05. Com só três
+      // quadros de tela no meio, as duas horas às vezes caíam no mesmo passo e o dia não
+      // contava (dia 4 no lugar de 5; caiu na main em 23 nov).
       await page.evaluate(async () => {
         const e = window.__brumaluz!;
         e.definirClima!('tempestade');
         e.hora = 0.95;
         await window.__par.quadros(3);
+        await e.sincronizar!();
         e.hora = 0.05;
         await window.__par.quadros(3);
+        await e.sincronizar!();
       });
       etapas.meiaNoite = await retrato(page, { hora: true });
       // dorme à noite numa cama: amanhece no dia seguinte e o renascer vai para a cama
