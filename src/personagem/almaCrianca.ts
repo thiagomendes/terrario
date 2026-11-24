@@ -12,6 +12,7 @@ import {
   aplicarGanho,
   comprarPremium,
   descontar,
+  idPremiumBemFormado,
   nivelDoXp,
   normalizarPerfilAlma,
   perfilAlmaVazio,
@@ -42,7 +43,8 @@ function lerComprados(armazenamento: Armazenamento): string[] {
     const dado: unknown = JSON.parse(bruto);
     const ids = Array.isArray(dado) ? dado : (dado as { ids?: unknown } | null)?.ids;
     return Array.isArray(ids)
-      ? ids.filter((i): i is string => typeof i === 'string').slice(0, MAX_COMPRADOS)
+      ? // (só id bem formado: o lixo da chave não ocupa vaga no teto; revisão da T10)
+        ids.filter(idPremiumBemFormado).slice(0, MAX_COMPRADOS)
       : [];
   } catch {
     return [];
