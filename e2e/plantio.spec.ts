@@ -372,13 +372,18 @@ test('HUD do Rancho no celular: dicas, corações e avisos sem cobrir nada', asy
   await page.screenshot({ path: `${PASTA_CAPTURAS}/rancho-celular-coracoes.png` });
   expect(s3.ruins).toEqual([]);
 
-  // 4. as informações abertas: a missão da roça aparece sem cobrir o minimapa nem a mira
+  // 4. as informações abertas: nada se cobre. Desde a 023 o Rancho tem as missões da alma (o
+  // selinho e o quadro pela roda) e o cartão antigo do diário fica escondido mesmo com as
+  // informações abertas (`body.alma-missoes .missao-hud`, a mesma regra que o alma.spec.ts
+  // confere); o teste ainda esperava o cartão do diário e caía sempre.
   await page.locator('[data-hud-info]').tap();
-  await expect(page.locator('[data-missao-atual]')).toBeVisible();
+  await expect(page.locator('body')).toHaveClass(/hud-aberto/);
+  await expect(page.locator('body')).toHaveClass(/alma-missoes/);
   await page.waitForTimeout(400);
   const s4 = await sobreposicoes();
   await page.screenshot({ path: `${PASTA_CAPTURAS}/rancho-celular-missao.png` });
-  expect(s4.vistos).toContain('missao');
+  expect(s4.vistos).not.toContain('missao');
+  expect(s4.vistos).toEqual(expect.arrayContaining(['barra', 'status', 'joystick']));
   expect(s4.ruins).toEqual([]);
   expect(erros).toEqual([]);
   await ctx.close();
