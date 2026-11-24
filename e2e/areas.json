@@ -639,8 +639,14 @@
     {
       "suite": "premium-presentes.spec.ts",
       "titulo": "dois na nuvem: cada uma vê o premium",
-      "motivo": "defeito do jogo: quando a amiga veste a capa de estrelas, o pinguim e a camiseta, a tela de quem vê fica parada de 730 a 870 ms (o maior quadro, medido no teste) montando o boneco dela; com isso vê em 1,1 a 3,5 s, e o limite é 1 s (5 de 5 em 23 e 24 nov; o outro lado, 0,3 a 0,8 s)",
-      "nota": "provável compilação dos materiais na primeira vez; sai da quarentena com o conserto"
+      "motivo": "defeito do jogo: quando a amiga veste a capa de estrelas, o pinguim e a camiseta, a tela de quem vê fica parada de 730 a 870 ms (o maior quadro, medido no teste) montando o boneco dela; com isso vê em 1,1 a 3,5 s, e o limite é 1 s (5 de 5 em 23 e 24 nov; o outro lado, 0,3 a 0,8 s; na conferência da 036, 1016 ms com o maior quadro de 651 ms)",
+      "nota": "a causa (T08 da 036): o definirPerfis (src/render/outrosJogadores.ts) refaz no mesmo quadro o boneco de quem mudou; a segunda vez ainda custa uns 0,2 s por boneco com a CPU 4x, então não é só a compilação dos materiais. Sai da quarentena com o conserto"
+    },
+    {
+      "suite": "entrada-nuvem.spec.ts",
+      "titulo": "B2: nada se acerta",
+      "motivo": "instável com a placa ocupada, e falha igual na main: o recarregar depois da segunda ressincronização não vem em 40 s (1 de 1 na conferência da 036, num lote de 12 suítes; 1 de 2 na main ao lado do construcoes-protegidas; sozinho, 3 de 3 no ramo em 48 a 53 s)",
+      "nota": "conferir o medirTravamento (src/cliente/estado.ts) com o servidor de teste lento: os quadros adiantados e o TRAVADO_MS podem não fechar a conta"
     },
     {
       "suite": "lampioes-027.spec.ts",

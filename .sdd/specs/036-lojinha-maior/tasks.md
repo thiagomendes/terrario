@@ -38,6 +38,7 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
 | T07 Sons dos itens | **pronta (24 nov)**: as rodinhas, o pedal, a hélice, as bolhas, o foguete, as gotinhas e a pipa, feitos em código e mais baixos que os passos. Os detalhes abaixo |
 | T00 Medidas de antes | **feita (24 nov)**, na `main` 2ed1739. Os números estão junto com os da T08 |
 | T08 Desempenho | **medida (24 nov)**: os brinquedos sozinhos passam (-6% de quadros, +17 chamadas), montar passa (50 a 95 ms), a vitrine passa (cartões em 0,1 s). **Duas metas falham com os itens novos juntos** (-14% a -19% de quadros, +39 a +47 chamadas), como já falhavam os premium de hoje na `main` (-23%, +71). E há picos ao descer. As causas estão abaixo |
+| T09 Conferência por área | **feita (24 nov)**: nada voltou para trás por causa do ramo. Levou 79 min, mais 45 min conferindo contra a `main`. Uma suíte instável que também falha na `main` foi para a quarentena. Os detalhes abaixo |
 
 ### T01 (24 nov 2026, `engenheiro-nucleo-rede`)
 - **O catálogo:** os 12 no `PREMIUM` (`src/jogo/alma.ts`), com os ids, preços e efeitos da spec; as categorias `andar`, `chapeu` e `mao` no fim de `CATEGORIAS_PREMIUM`. A vitrine já lista os 18, sem a figura dos novos até a T03 e sem as abas até a T06.
@@ -258,5 +259,55 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
   - A trava não vem só da primeira compilação: a segunda vez ainda custa uns 0,2 s por boneco com a CPU 4×.
   - **A causa:** o `definirPerfis` (`src/render/outrosJogadores.ts`, perto da linha 209) refaz no mesmo quadro o boneco de todos os amigos que mudaram, com o `aplicarAparencia`.
   - **Na nuvem** chega um amigo por vez, e é o caso da quarentena (`premium-presentes`, de 730 a 870 ms sem desacelerar). Refazer um boneco por quadro, ou compilar os materiais antes, tiraria a trava. Fica na quarentena.
+
+### T09 (24 nov 2026, `testador`)
+- **O mapa das áreas** (`e2e/areas.json`) ganhou o que é da 036:
+  - na alma e lojinha: `bonecoPremiumLojinha`, `brinquedoAndar`, `montar`, `efeitosLojinha`, `seguirVoando`, `lojaNovidades` e o esboço (`src/esboco/lojinha*.ts`), com as suítes `montar-036`, `capturas-036` e `esboco-lojinha`;
+  - na roda: o `iconesAndar`;
+  - no som: o `somItens`;
+  - no desempenho: a suíte nova `desempenho-036`.
+- **Como rodou:** `node scripts/conferir.ts --base main --areas leiaute-interface`.
+  - A base é a `main` local: a `origin/main` está 18 commits atrás e só difere no `src/cliente/bate.ts`.
+  - O leiaute entrou à mão: o ramo não muda nenhum arquivo dele.
+  - O script pegou sozinho a alma e lojinha, a roda, a nuvem e amigos, o personagem, o núcleo e rede (`nuvem.ts`, `protocolo.ts`), a câmera e roleta (`roleta.ts`), o som e a paridade (`alma.ts`, `aparencia.ts`, `protocolo.ts`).
+  - Com `LOJA_PASTA=capturas-036/t06-vitrine`, as fotos da vitrine foram refeitas.
+- **Os tempos (na placa, 2 trabalhadores):**
+
+  | Parte | Tempo | Resultado |
+  |---|---|---|
+  | Vitest | 6 min 55 s | 2315 de 2316 |
+  | build | 10 s | ok |
+  | fumaça | 9 min 17 s | 26 de 26 |
+  | áreas (8 áreas e 54 suítes, em 5 lotes) | 51 min 57 s | 126 passaram, 1 falhou, 77 pulados (fotos e medidas que só rodam com variável) |
+  | paridade | 9 min 41 s | 36 de 36 |
+  | quarentena (não segura) | 41 s | 0 de 1 |
+  | **total** | **78 min 40 s** | |
+
+  Depois vieram mais uns 45 min conferindo as duas falhas: o `B2` sozinho e na `main`, e o Vitest de novo.
+- **O que falhou:**
+  - **Vitest, `tests/render/fila.test.ts`** ("gerarMalha de chunk editado... menos de 500 ms"):
+    - mediu 563 ms com a máquina cheia; sozinho, passou 3 de 3, e o Vitest inteiro de novo deu 2316 de 2316;
+    - o ramo não toca no teste nem no `fila.ts`, e o teste já usa o melhor de 3;
+    - é instável de tempo e já era assim antes. Não foi mexido;
+  - **`entrada-nuvem.spec.ts`, `B2: nada se acerta...`:** em 40 s o recarregar depois da segunda ressincronização não veio.
+    - Sozinho no ramo, passou 3 de 3 (48 a 53 s).
+    - Rodando ao lado do `construcoes-protegidas`, caiu do mesmo jeito na `main` (1 de 2), e no ramo passou 2 de 2.
+    - É instável com a placa ocupada e não vem do ramo. **Foi para a quarentena**, com a pista: o `medirTravamento` (`src/cliente/estado.ts`) com o servidor de teste lento.
+    - Uma tentativa de consertar no teste (contar as cargas desde a primeira) não se confirmou: a carga lida era 1 nas duas vezes. Ficou de fora.
+- **Também caíram, só nas rodadas com carga feitas à parte** (e passaram na conferência):
+  - no ramo, o `B, buraco` (a Ana não andou na tela dela) e o `C` (a sala não abriu em 60 s);
+  - na `main`, o `voltar para casa` do `construcoes-protegidas`.
+  - É o mesmo sinal: a nuvem nos testes fica frágil com a placa cheia. Não foram para a quarentena.
+- **A quarentena:** o `premium-presentes` continuou caindo, agora com 1016 ms e o maior quadro de 651 ms. O motivo dele ganhou a causa achada na T08.
+- **As fotos da vitrine refeitas** (`capturas-036/t06-vitrine/`, às 16h07 em pé e às 16h49 no computador e deitado, depois do conserto das mãos cd8d9cd):
+  - a aba de andar nas 3 telas e o provador montado;
+  - nas figuras, as mãos fecham no guidão do patinete e da bicicletinha, no volante do carrinho e nos bracinhos da nuvem;
+  - no provador montado em pé, as mãos ficam nas manoplas da bicicletinha.
+  - As fotos da T04 (`capturas-036/t04-montar/`) também saíram de novo, porque o `montar-036` rodou.
+- **O aperitivo de sons da T07:** está em `capturas-036/t07-sons/`, com o `indice.md`.
+  - `1-tesouros.wav` e `2-montar.wav` trazem os sons em sequência, no volume do jogo, com o passo de régua;
+  - há também um arquivo por som, no volume cheio;
+  - o `tocarSom` do jogo foi tocado num `OfflineAudioContext`.
+  - A hélice (0,06) e a pipa (0,09) ficam quase sumidas perto do passo (0,90): vale ouvir no aparelho.
 
 Falta sempre, ao fim, a **rodada em família**.
