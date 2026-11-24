@@ -69,10 +69,12 @@ describe('o mapa das áreas (e2e/areas.json)', () => {
   });
 
   it('cada item da fumaça e da quarentena pega pelo menos um teste (a lista do Playwright)', () => {
+    // com todas as telas: a quarentena pode ter um teste que só roda no --tudo (o deitado)
     const r = spawnSync('npx', ['playwright', 'test', '--list', '--reporter=json'], {
       cwd: RAIZ,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
+      env: { ...process.env, E2E_TELAS: 'todas' },
     });
     expect(r.status, r.stderr).toBe(0);
     type Suite = { title: string; specs?: { title: string }[]; suites?: Suite[] };

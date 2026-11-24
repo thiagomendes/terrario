@@ -586,5 +586,18 @@
     { "suite": "multiplayer.spec.ts", "titulo": "dois navegadores no mesmo mundo", "porque": "entrar na nuvem com um amigo" },
     { "suite": "fumaca-telas.spec.ts", "porque": "uma foto de leiaute por tela, conferindo o HUD" }
   ],
-  "quarentena": []
+  "quarentena": [
+    {
+      "suite": "noite-fantasias.spec.ts",
+      "titulo": "T20: n1 a n5 de ponta a ponta, com o dedo e moedinhas de verdade (deitado)",
+      "motivo": "a página deitada perde o contexto WebGL na ponte da placa do WSL (a placa inteira trava uns 2 min; T20, T22 e T23 da 027); só roda no --tudo (o fluxo é em pé)",
+      "nota": "conferir no aparelho"
+    },
+    {
+      "suite": "vila-missoes.spec.ts",
+      "titulo": "Vila Neon, deitado:",
+      "motivo": "a página deitada perde o contexto WebGL na ponte da placa do WSL (Unable to create VAO na T23 da 027); só roda no --tudo (o fluxo é em pé)",
+      "nota": "conferir no aparelho"
+    }
+  ]
 }
