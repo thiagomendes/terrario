@@ -1,7 +1,7 @@
 ---
 id: 037-construir-melhor
 title: 'Construir melhor: primeira pessoa num botão, bloco nunca em cima de ninguém e bloco só encostado'
-status: DRAFT
+status: REVIEW
 base_branch: main
 branch: feat/037-construir-melhor
 created_at: 2026-11-25T09:00:00Z
@@ -78,17 +78,32 @@ A investigação completa está em `referencia/investigacao-colocar.md` (engenhe
 - **Protocolo:** não muda, e a `VERSAO_REDE` continua 18. O servidor sai antes, porque o núcleo muda.
 
 ### 2. A primeira pessoa
-O detalhe vem do estudo do braço, a pedido do dono. Já está decidido:
+O esboço `?esboco=primeira-pessoa` foi aprovado pelo dono no celular em 25 nov ("a mira, o bracinho, os movimentos e a jogabilidade, acertamos"). A spec leva o esboço para o jogo de verdade, com estas medidas (estudos em `referencia/`):
 - **O olhinho:** fica na roda, como um item com o desenho do olho, e não na tela. A câmera entra pela cabeça em uns 0,7 s e sai do mesmo jeito.
+- **A câmera:**
+  - os olhos a 1,62 do chão, com a cabeça escondida;
+  - em pé, campo de 80° na vertical; deitado e no computador, 70°;
+  - ao entrar, o olhar vai para a frente, com o horizonte no terço de cima;
+  - não balança com a cabeça;
+  - o arrastar para olhar é o de hoje.
+- **O braço:**
+  - o do próprio boneco, no tamanho dele, sem dobrar e sem esticar;
+  - gira num ombro fixo fora da beira direita, no ponto que a conta dá para cada tela, sempre acima dos botões;
+  - usa os ângulos da terceira pessoa em escala;
+  - nunca mostra a ponta do ombro.
 - **A mão:**
   - vazia, aparece só para agir;
   - com item, segura numa mão só;
-  - o braço não tem articulação, segue a geometria do corpo e nunca mostra a ponta do ombro;
-  - sem balanço de lado; no passo, no máximo um sobe e desce leve, e uma mola discreta no pulo.
-- **Olhando para baixo:** o próprio corpo, a roupa, a fantasia e o brinquedo de andar ficam acima do joystick.
-- **A mira:** segue o toque ou o clique, como na terceira pessoa. O contorno fino aparece embaixo do dedo ou do ponteiro, sem borrar de perto.
+  - cada golpe do jogo tem um golpe de braço e cada colocação um empurrão, no mesmo sinal do som.
+- **Os itens na mão:** todos de frente, como a criança segura: o bloco de pé, a ferramenta com o cabo na mão e a ponta para a frente, a comida e a semente de pé. Acertos do teste do dono:
+  - alguns itens ficam deslocados da mão (a sacola flutuando acima dela): cada item encosta na mão;
+  - o ioiô e o pião aparecem;
+  - a ferramenta fica menos alta na tela.
+- **Voltar para a terceira pessoa:** o item da mão some da tela e volta para o boneco. No esboço ele ficava preso na tela, um defeito achado pelo dono.
+- **A mira:** segue o toque ou o clique, como na terceira pessoa, pela mesma conta. O contorno fino aparece embaixo do dedo ou do ponteiro.
 - **Guardar e voltar:** a escolha fica no aparelho. Ao comprar ou vestir na lojinha, volta para a terceira pessoa.
 - **A sombra:** a do boneco aparece no chão na primeira pessoa.
+- **O esboço sai do código** quando a spec for feita.
 
 ## Experiência medida (para não frustrar)
 - **Bloco onde a criança mira:** em 20 toques seguidos na mira, nenhum cai em outra célula.
