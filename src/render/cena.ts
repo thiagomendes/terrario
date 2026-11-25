@@ -397,6 +397,7 @@ import {
 import { quadroSomItens, type RelogiosSomItens } from '../audio/somItens';
 import type { Pose } from '../personagem/poses';
 import { criarPersonagem } from './personagem';
+import { criarBracoPrimeiraPessoa, criarNaoNaMao, type BracoPrimeiraPessoa } from './bracoPrimeiraPessoa';
 import { criarModoFoto } from './modoFoto';
 import { criarOutrosJogadores } from './outrosJogadores';
 // spec 015 (gestos): roda, previsão, comando e o que chega do núcleo
@@ -475,9 +476,8 @@ export interface GanchoPrimeiraPessoa {
   aparencia: () => Aparencia;
   naMao: () => { bloco: number | null; item: string | null; qtd?: number };
   gesto: () => string | null;
-  /** Quantos golpes e colocações houve (os eventos que tocam o som e animam o boneco). */
-  golpes: () => number;
-  colocacoes: () => number;
+  /** Spec 037 (T04): o braço, a mão e o item da primeira pessoa (`bracoPrimeiraPessoa.ts`). */
+  braco: () => import('./bracoPrimeiraPessoa').BracoPrimeiraPessoa;
   /** O esboço põe a câmera de dentro antes da mira do dedo, a cada quadro. */
   antesDaMira: ((dt: number) => void) | null;
   /** O esboço desenha a mão depois do boneco, a cada quadro. */
@@ -4078,12 +4078,33 @@ export function criarCena(
     estado.travarYaw = (y) => {
       yawTravado = y;
     };
+  // spec 037 (T04): o braço, a mão e o item da primeira pessoa. Criado na primeira vez que a câmera
+  // de dentro pede (a T03, e até lá o esboço, chama `quadro` a cada quadro com a fração da
+  // entrada). Cada golpe e cada colocação, os mesmos eventos que tocam o som, dão um movimento de
+  // braço; a recusa de colocar dá o "não" curtinho do item na mão, nas duas câmeras.
+  const contasAcao = { golpes: 0, colocacoes: 0 };
+  barramento.ouvir('golpe', () => contasAcao.golpes++);
+  barramento.ouvir('colocacao', () => contasAcao.colocacoes++);
+  let bracoPP: BracoPrimeiraPessoa | null = null;
+  function bracoPrimeiraPessoa(): BracoPrimeiraPessoa {
+    bracoPP ??= criarBracoPrimeiraPessoa({
+      scene,
+      camera: cameraVisao,
+      personagem,
+      golpes: () => contasAcao.golpes,
+      colocacoes: () => contasAcao.colocacoes,
+      bloco: (x, y, z) => blocoEm(x, y, z),
+    });
+    return bracoPP;
+  }
+  const naoNaMao = criarNaoNaMao(() => personagem.noDaMao());
+  barramento.ouvir('recusa', (d) => {
+    if (d.motivo !== 'colocar') return;
+    bracoPP?.nao();
+    naoNaMao.disparar();
+  });
   // esboço 037 (só com ?esboco=primeira-pessoa): as peças que o esboço usa
   if (new URLSearchParams(location.search).get('esboco') === 'primeira-pessoa') {
-    // (cada golpe e cada colocação, os mesmos eventos que tocam o som e animam o boneco)
-    const contas = { golpes: 0, colocacoes: 0 };
-    barramento.ouvir('golpe', () => contas.golpes++);
-    barramento.ouvir('colocacao', () => contas.colocacoes++);
     estado.primeiraPessoa = {
       scene,
       olhos: camera,
@@ -4102,8 +4123,7 @@ export function criarCena(
         return { bloco, item: !bloco && pilha ? pilha.item : null, qtd: pilha?.qtd };
       },
       gesto: () => gestoDoAnimador(animador),
-      golpes: () => contas.golpes,
-      colocacoes: () => contas.colocacoes,
+      braco: bracoPrimeiraPessoa,
       antesDaMira: null,
       quadro: null,
     };
@@ -4382,6 +4402,7 @@ export function criarCena(
     const alvoLuz = coberto ? (ey < 55 ? 0.22 : 0.55) : 1;
     luzJogador += (alvoLuz - luzJogador) * Math.min(1, dt * 3);
     personagem.definirLuz(luzJogador * (0.45 + 0.55 * luzDia));
+    bracoPP?.definirLuz(luzJogador * (0.45 + 0.55 * luzDia));
   }
   let tetoX = NaN;
   let tetoY = NaN;
@@ -5924,6 +5945,7 @@ export function criarCena(
     atualizarEfeitos(Math.min(dtBruto, 0.25));
     atualizarProvisorios(Math.min(dtBruto, 0.25));
     atualizarPersonagem(dtQuadro);
+    naoNaMao.atualizar(Math.min(dtBruto, 0.1));
     // esboço 037 (só com ?esboco=primeira-pessoa): a câmera de dentro e a mão
     estado.primeiraPessoa?.quadro?.(Math.min(dtBruto, 0.1));
     estado.fps = engine.getFps();
