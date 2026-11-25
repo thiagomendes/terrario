@@ -59,10 +59,22 @@ A investigação completa está em `referencia/investigacao-colocar.md` (engenhe
   - a célula da obra aberta e a do bolo, com o bloco certo, ficam liberadas: a planta é a regra, e o telhado da casinha não fecha de outro jeito. A mira prefere o fantasma apoiado;
   - o lote do criativo (colar, espelho, ferramentas de computador) fica sem a regra de apoio, mas com a regra de corpo para amigos e bichos;
   - os mundos salvos não são mexidos: os blocos que já estão no ar ficam.
-- **A folga do amigo:** a caixa do amigo cresce com a velocidade que ele mesmo informa, `0,3 + min(0,6; vel × 0,15)`. Parado, ele não ganha folga nenhuma, para a criança poder construir uma parede colada no amigo.
+- **A folga do amigo:**
+  - a caixa do amigo cresce com a velocidade horizontal que ele mesmo informa, `0,3 + min(0,6; vel × 0,15)`, igual para todos os lados;
+  - parado, ele não ganha folga nenhuma, para a criança poder construir uma parede colada nele;
+  - a folga diminui o problema, mas não acaba com ele: o pulo e a queda não entram, e ela cobre uns 140 ms andando. O que sobrar, o soltar tira.
+- **O cliente e o núcleo:** o cliente confere os corpos pelas posições do último retrato, não pelo boneco desenhado. Uma piscada rara (o cliente põe, o núcleo recusa) é aceita. O apoio dá igual nos dois lados.
+- **Corpos que contam:** criança, amigos, bichos do mundo (menos o que está morrendo), moradores e peixes. Os bichos premium que seguem a criança e os da festa ficam fora, no núcleo e na previsão, porque o núcleo nem sabe deles.
+- **A porta:** fechar uma porta ou porteira confere corpo, como o colocar. A planta da obra passa por cima da regra da porta (o fantasma enche meia porta por vez), mas não por cima da regra do corpo.
+- **A mira na obra:** o fantasma apoiado só desempata entre os que o ímã do dedo pega. Ele nunca passa na frente do fantasma tocado.
 - **A ordem da recusa:** a da proteção, com o cadeado e o motivo, vem antes da do corpo e do apoio.
 - **A recusa visível:** além do som de recusa que já existe, o bloco na mão faz um "não" curtinho, um balanço rápido. Nas duas câmeras.
-- **Soltar quem ficou preso:** fica na física do cliente. Quem começa um passo dentro de um sólido vai para o lugar livre mais perto: primeiro na mesma altura, a até 1 bloco; depois subindo, até 6 blocos, como os bichos. O `conectar` passa a nascer numa célula livre.
+- **Soltar quem ficou preso:**
+  - fica na física do cliente e vale só para bloco do mundo, não para os corpos macios;
+  - quem começa um passo dentro de um sólido vai para o lugar livre mais perto: primeiro na mesma altura, a até 1 bloco; depois subindo, até 6 blocos, como os bichos;
+  - também cobre o andaime da obra seguinte, que nasce em cima de quem estiver no lote;
+  - o `conectar` passa a nascer numa célula livre, procurando da altura salva para cima, nunca do fundo nem do topo;
+  - um teste da sala prova que o teleporte do servidor não desfaz o soltar.
 - **Uma regra só:** uma função pura nova (por exemplo, `src/jogo/construir.ts`) diz se o bloco pode entrar. Ela é a mesma no núcleo e na previsão do cliente, para nada piscar.
 
 ## O que muda
@@ -75,14 +87,15 @@ A investigação completa está em `referencia/investigacao-colocar.md` (engenhe
 - **Apoio:** pelo menos um dos 6 vizinhos é sólido, ou a célula está na última camada do mundo. A porta exige chão sólido embaixo. Valem as exceções da seção anterior.
 - **Soltar:** na física do cliente, e o `conectar` nasce em célula livre.
 - **A previsão do cliente:** usa a mesma função, e a mira mostra o fantasma apoiado.
-- **Protocolo:** não muda, e a `VERSAO_REDE` continua 18. O servidor sai antes, porque o núcleo muda.
+- **Protocolo:** não muda, e a recusa não ganha motivo novo. A `VERSAO_REDE` continua 18. O servidor sai antes, porque o núcleo muda. O site antigo com o servidor novo vê o bloco piscar, com o som; o site novo com o servidor antigo é mais restrito, sem estrago.
 
 ### 2. A primeira pessoa
 O esboço `?esboco=primeira-pessoa` foi aprovado pelo dono no celular em 25 nov ("a mira, o bracinho, os movimentos e a jogabilidade, acertamos"). A spec leva o esboço para o jogo de verdade, com estas medidas (estudos em `referencia/`):
 - **O olhinho:** fica na roda, como um item com o desenho do olho, e não na tela. A câmera entra pela cabeça em uns 0,7 s e sai do mesmo jeito.
 - **A câmera:**
-  - os olhos a 1,62 do chão, com a cabeça escondida;
-  - em pé, campo de 80° na vertical; deitado e no computador, 70°;
+  - os olhos a 1,62 do chão, com a cabeça escondida, sempre dentro da caixa do corpo (no máximo 0,2 à frente do centro) ou recuando quando há bloco à frente: encostada na parede, a câmera nunca entra no bloco e a criança quebra e põe na parede da frente (e2e);
+  - o raio do toque sai dos olhos do controle;
+  - o campo vertical é o maior entre o da configuração e o que dá 42° na horizontal: em pé fica perto de 80°, e deitado e no computador, o da configuração (70° por padrão). O dono aceitou, no teste de 25 nov, ver umas 16 lajotas à frente em pé, contra 20 antes;
   - ao entrar, o olhar vai para a frente, com o horizonte no terço de cima;
   - não balança com a cabeça;
   - o arrastar para olhar é o de hoje.
@@ -103,13 +116,28 @@ O esboço `?esboco=primeira-pessoa` foi aprovado pelo dono no celular em 25 nov 
 - **A mira:** segue o toque ou o clique, como na terceira pessoa, pela mesma conta. O contorno fino aparece embaixo do dedo ou do ponteiro.
 - **Guardar e voltar:** a escolha fica no aparelho. Ao comprar ou vestir na lojinha, volta para a terceira pessoa.
 - **A sombra:** a do boneco aparece no chão na primeira pessoa.
+- **Lugares com câmera própria:** neles a primeira pessoa sai sozinha e volta ao sair:
+  - o modo foto da roleta;
+  - a Casa anos 80 (telhado cortado);
+  - sentada num brinquedo do parque;
+  - montada (brinquedo de andar, patinete, skate, bicho);
+  - dormindo e desmaiada.
+
+  Cada um com teste.
+- **Desempenho da conta do ombro:**
+  - calculada fora do quadro e guardada por tamanho de tela;
+  - recalculada quando a tela gira ou os botões mudam de lugar;
+  - conferida por conta numa faixa de proporções de tela, não só em 3 telas;
+  - sem solução, a mão some em vez de mostrar a ponta do braço;
+  - nada de varrer a cena a cada quadro.
 - **O esboço sai do código** quando a spec for feita.
 
 ## Experiência medida (para não frustrar)
-- **Bloco onde a criança mira:** em 20 toques seguidos na mira, nenhum cai em outra célula.
-- **Ninguém preso:** em nenhum dos caminhos da investigação um amigo, bicho ou peixe fica preso ou morre. Quem já estava preso sai em menos de 1 s.
+- **Bloco onde a criança mira:** em 20 toques seguidos, nas duas câmeras e também na obra, nenhum cai em outra célula.
+- **Ninguém preso:** em nenhum dos caminhos da investigação (amigo andando, correndo e pulando; porta; lote; quem entra; andaime) alguém fica preso mais de 1 s, porque o soltar tira; e nenhum peixe morre.
 - **Entrar e sair da primeira pessoa:** em no máximo 0,8 s, sem quadro acima de 100 ms.
-- **Fluidez:** a primeira pessoa cai no máximo 5% de quadros por segundo em relação à terceira, e soma no máximo +3 chamadas de desenho com o braço.
+- **Fluidez:** a primeira pessoa cai no máximo 5% de quadros por segundo em relação à terceira, e soma no máximo +3 chamadas de desenho com o braço. Nem a entrada nem o giro da tela passam de 100 ms num quadro.
+- **Construir com bicho junto:** uma parede de 5 blocos com a raposa domada seguindo a criança, com no máximo 2 recusas.
 - **A mão no lugar:** a ponta do ombro nunca aparece na tela, nas 3 telas e em todas as poses (conferido por conta).
 
 ## Cuidados
