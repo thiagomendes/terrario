@@ -1,5 +1,9 @@
 # Esboço 037: a primeira pessoa (`?esboco=primeira-pessoa`)
 
+> A rodada mais nova, com as duas opções de braço (1 com articulação leve, 2 sem articulação),
+> está em `opcoes/`. Esta página é a da primeira rodada (as variantes A, B e C); os botões A, B e
+> C já saíram do esboço, e o e2e de hoje não refaz estas fotos.
+
 Celular em pé 390×844, de dia, na Vila Neon, e uma foto deitado 844×390. Saem de
 `e2e/esboco-primeira-pessoa.spec.ts` (`ESBOCO_PP=tudo`). O estudo que guiou o esboço está em
 `.sdd/specs/037-construir-melhor/referencia/estudo-primeira-pessoa.md`.

@@ -1,0 +1,14 @@
+{
+  "1": {
+    "quadros": 120,
+    "ladoPx": 0,
+    "sobeDescePx": 21,
+    "maiorTrancoPx": 3
+  },
+  "2": {
+    "quadros": 120,
+    "ladoPx": 6,
+    "sobeDescePx": 15,
+    "maiorTrancoPx": 2
+  }
+}

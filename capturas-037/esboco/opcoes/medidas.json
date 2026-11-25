@@ -1,0 +1,12 @@
+{
+  "custos": {
+    "1": {
+      "malhas": 12,
+      "triangulos": 2678
+    },
+    "2": {
+      "malhas": 10,
+      "triangulos": 1786
+    }
+  }
+}
