@@ -183,7 +183,108 @@ async function rodarVariante(p: Page, v: Variante, gravar: boolean, inicio: numb
   return custo;
 }
 
+/**
+ * A variante A refinada (dono, 24 nov): o braço menor e com cotovelo, sem balanço de lado, com
+ * mola; a mira de colocar (o contorno na célula e a conferência de que o bloco entra ali); a
+ * câmera solta de dentro (arrastar para olhar para os lados, para cima e para baixo).
+ *   ESBOCO_PP=a2
+ */
+test('esboço da primeira pessoa: a variante A refinada (A2)', async ({ browser }) => {
+  test.skip(MODO !== 'a2', 'só com ESBOCO_PP=a2');
+  const pasta = `${PASTA}/A2`;
+  mkdirSync(pasta, { recursive: true });
+  const { ctx, page: p } = await abrir(browser, 390, 844);
+  const f = (n: string) => p.screenshot({ path: `${pasta}/${n}.png` });
+  await prepararBarra(p);
+  await olhar(p, 0.6, 0.25);
+  await p.waitForTimeout(1200);
+  await comecarGravacao(p);
+  // entra pela cabeça
+  await p.waitForTimeout(500);
+  await p.click('[data-esb-olho]');
+  await p.waitForTimeout(1300);
+  // a câmera solta, de dentro: arrastar para os lados, para cima e para baixo (o controle de hoje)
+  const arrastar = async (dx: number, dy: number, passos: number) => {
+    await p.evaluate(() => window.__brumaluz!.controleDireto!.arrastar(true));
+    for (let i = 0; i < passos; i++) {
+      await p.evaluate(([x, y]) => window.__brumaluz!.controleDireto!.olhar(x, y), [dx, dy] as const);
+      await p.waitForTimeout(40);
+    }
+    await p.evaluate(() => window.__brumaluz!.controleDireto!.arrastar(false));
+  };
+  const r0 = await rot(p);
+  await arrastar(14, 0, 20);
+  const r1 = await rot(p);
+  await arrastar(-14, 0, 20);
+  await arrastar(0, -10, 18);
+  const r2 = await rot(p);
+  await f('A2-01-olhando-para-cima');
+  await arrastar(0, 10, 36);
+  const r3 = await rot(p);
+  await p.waitForTimeout(400);
+  await f('A2-02-olhando-para-baixo');
+  await arrastar(0, -10, 16);
+  console.log('câmera solta (pitch, yaw):', JSON.stringify({ r0, direita: r1, cima: r2, baixo: r3 }));
+  // anda de mão vazia (nada aparece), acena
+  await mover(p, 0.6);
+  await p.waitForTimeout(1000);
+  await mover(p, 0);
+  await p.evaluate(() => window.__brumaluz!.gestos!.fazer('acenar'));
+  await p.waitForTimeout(700);
+  await f('A2-03-acenando');
+  await p.waitForTimeout(1600);
+  // pega o bloco: o braço com cotovelo, baixo e de lado
+  await slot(p, 1);
+  await p.waitForTimeout(900);
+  await f('A2-04-segurando-bloco');
+  await mover(p, 0.6);
+  await p.waitForTimeout(900);
+  await mover(p, 0);
+  // pula e pousa (a mola do braço)
+  await p.evaluate(() => window.__brumaluz!.controleDireto!.tecla('pular', true));
+  await p.waitForTimeout(200);
+  await p.evaluate(() => window.__brumaluz!.controleDireto!.tecla('pular', false));
+  await p.waitForTimeout(1300);
+  // a mira: olha para o chão da frente, o contorno mostra onde o bloco vai entrar
+  await girar(p, 0, 0.5, 500);
+  await p.waitForTimeout(500);
+  await f('A2-05-mira-antes-do-toque');
+  for (let i = 0; i < 3; i++) {
+    const celula = await p.evaluate(() => window.__primeiraPessoa!.mira());
+    // toca no meio da tela (onde está o pontinho): o bloco tem que entrar na célula do contorno
+    await p.evaluate(() => {
+      const c = window.__brumaluz!.controleDireto!;
+      c.mirar(innerWidth / 2, innerHeight / 2);
+      c.tocar();
+      c.soltarMira();
+    });
+    await p.waitForTimeout(120);
+    if (i === 0) await f('A2-06-colocando');
+    await p.waitForTimeout(600);
+    const entrou = celula
+      ? await p.evaluate(([x, y, z]) => window.__brumaluz!.bloco!(x, y, z), celula)
+      : -1;
+    console.log(`mira ${i + 1}: célula ${JSON.stringify(celula)}, bloco lá agora: ${entrou}`);
+    await girar(p, 0.35, 0, 400);
+    await p.waitForTimeout(300);
+  }
+  await girar(p, 0, -0.5, 500);
+  // troca para a maçã e come
+  await slot(p, 3);
+  await p.waitForTimeout(900);
+  await p.evaluate(() => window.__brumaluz!.comer!());
+  await p.waitForTimeout(2600);
+  // gira e sai pela cabeça
+  await girar(p, 1.2, 0, 1200);
+  await p.click('[data-esb-olho]');
+  await p.waitForTimeout(1600);
+  await pararGravacao(p, `${pasta}/variante-A2.webm`);
+  console.log('custo', JSON.stringify(await p.evaluate(() => window.__primeiraPessoa!.custo())));
+  await ctx.close();
+});
+
 test('esboço da primeira pessoa: celular em pé, de dia', async ({ browser }) => {
+  test.skip(MODO === 'a2', 'não na A2');
   mkdirSync(PASTA, { recursive: true });
   const { ctx, page } = await abrir(browser, 390, 844);
   const custos: Record<string, unknown> = {};
