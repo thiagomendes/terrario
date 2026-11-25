@@ -475,7 +475,12 @@ export interface GanchoPrimeiraPessoa {
   aparencia: () => Aparencia;
   naMao: () => { bloco: number | null; item: string | null; qtd?: number };
   gesto: () => string | null;
-  /** O esboço desenha a câmera e a mão depois do boneco, a cada quadro. */
+  /** Quantos golpes e colocações houve (os eventos que tocam o som e animam o boneco). */
+  golpes: () => number;
+  colocacoes: () => number;
+  /** O esboço põe a câmera de dentro antes da mira do dedo, a cada quadro. */
+  antesDaMira: ((dt: number) => void) | null;
+  /** O esboço desenha a mão depois do boneco, a cada quadro. */
   quadro: ((dt: number) => void) | null;
 }
 
@@ -4074,7 +4079,11 @@ export function criarCena(
       yawTravado = y;
     };
   // esboço 037 (só com ?esboco=primeira-pessoa): as peças que o esboço usa
-  if (new URLSearchParams(location.search).get('esboco') === 'primeira-pessoa')
+  if (new URLSearchParams(location.search).get('esboco') === 'primeira-pessoa') {
+    // (cada golpe e cada colocação, os mesmos eventos que tocam o som e animam o boneco)
+    const contas = { golpes: 0, colocacoes: 0 };
+    barramento.ouvir('golpe', () => contas.golpes++);
+    barramento.ouvir('colocacao', () => contas.colocacoes++);
     estado.primeiraPessoa = {
       scene,
       olhos: camera,
@@ -4093,8 +4102,12 @@ export function criarCena(
         return { bloco, item: !bloco && pilha ? pilha.item : null, qtd: pilha?.qtd };
       },
       gesto: () => gestoDoAnimador(animador),
+      golpes: () => contas.golpes,
+      colocacoes: () => contas.colocacoes,
+      antesDaMira: null,
       quadro: null,
     };
+  }
   // spec 032 (só nos testes de tela): o ajuste da comida na boca (o braço e a comida na mão)
   if (ehTesteDeTela())
     estado.ajusteComer = { pose: AJUSTE_COMER, mao: NA_MAO_COMENDO, boca: NA_BOCA };
@@ -5897,6 +5910,9 @@ export function criarCena(
     atualizarSomMovimento(Math.min(dtBruto, 0.05));
     // a câmera segue o boneco antes da mira: o alvo do quadro é o que a criança vê
     atualizarCameraVisao(Math.min(dtBruto, 0.1));
+    // esboço 037: a câmera de dentro vai para os olhos antes da mira (o dedo mira da câmera que a
+    // criança vê)
+    estado.primeiraPessoa?.antesDaMira?.(Math.min(dtBruto, 0.1));
     if (pontoToque) mirarToque(pontoToque.x, pontoToque.y);
     verificarSlot();
     // o que as telas mexeram nos itens vira transação para o núcleo

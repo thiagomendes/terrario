@@ -14,12 +14,20 @@
  *   ombro fixo fora da beira direita. O ponto do ombro sai de uma conta para cada tela
  *   (`acharOmbro`, a mesma de `conta-braco.mjs`);
  * - os ângulos de junta vêm da terceira pessoa: segurar é o "comer" baixado 15°; o passo, o pulo,
- *   o aceno e o comer são os do boneco de verdade, em escala;
- * - a mão vazia só entra para agir (a variante A); a mira (o pontinho e o contorno fino); a
- *   câmera solta; a entrada e a saída pela cabeça com o olhinho.
+ *   o aceno e o comer são os do boneco de verdade, em escala; um golpe do braço a cada golpe do
+ *   jogo e um empurrão a cada colocação (os mesmos eventos que tocam o som);
+ * - o item na mão como a criança seguraria olhando para a frente (o bloco de pé, em cima da mão;
+ *   a ferramenta de cabo para cima e para a frente, batendo para a frente);
+ * - a visão (dono, 25 nov): de dentro, o campo nunca menor que 50° na horizontal, e o olhar vai
+ *   para a frente ao entrar (`conta-visao.mjs`);
+ * - a mira segue o dedo, como na terceira pessoa (dono, 25 nov): o toque age embaixo do dedo e o
+ *   contorno aparece ali enquanto segura e um instante depois; no computador, o clique age onde
+ *   está o ponteiro, sem travar o mouse, e o contorno fica embaixo dele;
+ * - a mão vazia só entra para agir (a variante A); a câmera solta; a entrada e a saída pela
+ *   cabeça com o olhinho.
  */
 import { Color3 } from '@babylonjs/core/Maths/math.color';
-import { Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
@@ -31,6 +39,8 @@ import type { GanchoPrimeiraPessoa } from '../render/cena';
 import type { Personagem } from '../render/personagem';
 import { criarBoneco } from '../render/boneco';
 import type { Aparencia } from '../personagem/aparencia';
+import { curvaGolpe, PERIODO_MINERAR } from '../personagem/poses';
+import { obterItem, todosItens } from '../jogo/itens';
 
 interface EsbocoPrimeiraPessoa {
   /** Liga (true) ou desliga a primeira pessoa, com a transição. */
@@ -40,7 +50,7 @@ interface EsbocoPrimeiraPessoa {
   fracao(): number;
   /** Peso da mão na tela (0 fora, 1 inteira). */
   maos(): { direita: number; esquerda: number };
-  /** A célula onde o bloco entra se a criança tocar no meio da tela (null sem mira). */
+  /** A célula do contorno agora (embaixo do dedo ou do ponteiro; null sem contorno). */
   mira(): [number, number, number] | null;
   /** Malhas e triângulos do que o esboço soma. */
   custo(): { malhas: number; triangulos: number };
@@ -52,6 +62,11 @@ interface EsbocoPrimeiraPessoa {
    */
   ponta(): { quadros: number; menorFolgaPx: number };
   zerarPonta(): void;
+  /** O ritmo desde o último zerar: os golpes e colocações do jogo e os movimentos do braço. */
+  ritmo(): { golpes: number; balancos: number; colocacoes: number; empurroes: number };
+  zerarRitmo(): void;
+  /** Os itens que a mão pode segurar (para a folha de itens). */
+  itens(): { id: string; tipo: string }[];
 }
 
 declare global {
@@ -63,13 +78,13 @@ declare global {
 // ------------------------------------------------------------------ números do esboço
 /** A entrada e a saída pela cabeça (s). */
 const DURACAO_TRANSICAO = 0.7;
-/** O empurrão de colocar, visto de dentro (s): o do corpo dura 0,2 s, rápido demais. */
-const DURACAO_ALCANCE = 0.45;
 /**
- * Os olhos, no espaço da cabeça do boneco (sem a escala): o ponto entre os olhos (que ficam a
- * −0,04 e 0,33 à frente do centro), logo atrás do rosto (a cara da cabeça fica a 0,325).
+ * Os olhos de verdade do boneco, em relação aos pés (blocos, com a escala 1,15): o ponto entre os
+ * olhos, logo atrás do rosto (o plano do boneco: os olhos a 1,207 de altura; a cara a 0,37 à
+ * frente do centro do corpo). A câmera sai da posição do corpo no quadro, sem o balanço da cabeça.
  */
-const OLHOS_NA_CABECA = new Vector3(0, -0.04, 0.3);
+const OLHOS_ALTURA = 1.21;
+const OLHOS_FRENTE = 0.345;
 /** Olhando bem para baixo, o olhar passa um tico da vertical: aparecem o peito e os sapatos. */
 const PITCH_CURVADO = 0.35;
 /** Pouso: quanto a câmera abaixa (blocos) por segundo de queda, no máximo POUSO_MAXIMO. */
@@ -101,6 +116,28 @@ const ACENAR: [number, number] = [-2.2, -1.0];
 const GANHO_PASSO = 0.12;
 const GANHO_PULO = 0.25;
 const EMPURRAO_COLOCAR = -0.32;
+/**
+ * O golpe: a mesma curva do golpe da terceira pessoa (`curvaGolpe`: sobe devagar, desce rápido e
+ * volta), em escala, uma vez a cada golpe do jogo (o mesmo evento que toca o som).
+ */
+const GANHO_GOLPE = 0.22;
+const DURACAO_GOLPE = PERIODO_MINERAR;
+/** O empurrão de colocar: uma vez a cada colocação do jogo (s). */
+const DURACAO_EMPURRAO = 0.3;
+/** O campo de visão em que o braço foi medido (a conta do ombro e a aparência dele). */
+const FOV_BRACO = (70 * Math.PI) / 180;
+/**
+ * O campo de visão de dentro: o vertical de hoje (70°), mas nunca menos que 50° na horizontal (no
+ * celular em pé, 70° na vertical dava só 36° na horizontal: a tela parecia um zoom). A conta e a
+ * medida estão em `.sdd/specs/037-construir-melhor/referencia/conta-visao.mjs`.
+ */
+const FOV_H_MINIMO = (50 * Math.PI) / 180;
+const fovDeDentro = (aspecto: number, fovJogo: number) =>
+  Math.max(fovJogo, 2 * Math.atan(Math.tan(FOV_H_MINIMO / 2) / aspecto));
+/** Ao entrar, o olhar vai para a frente: o horizonte no terço de cima da tela. */
+const pitchDeEntrada = (fovV: number) => Math.atan(Math.tan(fovV / 2) / 3);
+/** Depois do toque, o contorno fica na célula por um instante (s). */
+const CONTORNO_DEPOIS_DO_TOQUE = 0.6;
 const GANHO_COMER_X = 0.37;
 const GANHO_COMER_Z = 0.3;
 /** Fora: o braço gira para baixo até a mão sumir pela beira de baixo. */
@@ -141,6 +178,9 @@ export function acharOmbro(
     [ACENAR[0], ACENAR[1] + 0.35],
     [ACENAR[0], ACENAR[1] - 0.35],
     [SEGURAR[0] - 1.5 * GANHO_COMER_X, SEGURAR[1] - 0.78 * GANHO_COMER_Z],
+    // o golpe: o preparo (a mão sobe) e a batida (a mão desce)
+    [SEGURAR[0] - 1.1 * GANHO_GOLPE, SEGURAR[1]],
+    [SEGURAR[0] + 1.5 * GANHO_GOLPE, SEGURAR[1]],
   ];
   const serve = (ombro: Vector3) => {
     if (ombro.z < PERTO || fora(ombro, MEIA_MANGA) < 4) return false;
@@ -279,10 +319,12 @@ function ligar(g: GanchoPrimeiraPessoa): void {
   };
   const conferirTela = () => {
     const r = scene.getEngine().getRenderingCanvas()!.getBoundingClientRect();
-    const chave = `${Math.round(r.width)}x${Math.round(r.height)}|${visao.fov.toFixed(3)}`;
+    const chave = `${Math.round(r.width)}x${Math.round(r.height)}`;
     if (chave === chaveTela) return;
     chaveTela = chave;
-    const achado = acharOmbro(r.width, r.height, visao.fov, altoDosBotoes(r.width, r.height));
+    // (o braço é medido sempre no campo de 70°: com o campo de dentro mais aberto, o suporte
+    // compensa e ele aparece do mesmo tamanho)
+    const achado = acharOmbro(r.width, r.height, FOV_BRACO, altoDosBotoes(r.width, r.height));
     if (achado) {
       ombro = achado.ombro;
       maoPx = achado.maoPx;
@@ -325,9 +367,15 @@ function ligar(g: GanchoPrimeiraPessoa): void {
   /** Trocar de item: 0 parado; sobe de 0 a 1 (desce até 0,5, troca, sobe de volta). */
   let troca = -1;
   let pendente: ReturnType<GanchoPrimeiraPessoa['naMao']> | null = null;
-  let golpeAntes = 0;
-  /** O empurrão de tocar ou colocar (0 a 1; -1 parado). */
-  let alcance = -1;
+  /** O golpe e o empurrão de colocar em curso (0 a 1; -1 parado), um por evento do jogo. */
+  let golpeT = -1;
+  let empurraoT = -1;
+  let golpesVistos = g.golpes();
+  let colocacoesVistas = g.colocacoes();
+  /** Para conferir o ritmo: quantos eventos e quantos movimentos do braço desde o último zerar. */
+  const ritmo = { golpes: 0, balancos: 0, colocacoes: 0, empurroes: 0 };
+  /** A inclinação ao entrar (o olhar vai para a frente durante a entrada). */
+  let entrada: { de: number; para: number } | null = null;
   /** A mola do braço (rad): sobe um tico no pulo, afunda e volta ao pousar. */
   let mola = 0;
   let molaVel = 0;
@@ -384,22 +432,84 @@ function ligar(g: GanchoPrimeiraPessoa): void {
   miolo.isPickable = false;
   miolo.setEnabled(false);
   let celulaMira: [number, number, number] | null = null;
-  const pontoMira = document.createElement('div');
-  pontoMira.className = 'esb-pp-ponto';
-  pontoMira.hidden = true;
-  document.body.appendChild(pontoMira);
-  function atualizarMira(ligada: boolean): void {
+  // ---------------------------------------------------------------- o dedo (e o ponteiro)
+  // a primeira pessoa age onde a criança toca, como a terceira pessoa (o toque, o segurar e o
+  // arrastar são os de sempre, de `src/ui/toque.ts`): o esboço só acompanha o dedo para mostrar
+  // o contorno embaixo dele enquanto segura e por um instante depois do toque; no computador, o
+  // contorno fica embaixo do ponteiro
+  const dedo = { ativo: false, mouse: false, x: 0, y: 0, x0: 0, y0: 0, t0: 0, ate: 0, arrastou: false };
+  const canvas = scene.getEngine().getRenderingCanvas()!;
+  const naTelaDoJogo = (ev: PointerEvent) => {
+    const alvo = ev.target as HTMLElement | null;
+    return !!alvo && (alvo === canvas || alvo.classList?.contains('olhar'));
+  };
+  const noCanvas = (ev: PointerEvent): [number, number] => {
+    const r = canvas.getBoundingClientRect();
+    return [ev.clientX - r.left, ev.clientY - r.top];
+  };
+  window.addEventListener(
+    'pointerdown',
+    (ev) => {
+      if (!naTelaDoJogo(ev)) return;
+      [dedo.x, dedo.y] = noCanvas(ev);
+      dedo.x0 = dedo.x;
+      dedo.y0 = dedo.y;
+      dedo.t0 = performance.now() / 1000;
+      dedo.ativo = true;
+      dedo.arrastou = false;
+      dedo.mouse = ev.pointerType === 'mouse';
+    },
+    { capture: true, passive: true },
+  );
+  window.addEventListener(
+    'pointermove',
+    (ev) => {
+      if (ev.pointerType === 'mouse' && !dedo.ativo) {
+        // o ponteiro passeando: o contorno vai embaixo dele
+        if (!naTelaDoJogo(ev)) return;
+        dedo.mouse = true;
+        [dedo.x, dedo.y] = noCanvas(ev);
+        return;
+      }
+      if (!dedo.ativo) return;
+      [dedo.x, dedo.y] = noCanvas(ev);
+      if (Math.hypot(dedo.x - dedo.x0, dedo.y - dedo.y0) > 12) dedo.arrastou = true;
+    },
+    { capture: true, passive: true },
+  );
+  const soltarDedo = () => {
+    if (!dedo.ativo) return;
+    dedo.ativo = false;
+    dedo.ate = dedo.arrastou ? 0 : performance.now() / 1000 + CONTORNO_DEPOIS_DO_TOQUE;
+    // (o ponteiro do computador volta a passear: o contorno volta para baixo dele)
+    if (dedo.mouse) dedo.arrastou = false;
+  };
+  window.addEventListener('pointerup', soltarDedo, { capture: true, passive: true });
+  window.addEventListener('pointercancel', soltarDedo, { capture: true, passive: true });
+  /** Onde o contorno vai agora (px no canvas), ou null; e se é para quebrar (segurando). */
+  const pontoDoContorno = (): { x: number; y: number; quebrar: boolean } | null => {
+    const agora = performance.now() / 1000;
+    const segurando = dedo.ativo && !dedo.arrastou;
+    if (dedo.mouse) return dedo.arrastou ? null : { x: dedo.x, y: dedo.y, quebrar: segurando && agora - dedo.t0 > 0.35 };
+    if (segurando) return { x: dedo.x, y: dedo.y, quebrar: agora - dedo.t0 > 0.35 };
+    if (agora < dedo.ate) return { x: dedo.x, y: dedo.y, quebrar: false };
+    return null;
+  };
+  function atualizarMira(ligada: boolean, colocaBloco: boolean): void {
     const e = window.__brumaluz;
     let cel: [number, number, number] | null = null;
-    if (ligada && e?.preverToque) {
-      const r = scene.getEngine().getRenderingCanvas()!.getBoundingClientRect();
-      const prev = e.preverToque(r.width / 2, r.height / 2);
+    const ponto = ligada ? pontoDoContorno() : null;
+    if (ponto && e?.preverToque) {
+      const prev = e.preverToque(ponto.x, ponto.y);
       const a = prev.alvo;
-      if (a) cel = [a.x + a.normal.x, a.y + a.normal.y, a.z + a.normal.z];
+      // com bloco na mão e sem segurar, a célula onde ele entra; senão, o bloco que vai quebrar
+      if (a) cel = colocaBloco && !ponto.quebrar ? [a.x + a.normal.x, a.y + a.normal.y, a.z + a.normal.z] : [a.x, a.y, a.z];
       // a célula onde a própria criança está não recebe bloco: o contorno não aparece ali
       const j = g.jogador();
       if (
         cel &&
+        colocaBloco &&
+        !ponto.quebrar &&
         cel[0] < j.x + 0.3 &&
         cel[0] + 1 > j.x - 0.3 &&
         cel[2] < j.z + 0.3 &&
@@ -410,7 +520,6 @@ function ligar(g: GanchoPrimeiraPessoa): void {
         cel = null;
     }
     celulaMira = cel;
-    pontoMira.hidden = !ligada;
     if (!cel) {
       contorno?.setEnabled(false);
       miolo.setEnabled(false);
@@ -438,30 +547,16 @@ function ligar(g: GanchoPrimeiraPessoa): void {
   // a cabeça e os braços do boneco de verdade: some a junta inteira (com o que estiver preso
   // nela, como a comida mordida), e o boneco continua inteiro para os amigos
   const junta = (n: string) => scene.getTransformNodeByName(`personagem-junta-${n}`);
-  const mostrarCorpo = (cabeca: boolean, bracos: boolean) => {
+  const mostrarCorpo = (cabeca: boolean, bracos: boolean, tesouro = false) => {
     junta('cabeca')?.setEnabled(cabeca);
     junta('bracoD')?.setEnabled(bracos);
-    junta('bracoE')?.setEnabled(bracos);
+    // o tesouro da mão (a varinha, o guarda-chuva, a pipa) fica na mão esquerda de verdade, no
+    // alto, como na terceira pessoa: aparece de dentro onde os olhos o alcançam
+    junta('bracoE')?.setEnabled(bracos || tesouro);
   };
-  /**
-   * Os olhos do boneco de verdade, no mundo: o ponto da cabeça (o pescoço anda com o corpo: o
-   * passo, o pulo, o pouso), com o rumo do corpo e sem o balanço da cabeça (a cabeça acenando
-   * com o olhar balançaria a câmera).
-   */
-  const olhosDoBoneco = (yaw: number): Vector3 | null => {
-    const cab = junta('cabeca');
-    if (!cab) return null;
-    cab.computeWorldMatrix(true);
-    const p = cab.getAbsolutePosition();
-    const o = OLHOS_NA_CABECA.scale(ESCALA_BONECO);
-    return new Vector3(
-      p.x + Math.sin(yaw) * o.z,
-      p.y + o.y,
-      p.z + Math.cos(yaw) * o.z,
-    );
-  };
+  /** Onde um ponto do braço cai na tela (px): o braço é desenhado como no campo de 70°. */
   const projetar = (p: Vector3): [number, number] => {
-    const tanV = Math.tan(visao.fov / 2);
+    const tanV = Math.tan(FOV_BRACO / 2);
     const r = scene.getEngine().getRenderingCanvas()!.getBoundingClientRect();
     const tanH = tanV * (r.width / r.height);
     return [
@@ -470,17 +565,90 @@ function ligar(g: GanchoPrimeiraPessoa): void {
     ];
   };
 
+  const matrizDesejada = new Matrix();
+  const matrizOsso = new Matrix();
+  /**
+   * O jeito de segurar de dentro, por tipo de item: o giro da mão no espaço da câmera (guinada,
+   * inclinação, rolagem) e onde o item fica em relação à mão (o nó de pegar, no espaço da mão).
+   */
+  const posturaDoItem = (
+    mao: ReturnType<GanchoPrimeiraPessoa['naMao']>,
+    batida: number,
+  ): { giro: [number, number, number]; pega: [number, number, number]; torce: number } => {
+    const def = mao.item ? obterItem(mao.item) : undefined;
+    if (def?.ferramenta)
+      // o cabo (que sai da mão para a frente) sobe para a frente e um tico para o meio; a cabeça
+      // gira no cabo (torce) para a ponta da picareta, a lâmina e a pá apontarem para a frente,
+      // no plano do golpe: no golpe, a ferramenta bate para a frente e para baixo
+      return { giro: [-0.45, -0.8 + batida * 1.4, 0], pega: [0, 0, 0], torce: Math.PI / 2 };
+    if (mao.bloco !== null)
+      // de pé, um tico virado (aparecem duas faces) e em cima da mão
+      return { giro: [0.45, 0.12, 0], pega: [0, 0.16, -0.08], torce: 0 };
+    // comida, semente, sacola, brinquedo: de pé, acima e um tico à frente da mão (os pequenos
+    // não somem atrás dela)
+    return { giro: [0.3, 0.08, 0], pega: [0, 0.15, -0.08], torce: 0 };
+  };
   /** O corpo está com partes escondidas (volta inteiro ao sair). */
   let cheio = false;
-  g.quadro = (dt) => {
+  /**
+   * A câmera de dentro, antes da mira do dedo (o jogo mira e quebra com a câmera que a criança
+   * vê): a entrada pela cabeça, o campo de visão, o olhar para a frente ao entrar, os olhos (da
+   * posição do corpo neste quadro, sem esperar o boneco) e o pouso.
+   */
+  g.antesDaMira = (dt) => {
     const alvoT = ligado ? 1 : 0;
-    const passo = dt / DURACAO_TRANSICAO;
-    t = alvoT > t ? Math.min(1, t + passo) : Math.max(0, t - passo);
+    t = alvoT > t ? Math.min(1, t + dt / DURACAO_TRANSICAO) : Math.max(0, t - dt / DURACAO_TRANSICAO);
+    const e = suave(t);
+    if (e <= 0) return;
+    const jog = g.jogador();
+    const pitch = olhos.rotation.x;
+    const yaw = olhos.rotation.y;
+    // ---------------- o campo de visão de dentro (mais aberto no celular em pé), entrando junto
+    const tela = canvas.getBoundingClientRect();
+    const fovJogo = visao.fov;
+    const fovDentro = fovDeDentro(tela.width / tela.height, fovJogo);
+    visao.fov = fovJogo + (fovDentro - fovJogo) * e;
+    // o braço aparece como no campo de 70°, qualquer que seja o campo de dentro
+    const s = Math.tan(visao.fov / 2) / Math.tan(FOV_BRACO / 2);
+    suporte.scaling.set(s, s, 1);
+    // ao entrar, o olhar vai para a frente (o horizonte no terço de cima), junto com a entrada
+    if (ligado && entrada === null) entrada = { de: pitch, para: pitchDeEntrada(fovDentro) };
+    if (entrada && ligado && t < 1) window.__brumaluz?.apontar?.(yaw, entrada.de + (entrada.para - entrada.de) * e);
+    // ---------------- o corpo vira junto com o olhar
+    const yawCorpo = window.__brumaluz?.yawBoneco?.() ?? yaw;
+    g.travarYaw(e >= 1 ? yaw : yawCorpo + ((((yaw - yawCorpo + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) - Math.PI) * e);
+    // ---------------- o pouso: a câmera abaixa um tico e volta macia; o braço afunda junto
+    if (jog.noChao) {
+      if (noArDesde >= 0) {
+        const noAr = performance.now() / 1000 - noArDesde;
+        if (noAr > 0.25 && !jog.voando) {
+          pousoVel -= Math.min(POUSO_MAXIMO * 9, noAr * POUSO_POR_SEGUNDO * 9);
+          molaVel += Math.min(1.6, noAr * 2.2);
+        }
+      }
+      noArDesde = -1;
+    } else if (noArDesde < 0) noArDesde = performance.now() / 1000;
+    pousoVel += (-pouso * 90 - pousoVel * 12) * dt;
+    pouso = Math.max(-POUSO_MAXIMO, Math.min(0.02, pouso + pousoVel * dt));
+    // ---------------- os olhos de verdade (a câmera entra pela cabeça, sem corte seco)
+    const destino = new Vector3(
+      jog.x + Math.sin(yaw) * OLHOS_FRENTE,
+      jog.y + OLHOS_ALTURA + pouso,
+      jog.z + Math.cos(yaw) * OLHOS_FRENTE,
+    );
+    visao.position.copyFrom(Vector3.Lerp(visao.position, destino, e));
+    // olhando bem para baixo, o olhar passa um tico da vertical: o peito e os sapatos aparecem
+    // (o alto da tela continua sendo a frente: nada vira de ponta-cabeça)
+    const curva = suave((pitch - 1.0) / 0.45);
+    visao.rotation.x = pitch + PITCH_CURVADO * curva * e;
+    visao.updateUpVectorFromRotation = curva > 0;
+    if (curva <= 0) visao.upVector.set(0, 1, 0);
+  };
+  g.quadro = (dt) => {
     const e = suave(t);
     const jog = g.jogador();
     const v = g.vista();
     const pitch = olhos.rotation.x;
-    const yaw = olhos.rotation.y;
     const ap = g.aparencia();
     if (e <= 0) {
       if (cheio) mostrarCorpo(true, true);
@@ -491,43 +659,18 @@ function ligar(g: GanchoPrimeiraPessoa): void {
       sombra.setEnabled(false);
       for (const m of malhasBraco) m.setEnabled(false);
       peso = 0;
-      atualizarMira(false);
+      entrada = null;
+      atualizarMira(false, false);
+      document.body.classList.remove('esb-pp-dentro');
       return;
     }
     if (!vista || ap !== aparenciaDaVista) montarVista(ap);
     conferirTela();
-    // ---------------- o corpo vira junto com o olhar
-    const yawCorpo = window.__brumaluz?.yawBoneco?.() ?? yaw;
-    g.travarYaw(e >= 1 ? yaw : yawCorpo + ((((yaw - yawCorpo + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) - Math.PI) * e);
     g.personagem.definirOpacidade(1);
-    // ---------------- a câmera entra pela cabeça (sem corte seco) até os olhos de verdade
-    if (jog.noChao) {
-      if (noArDesde >= 0) {
-        const noAr = performance.now() / 1000 - noArDesde;
-        if (noAr > 0.25 && !jog.voando) {
-          pousoVel -= Math.min(POUSO_MAXIMO * 9, noAr * POUSO_POR_SEGUNDO * 9);
-          // o braço afunda junto e volta na mola
-          molaVel += Math.min(1.6, noAr * 2.2);
-        }
-      }
-      noArDesde = -1;
-    } else if (noArDesde < 0) noArDesde = performance.now() / 1000;
-    // mola do pouso: abaixa rápido e volta macia
-    pousoVel += (-pouso * 90 - pousoVel * 12) * dt;
-    pouso = Math.max(-POUSO_MAXIMO, Math.min(0.02, pouso + pousoVel * dt));
-    const destino = olhosDoBoneco(yaw) ?? olhos.position.clone();
-    destino.y += pouso;
-    visao.position.copyFrom(Vector3.Lerp(visao.position, destino, e));
-    // olhando bem para baixo, o olhar passa um tico da vertical: o peito e os sapatos aparecem
-    // (o alto da tela continua sendo a frente: nada vira de ponta-cabeça)
-    const curva = suave((pitch - 1.0) / 0.45);
-    visao.rotation.x = pitch + PITCH_CURVADO * curva * e;
-    visao.updateUpVectorFromRotation = curva > 0;
-    if (curva <= 0) visao.upVector.set(0, 1, 0);
     // a cabeça some quando a câmera passa por ela; os braços do corpo só aparecem olhando para
     // baixo, quando a mão da frente já saiu (nunca dois braços)
     const verBracos = suave((pitch - PITCH_SEM_MAO) / 0.25) > 0.5 || t < 0.55;
-    mostrarCorpo(t <= 0.55, verBracos);
+    mostrarCorpo(t <= 0.55, verBracos, !!ap.premium?.mao && !ap.montado);
     cheio = true;
     // ---------------- a sombra no chão, debaixo dos pés
     const chao = acharChao(jog.x, jog.y, jog.z);
@@ -566,12 +709,27 @@ function ligar(g: GanchoPrimeiraPessoa): void {
     }
     // ---------------- o que a mão faz: os ângulos de junta da terceira pessoa, em escala
     const gesto = g.gesto();
-    const golpe = v.golpe ?? v.colocar;
-    if (golpe !== null && !golpeAntes) alcance = 0;
-    golpeAntes = golpe !== null ? 1 : 0;
-    if (alcance >= 0) alcance += dt / DURACAO_ALCANCE;
-    if (alcance >= 1) alcance = -1;
-    const agindo = alcance >= 0;
+    // um golpe do braço a cada golpe do jogo (o evento que toca o som), e um empurrão a cada
+    // colocação: nada de tempo próprio
+    const golpesAgora = g.golpes();
+    if (golpesAgora !== golpesVistos) {
+      ritmo.golpes += golpesAgora - golpesVistos;
+      golpesVistos = golpesAgora;
+      golpeT = 0;
+      ritmo.balancos++;
+    }
+    const colocacoesAgora = g.colocacoes();
+    if (colocacoesAgora !== colocacoesVistas) {
+      ritmo.colocacoes += colocacoesAgora - colocacoesVistas;
+      colocacoesVistas = colocacoesAgora;
+      empurraoT = 0;
+      ritmo.empurroes++;
+    }
+    if (golpeT >= 0) golpeT += dt / DURACAO_GOLPE;
+    if (golpeT >= 1) golpeT = -1;
+    if (empurraoT >= 0) empurraoT += dt / DURACAO_EMPURRAO;
+    if (empurraoT >= 1) empurraoT = -1;
+    const agindo = golpeT >= 0 || empurraoT >= 0;
     const comendo = v.comer !== null;
     // (a variante A: a mão vazia some; entra para tocar, colocar, acenar e comer)
     const aparece = temItem || !!gesto || comendo || agindo;
@@ -598,8 +756,11 @@ function ligar(g: GanchoPrimeiraPessoa): void {
       // o passo e o pulo vêm do corpo, bem menores: só um sobe e desce, nada de lado
       x += (rx - descansoX) * GANHO_PASSO;
       z += Math.max(0, rz - 0.09) * GANHO_PULO;
-      if (agindo) x += EMPURRAO_COLOCAR * Math.sin(Math.PI * Math.min(1, alcance));
     }
+    // o golpe: a curva do golpe da terceira pessoa (a mão sobe e desce batendo)
+    const batida = golpeT >= 0 ? curvaGolpe(golpeT) * GANHO_GOLPE : 0;
+    x += batida;
+    if (empurraoT >= 0) x += EMPURRAO_COLOCAR * Math.sin(Math.PI * empurraoT);
     // a mola: sobe um tico no ar, afunda e volta ao pousar
     const alvoMola = jog.noChao || jog.voando ? 0 : -0.05;
     molaVel += ((alvoMola - mola) * 70 - molaVel * 11) * dt;
@@ -610,9 +771,20 @@ function ligar(g: GanchoPrimeiraPessoa): void {
     osso.position.copyFrom(ombro);
     osso.scaling.setAll(ESCALA_BONECO);
     Quaternion.RotationYawPitchRollToRef(0, x, z, osso.rotationQuaternion!);
-    // a mão e o item de pé (como na terceira pessoa, o bloco à frente da mão)
-    if (juntaMao) juntaMao.rotationQuaternion = Quaternion.Inverse(osso.rotationQuaternion!);
-    vista!.noDaMao().scaling.setAll(1);
+    // a mão e o item como a criança seguraria olhando para a frente (a partir do jeito de segurar
+    // da terceira pessoa, `definirNaMao`): o bloco de pé e de frente, em cima da mão; a ferramenta
+    // com o cabo na mão e a cabeça para cima e para a frente, batendo para a frente e para baixo
+    const postura = posturaDoItem(mao, batida);
+    if (juntaMao) {
+      Quaternion.RotationYawPitchRoll(postura.giro[0], postura.giro[1], postura.giro[2]).toRotationMatrix(matrizDesejada);
+      osso.rotationQuaternion!.toRotationMatrix(matrizOsso);
+      // a mão é filha do braço: local = desejada × inversa do braço (a inversa de um giro é a transposta)
+      juntaMao.rotationQuaternion = Quaternion.FromRotationMatrix(matrizDesejada.multiply(matrizOsso.transpose()));
+    }
+    const pega = vista!.noDaMao();
+    pega.scaling.setAll(1);
+    pega.position.set(postura.pega[0], postura.pega[1], postura.pega[2]);
+    pega.rotation.set(0, 0, postura.torce);
     const ver = peso > 0.02;
     for (const m of malhasBraco) m.setEnabled(ver);
     // a comida mordida do boneco de verdade vai até a boca, logo abaixo dos olhos: de dentro, ela
@@ -631,15 +803,87 @@ function ligar(g: GanchoPrimeiraPessoa): void {
     if (ver) {
       // a conferência: o ombro, com a grossura da manga, fora da tela
       const r = scene.getEngine().getRenderingCanvas()!.getBoundingClientRect();
-      const tanV = Math.tan(visao.fov / 2);
+      const tanV = Math.tan(FOV_BRACO / 2);
       const rp = (MEIA_MANGA / (ombro.z * tanV)) * (r.height / 2);
       const [sx, sy] = ombroNaTela;
       const folga = Math.max(-sx, sx - r.width, -sy, sy - r.height) - rp;
       vigia.quadros++;
       vigia.menorFolgaPx = Math.min(vigia.menorFolgaPx, folga);
     }
-    atualizarMira(temItem && mao.bloco !== null && e > 0.9);
+    atualizarMira(e > 0.9, mao.bloco !== null);
+    document.body.classList.toggle('esb-pp-dentro', e > 0.5);
   };
+
+  // ---------------------------------------------------------------- o computador
+  // de dentro, o clique age onde está o ponteiro (como o dedo): sem travar o mouse, a câmera
+  // gira arrastando; clicar põe (ou usa), segurar parado quebra embaixo do ponteiro
+  const direto = () => window.__brumaluz?.controleDireto;
+  const mouse = { botao: -1, x: 0, y: 0, x0: 0, y0: 0, t0: 0, arrastando: false, quebrando: false, timer: 0 };
+  const dentro = () => ligado && t > 0.5;
+  // (o clique no canvas pedia o mouse travado: de dentro, não)
+  canvas.addEventListener(
+    'click',
+    (ev) => {
+      if (dentro()) ev.stopImmediatePropagation();
+    },
+    true,
+  );
+  // (eventos de ponteiro: o motor cancela o pointerdown, e aí o mousedown nem chega)
+  canvas.addEventListener('pointerdown', (ev) => {
+    if (ev.pointerType !== 'mouse' || !dentro() || document.pointerLockElement === canvas) return;
+    const [x, y] = [ev.offsetX, ev.offsetY];
+    if (ev.button === 2) {
+      direto()?.mirar(x, y);
+      direto()?.usar();
+      setTimeout(() => direto()?.soltarMira(), 50);
+      return;
+    }
+    if (ev.button !== 0) return;
+    Object.assign(mouse, { botao: 0, x, y, x0: x, y0: y, t0: performance.now(), arrastando: false, quebrando: false });
+    clearTimeout(mouse.timer);
+    mouse.timer = window.setTimeout(() => {
+      if (mouse.botao !== 0 || mouse.arrastando) return;
+      // segurou parado: quebra embaixo do ponteiro até soltar
+      mouse.quebrando = true;
+      direto()?.mirar(mouse.x, mouse.y);
+      direto()?.quebrar(true);
+    }, 350);
+  });
+  window.addEventListener('pointermove', (ev) => {
+    if (ev.pointerType !== 'mouse' || mouse.botao !== 0 || !dentro()) return;
+    const r = canvas.getBoundingClientRect();
+    const [x, y] = [ev.clientX - r.left, ev.clientY - r.top];
+    const [dx, dy] = [x - mouse.x, y - mouse.y];
+    mouse.x = x;
+    mouse.y = y;
+    if (mouse.quebrando) {
+      direto()?.mirar(x, y);
+      return;
+    }
+    if (!mouse.arrastando && Math.hypot(x - mouse.x0, y - mouse.y0) > 6) {
+      mouse.arrastando = true;
+      clearTimeout(mouse.timer);
+      direto()?.arrastar(true);
+    }
+    if (mouse.arrastando) direto()?.olhar(dx * 2.2, dy * 2.2);
+  });
+  window.addEventListener('pointerup', (ev) => {
+    if (ev.pointerType !== 'mouse' || ev.button !== 0 || mouse.botao !== 0) return;
+    mouse.botao = -1;
+    clearTimeout(mouse.timer);
+    const c = direto();
+    if (!c) return;
+    if (mouse.quebrando) {
+      c.quebrar(false);
+      c.soltarMira();
+    } else if (mouse.arrastando) c.arrastar(false);
+    else {
+      // um clique: o mesmo toque do dedo, no ponto do ponteiro
+      c.mirar(mouse.x, mouse.y);
+      c.tocar?.();
+      setTimeout(() => c.soltarMira(), 50);
+    }
+  });
 
   function acharChao(x: number, y: number, z: number): number | null {
     const bloco = window.__brumaluz?.bloco;
@@ -660,9 +904,8 @@ function ligar(g: GanchoPrimeiraPessoa): void {
       box-shadow: 0 3px 8px rgba(0,0,0,0.25); touch-action: manipulation; padding: 0; }
     .esb-pp-olho.ligado { background: #ffd34d; border-color: #fff; }
     .esb-pp-olho svg { width: 40px; height: 40px; }
-    .esb-pp-ponto { position: fixed; left: 50%; top: 50%; width: 10px; height: 10px;
-      margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; z-index: 40;
-      box-shadow: 0 0 0 2px rgba(36, 49, 77, 0.55); pointer-events: none; }
+    /* de dentro, a mira do meio da tela sai: o toque e o clique agem onde o dedo e o ponteiro estão */
+    body.esb-pp-dentro .hud .mira { display: none; }
   `;
   document.head.appendChild(estilo);
   const olho = document.createElement('button');
@@ -711,6 +954,11 @@ function ligar(g: GanchoPrimeiraPessoa): void {
       vigia.quadros = 0;
       vigia.menorFolgaPx = Infinity;
     },
+    ritmo: () => ({ ...ritmo }),
+    zerarRitmo() {
+      ritmo.golpes = ritmo.balancos = ritmo.colocacoes = ritmo.empurroes = 0;
+    },
+    itens: () => todosItens().map((i) => ({ id: i.id, tipo: i.tipo })),
   };
   window.__primeiraPessoa = api;
 }
