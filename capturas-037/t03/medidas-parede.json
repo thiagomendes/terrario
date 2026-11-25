@@ -1,0 +1,16 @@
+{
+ "giro": {
+  "quadros": 61,
+  "dentroDeBloco": 0,
+  "menorAteParede": 0.2
+ },
+ "pos": 7,
+ "depois": {
+  "frente": 0.1,
+  "cima": 1.62,
+  "lado": 0,
+  "pitch": 0.05,
+  "fovV": 80,
+  "dentroDeBloco": false
+ }
+}

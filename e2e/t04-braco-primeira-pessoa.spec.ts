@@ -4,8 +4,8 @@ import { comecarGravacao, pararGravacao } from './gravarCena';
 
 /**
  * Spec 037 (T04): o braço, a mão e os itens da primeira pessoa, como código de verdade
- * (`src/render/bracoPrimeiraPessoa.ts`). Até a T03 ligar a câmera de verdade, a câmera é a do
- * esboço (`?esboco=primeira-pessoa`, o olhinho). Fora da suíte: as fotos, o vídeo, a folha dos
+ * (`src/render/bracoPrimeiraPessoa.ts`), com a câmera de verdade da T03 (`primeiraPessoa.ts`,
+ * ligada pelo olhinho da roda; aqui, direto pela `primeiraPessoa.ligar`). Fora da suíte: as fotos, o vídeo, a folha dos
  * itens e as conferências (o item sai da tela na volta, o "não" curtinho, o ombro fora).
  *
  *   T04=fotos   (em pé, deitado e no computador, de dia e de noite; a volta e o "não")
@@ -28,9 +28,9 @@ async function abrir(browser: Browser, w: number, h: number, toque = true, hora 
   });
   const page = await ctx.newPage();
   page.on('pageerror', (err) => console.log('erro na página:', String(err)));
-  await page.goto('/?esboco=primeira-pessoa');
+  await page.goto('/');
   await page.waitForFunction(
-    () => window.__brumaluz?.ready === true && !!window.__primeiraPessoa,
+    () => window.__brumaluz?.ready === true && !!window.__brumaluz.primeiraPessoa,
     undefined,
     { timeout: 180_000 },
   );
@@ -65,14 +65,16 @@ async function abrir(browser: Browser, w: number, h: number, toque = true, hora 
 const olhar = (p: Page, yaw: number, pitch: number) =>
   p.evaluate(([y, pi]) => window.__brumaluz!.apontar!(y, pi), [yaw, pitch] as const);
 const slot = (p: Page, i: number) => p.evaluate((i) => window.__brumaluz!.selecionarSlot!(i), i);
+const ligarPP = (p: Page, sim: boolean) =>
+  p.evaluate((sim) => window.__brumaluz!.primeiraPessoa!.ligar(sim), sim);
 const entrar = async (p: Page) => {
-  await p.click('[data-esb-olho]');
+  await ligarPP(p, true);
   await p.waitForTimeout(1600);
 };
 /** O braço de verdade está na tela? (o osso dele e quantas peças acesas tem). */
 const bracoAceso = (p: Page) =>
   p.evaluate(() => {
-    const s = window.__brumaluz!.primeiraPessoa!.scene;
+    const s = window.__brumaluz!.cenaBabylon!();
     const osso = s.getTransformNodeByName('pp-braco-osso');
     const pecas = osso ? osso.getChildMeshes(false).filter((m) => m.isEnabled()).length : 0;
     return { osso: !!osso?.isEnabled(), pecas };
@@ -80,7 +82,7 @@ const bracoAceso = (p: Page) =>
 /** As peças do item na mão do boneco de verdade, acesas (a terceira pessoa). */
 const itemDoBoneco = (p: Page) =>
   p.evaluate(() => {
-    const s = window.__brumaluz!.primeiraPessoa!.scene;
+    const s = window.__brumaluz!.cenaBabylon!();
     const pega = s.getTransformNodeByName('personagem-pega');
     return pega ? pega.getChildMeshes(false).filter((m) => m.isEnabled() && m.isVisible).length : -1;
   });
@@ -103,7 +105,10 @@ test('T04: as fotos nas três telas, de dia e de noite; a volta e o "não"', asy
       await entrar(p);
       await p.waitForTimeout(400);
       await p.screenshot({ path: `${PASTA}/${nome}-${quando}-bloco.png` });
-      const braco = await p.evaluate(() => ({ tela: window.__primeiraPessoa!.tela(), custo: window.__primeiraPessoa!.custo() }));
+      const braco = await p.evaluate(() => {
+        const pp = window.__brumaluz!.primeiraPessoa!;
+        return { tela: pp.tela(), custo: pp.custo() };
+      });
       if (quando === 'dia') {
         await slot(p, 2);
         await p.waitForTimeout(900);
@@ -126,7 +131,7 @@ test('T04: as fotos nas três telas, de dia e de noite; a volta e o "não"', asy
         for (let i = 0; i < 8; i++) {
           giros.push(
             await p.evaluate(() => {
-              const s = window.__brumaluz!.primeiraPessoa!.scene;
+              const s = window.__brumaluz!.cenaBabylon!();
               const m = s.getTransformNodeByName('pp-braco-junta-maoD');
               return +(m?.rotationQuaternion?.toEulerAngles().z ?? 0).toFixed(3);
             }),
@@ -138,7 +143,7 @@ test('T04: as fotos nas três telas, de dia e de noite; a volta e o "não"', asy
         await slot(p, 1);
         await p.waitForTimeout(900);
         const antesDaVolta = await bracoAceso(p);
-        await p.click('[data-esb-olho]');
+        await ligarPP(p, false);
         await p.waitForTimeout(1500);
         const depois = await bracoAceso(p);
         const noBoneco = await itemDoBoneco(p);
@@ -161,7 +166,7 @@ test('T04: as fotos nas três telas, de dia e de noite; a volta e o "não"', asy
         for (let i = 0; i < 8; i++) {
           fora.push(
             await p.evaluate(() => {
-              const s = window.__brumaluz!.primeiraPessoa!.scene;
+              const s = window.__brumaluz!.cenaBabylon!();
               return +(s.getTransformNodeByName('personagem-pega')?.rotation.z ?? 0).toFixed(3);
             }),
           );
@@ -188,8 +193,8 @@ test('T04: o vídeo em pé', async ({ browser }) => {
   await p.waitForTimeout(400);
   await entrar(p);
   await p.evaluate(() => {
-    window.__primeiraPessoa!.zerarPonta();
-    window.__primeiraPessoa!.zerarRitmo();
+    window.__brumaluz!.primeiraPessoa!.zerarPonta();
+    window.__brumaluz!.primeiraPessoa!.zerarRitmo();
   });
   // anda com o bloco
   await p.evaluate(() => window.__brumaluz!.controleDireto!.mover(0.6, 0));
@@ -236,11 +241,11 @@ test('T04: o vídeo em pé', async ({ browser }) => {
   // volta para a terceira pessoa com o bloco na mão
   await slot(p, 1);
   await p.waitForTimeout(900);
-  await p.click('[data-esb-olho]');
+  await ligarPP(p, false);
   await p.waitForTimeout(1600);
   await pararGravacao(p, `${PASTA}/primeira-pessoa-t04.webm`);
-  const ponta = await p.evaluate(() => window.__primeiraPessoa!.ponta());
-  const ritmo = await p.evaluate(() => window.__primeiraPessoa!.ritmo());
+  const ponta = await p.evaluate(() => window.__brumaluz!.primeiraPessoa!.ponta());
+  const ritmo = await p.evaluate(() => window.__brumaluz!.primeiraPessoa!.ritmo());
   console.log('vídeo', JSON.stringify({ ponta, ritmo }));
   await ctx.close();
   expect(ponta.menorFolgaPx).toBeGreaterThan(0);
@@ -255,7 +260,7 @@ test('T04: a folha dos itens na mão', async ({ browser }) => {
   const { ctx, page: p } = await abrir(browser, 390, 844);
   await olhar(p, 0.6, 0.15);
   await entrar(p);
-  const todos = await p.evaluate(() => window.__primeiraPessoa!.itens());
+  const todos = await p.evaluate(() => window.__brumaluz!.primeiraPessoa!.itens());
   const blocos = [7, 43, 9, 37, 56, 57, 59, 60, 61, 82, 98, 10];
   const lista = [
     ...blocos.map((b) => `bloco:${b}`).filter((id) => todos.some((t) => t.id === id)),
@@ -273,7 +278,7 @@ test('T04: a folha dos itens na mão', async ({ browser }) => {
     const nome = id.replace(/[^a-z0-9_]/gi, '_');
     await p.screenshot({ path: `${pasta}/${nome}.png`, clip: { x: 130, y: 260, width: 260, height: 420 } });
     pecas[id] = await p.evaluate(() => {
-      const s = window.__brumaluz!.primeiraPessoa!.scene;
+      const s = window.__brumaluz!.cenaBabylon!();
       const pega = s.getTransformNodeByName('pp-braco-pega');
       return pega ? pega.getChildMeshes(false).filter((m) => m.isEnabled()).length : -1;
     });

@@ -147,7 +147,7 @@ import type { DadosMundo, MetaMundo, ModoJogo, RepositorioMundos } from '../jogo
 import { caixasDoBloco, cercaConecta, direcaoDoYaw, vetorDirecao } from '../world/formas';
 import { abreEFecha, alternado, ehPorta, ehPorteira } from '../world/portas';
 import { velocidadeMineracao } from '../jogo/ferramentas';
-import { blocoDoItem, obterItem } from '../jogo/itens';
+import { blocoDoItem, obterItem, todosItens } from '../jogo/itens';
 import { COLHER_PEDREIRO, SACOLA_DOCES, itemNoMundo } from '../jogo/exclusivos';
 import { entradaNaCaixa, fantasmaNoRaio } from '../jogo/miraObra';
 import {
@@ -405,6 +405,7 @@ import { quadroSomItens, type RelogiosSomItens } from '../audio/somItens';
 import type { Pose } from '../personagem/poses';
 import { criarPersonagem } from './personagem';
 import { criarBracoPrimeiraPessoa, criarNaoNaMao, type BracoPrimeiraPessoa } from './bracoPrimeiraPessoa';
+import { criarPrimeiraPessoa, type ApiPrimeiraPessoa } from './primeiraPessoa';
 import { criarModoFoto } from './modoFoto';
 import { criarOutrosJogadores } from './outrosJogadores';
 // spec 015 (gestos): roda, previsão, comando e o que chega do núcleo
@@ -466,36 +467,10 @@ const ALCANCE_VER_LONGE = 48;
 /** No computador, quanto tempo o cadeado fica depois do clique no que não quebra (ms). */
 const CADEADO_DEPOIS_DO_CLIQUE_MS = 1500;
 
-/**
- * Esboço 037 (só com `?esboco=primeira-pessoa`): as peças de verdade que o esboço da primeira
- * pessoa usa. O jogo nunca liga o `quadro`; sem o esboço, nada disto existe.
- */
-export interface GanchoPrimeiraPessoa {
-  scene: Scene;
-  /** Os olhos (a câmera do controle) e a câmera que desenha a tela. */
-  olhos: UniversalCamera;
-  visao: UniversalCamera;
-  personagem: Personagem;
-  jogador: () => { x: number; y: number; z: number; noChao: boolean; voando?: boolean };
-  vista: () => import('../player/animacao').Vista;
-  velocidade: () => number;
-  /** O corpo travado num rumo (null solta). */
-  travarYaw: (y: number | null) => void;
-  aparencia: () => Aparencia;
-  naMao: () => { bloco: number | null; item: string | null; qtd?: number };
-  gesto: () => string | null;
-  /** Spec 037 (T04): o braço, a mão e o item da primeira pessoa (`bracoPrimeiraPessoa.ts`). */
-  braco: () => import('./bracoPrimeiraPessoa').BracoPrimeiraPessoa;
-  /** O esboço põe a câmera de dentro antes da mira do dedo, a cada quadro. */
-  antesDaMira: ((dt: number) => void) | null;
-  /** O esboço desenha a mão depois do boneco, a cada quadro. */
-  quadro: ((dt: number) => void) | null;
-}
-
 export interface EstadoDepuracao {
   ready: boolean;
-  /** Esboço 037 (só com `?esboco=primeira-pessoa`). */
-  primeiraPessoa?: GanchoPrimeiraPessoa;
+  /** Spec 037 (T03): a primeira pessoa (o olhinho da roda liga e desliga; os testes medem). */
+  primeiraPessoa?: ApiPrimeiraPessoa;
   /** Spec 035: quantas vezes a rede de segurança ressincronizou nesta página. */
   ressincronizacoes?: number;
   /** Tema visual ativo nesta página. */
@@ -3574,8 +3549,11 @@ export function criarCena(
    */
   function raioMira(): { origem: Vec3; direcao: Vec3 } {
     if (raioToque) return raioToque;
+    // spec 037: de dentro (o computador, o controle), a mira do meio sai dos olhos, da câmera que
+    // desenha a tela (o pontinho do meio)
+    const v = cameraVisao.position;
     return {
-      origem: pivoMira(),
+      origem: mirandoDeDentro() ? { x: v.x, y: v.y, z: v.z } : pivoMira(),
       direcao: direcaoDoOlhar(camera.rotation.y, camera.rotation.x),
     };
   }
@@ -4171,31 +4149,98 @@ export function criarCena(
     bracoPP?.nao();
     naoNaMao.disparar();
   });
-  // esboço 037 (só com ?esboco=primeira-pessoa): as peças que o esboço usa
-  if (new URLSearchParams(location.search).get('esboco') === 'primeira-pessoa') {
-    estado.primeiraPessoa = {
-      scene,
-      olhos: camera,
-      visao: cameraVisao,
-      personagem,
-      jogador: () => controle.jogador,
-      vista: () => animador.vista(),
-      velocidade: () => velocidadeHoriz,
-      travarYaw: (y) => {
-        yawPrimeiraPessoa = y;
-      },
-      aparencia: () => aparencia,
-      naMao: () => {
-        const bloco = hotbar.blocoAtivo() || null;
-        const pilha = hotbar.pilhaAtiva();
-        return { bloco, item: !bloco && pilha ? pilha.item : null, qtd: pilha?.qtd };
-      },
-      gesto: () => gestoDoAnimador(animador),
-      braco: bracoPrimeiraPessoa,
-      antesDaMira: null,
-      quadro: null,
-    };
-  }
+  // spec 037 (T03): a primeira pessoa (o olhinho da roda; a escolha fica guardada no aparelho)
+  /** A câmera já está mais dentro que fora: a mira do meio sai dos olhos. */
+  const mirandoDeDentro = () => primeiraPessoa.fracao() >= 0.5;
+  /** Dormindo: do "dormiu" do núcleo até o "acordou" (o véu escuro). */
+  let dormindo = false;
+  const primeiraPessoa = criarPrimeiraPessoa({
+    scene,
+    olhos: camera,
+    visao: cameraVisao,
+    canvas,
+    armazenamento: armazenamentoLocal(),
+    jogador: () => controle.jogador,
+    solido: (x, y, z) => !!obterBlocoDef(blocoEm(x, y, z))?.solido,
+    braco: bracoPrimeiraPessoa,
+    entradaBraco: () => {
+      const bloco = hotbar.blocoAtivo() || null;
+      const pilha = hotbar.pilhaAtiva();
+      return {
+        vista: animador.vista(),
+        gesto: gestoDoAnimador(animador),
+        naMao: { bloco, item: !bloco && pilha ? pilha.item : null, qtd: pilha?.qtd },
+        aparencia,
+      };
+    },
+    apontar: (yaw, pitch) => controle.apontar(yaw, pitch),
+    yawBoneco: () => animador.yaw(),
+    travarYaw: (y) => {
+      yawPrimeiraPessoa = y;
+    },
+    situacao: () => ({
+      modoFoto: !!estado.modoFoto?.ativo(),
+      casa: !!casaCena && (casaCena.dentro() || !!casaCena.lugar() || !!casaCena.noTrilho()),
+      sentadaNoParque: !!passeio?.sentado(),
+      montada: !!aparencia.montado || !!aparencia.skate,
+      dormindo,
+      desmaiada: modo === 'sobrevivencia' && sobrevivenciaMorto(),
+    }),
+    alvo: (ponto) => {
+      if (ponto) return estado.preverToque!(ponto.x, ponto.y);
+      if (raioToque) return { alvo: null, fantasma: null };
+      return { alvo: alvoDoQuadro(), fantasma: podeEncherObra() ? fantasmaNaMira() : null };
+    },
+    quebrando: () => minerador.segurando,
+    semBrilho: (m) => glow.addExcludedMesh(m),
+  });
+  estado.primeiraPessoa = {
+    ligar: (sim) => primeiraPessoa.ligar(sim),
+    ligada: () => primeiraPessoa.ligada(),
+    valendo: () => primeiraPessoa.valendo(),
+    fracao: () => primeiraPessoa.fracao(),
+    propria: () => primeiraPessoa.propria(),
+    mira: () => primeiraPessoa.mira(),
+    camera: () => {
+      const j = controle.jogador;
+      const yaw = camera.rotation.y;
+      const v = cameraVisao.position;
+      const dx = v.x - j.x;
+      const dz = v.z - j.z;
+      return {
+        frente: +(dx * Math.sin(yaw) + dz * Math.cos(yaw)).toFixed(3),
+        cima: +(v.y - j.y).toFixed(3),
+        lado: +(dx * Math.cos(yaw) - dz * Math.sin(yaw)).toFixed(3),
+        pitch: +cameraVisao.rotation.x.toFixed(3),
+        fovV: +((cameraVisao.fov * 180) / Math.PI).toFixed(1),
+        dentroDeBloco: !!obterBlocoDef(blocoEm(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z)))?.solido,
+      };
+    },
+    maos: () => ({ direita: bracoPP?.peso() ?? 0, esquerda: 0 }),
+    tela: () => bracoPrimeiraPessoa().tela(),
+    ponta: () => bracoPrimeiraPessoa().ponta(),
+    zerarPonta: () => bracoPrimeiraPessoa().zerarPonta(),
+    ritmo: () => bracoPrimeiraPessoa().ritmo(),
+    zerarRitmo: () => bracoPrimeiraPessoa().zerarRitmo(),
+    custo: () => {
+      const c = bracoPP?.custo() ?? { malhas: 0, triangulos: 0 };
+      const m = primeiraPessoa.custoMira();
+      return { malhas: c.malhas + m.malhas, triangulos: c.triangulos + m.triangulos };
+    },
+    itens: () => todosItens().map((i) => ({ id: i.id, tipo: i.tipo })),
+  };
+  // (o núcleo avisa o sono e o acordar; a cena repassa nestes eventos, que o véu também ouve)
+  window.addEventListener('brumaluz:sono', (e) => {
+    if ((e as CustomEvent<{ dormiu?: boolean }>).detail?.dormiu) dormindo = true;
+  });
+  window.addEventListener('brumaluz:acordou', () => {
+    dormindo = false;
+  });
+  // comprou, vestiu ou tirou um tesouro na lojinha: a câmera volta para fora (ela se vê)
+  window.addEventListener('brumaluz:almaPerfil', (e) => {
+    const aviso = (e as CustomEvent<{ aviso?: { tipo?: string } }>).detail?.aviso;
+    if (aviso?.tipo === 'premium' && primeiraPessoa.ligada()) primeiraPessoa.ligar(false);
+  });
   // spec 032 (só nos testes de tela): o ajuste da comida na boca (o braço e a comida na mão)
   if (ehTesteDeTela())
     estado.ajusteComer = { pose: AJUSTE_COMER, mao: NA_MAO_COMENDO, boca: NA_BOCA };
@@ -4205,7 +4250,10 @@ export function criarCena(
     let pitch = camera.rotation.x;
     for (let i = 0; i < 6; i++) {
       const s = orbita.seguido() ?? camera.position;
-      const p = pivoCamera(s, yaw, pitch, bloqueiaCamera, LADO_OMBRO, orbita.alturaPivo());
+      // (de dentro, a mira do meio sai dos olhos)
+      const p = mirandoDeDentro()
+        ? primeiraPessoa.olhosPara(yaw)
+        : pivoCamera(s, yaw, pitch, bloqueiaCamera, LADO_OMBRO, orbita.alturaPivo());
       const dx = ax - p.x;
       const dy = ay - p.y;
       const dz = az - p.z;
@@ -4347,7 +4395,7 @@ export function criarCena(
   /** Spec 032 (só fotos de teste): o corpo travado num rumo. */
   let yawTravado: number | null = null;
   /**
-   * Esboço 037: em primeira pessoa o corpo fica debaixo dos olhos, no rumo do olhar (nem ao
+   * Spec 037: em primeira pessoa o corpo fica debaixo dos olhos, no rumo do olhar (nem ao
    * colocar nem ao comer ele vira, ou o ombro entrava na frente da câmera).
    */
   let yawPrimeiraPessoa: number | null = null;
@@ -5999,9 +6047,9 @@ export function criarCena(
     atualizarSomMovimento(Math.min(dtBruto, 0.05));
     // a câmera segue o boneco antes da mira: o alvo do quadro é o que a criança vê
     atualizarCameraVisao(Math.min(dtBruto, 0.1));
-    // esboço 037: a câmera de dentro vai para os olhos antes da mira (o dedo mira da câmera que a
+    // spec 037: a câmera de dentro vai para os olhos antes da mira (o dedo mira da câmera que a
     // criança vê)
-    estado.primeiraPessoa?.antesDaMira?.(Math.min(dtBruto, 0.1));
+    primeiraPessoa.antesDaMira(Math.min(dtBruto, 0.1));
     if (pontoToque) mirarToque(pontoToque.x, pontoToque.y);
     verificarSlot();
     // o que as telas mexeram nos itens vira transação para o núcleo
@@ -6014,8 +6062,8 @@ export function criarCena(
     atualizarProvisorios(Math.min(dtBruto, 0.25));
     atualizarPersonagem(dtQuadro);
     naoNaMao.atualizar(Math.min(dtBruto, 0.1));
-    // esboço 037 (só com ?esboco=primeira-pessoa): a câmera de dentro e a mão
-    estado.primeiraPessoa?.quadro?.(Math.min(dtBruto, 0.1));
+    // spec 037: o braço, a mão e o contorno da mira da primeira pessoa, depois do boneco
+    primeiraPessoa.quadro(Math.min(dtBruto, 0.1));
     estado.fps = engine.getFps();
     estado.posicao = [camera.position.x, camera.position.y, camera.position.z];
     estado.rotacao = [camera.rotation.x, camera.rotation.y];
@@ -7123,6 +7171,8 @@ export function criarCena(
       !alvoComDistancia() &&
       !criaturaApontada() &&
       !comidaNaMao() &&
+      // (spec 037: o dedo num fantasma da obra no ar, sem bloco perto atrás, não é "longe")
+      !(podeEncherObra() && fantasmaNaMira()) &&
       blocoLongeNoRaio(raioToque),
     avisarLonge: () => tocarSom(motorAudio, 'recusa'),
     voando: () => !!controle.jogador.voando,

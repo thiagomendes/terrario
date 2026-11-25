@@ -404,19 +404,17 @@
         "src/ui/toque.ts",
         "src/ui/dicaMira.ts",
         "src/render/modoFoto.ts",
-        "src/esboco/primeiraPessoa.ts",
+        "src/render/primeiraPessoa.ts",
         "src/render/bracoPrimeiraPessoa.ts",
         "src/render/contaOmbro.ts"
       ],
       "suites": [
         "camera.spec.ts",
         "capturas-camera.spec.ts",
-        "esboco-primeira-pessoa.spec.ts",
-        "estudo-braco-primeira-pessoa.spec.ts",
-        "estudo-visao-primeira-pessoa.spec.ts",
         "medidas-033-camera.spec.ts",
         "medidas-033-roleta.spec.ts",
         "mira-toque.spec.ts",
+        "primeira-pessoa.spec.ts",
         "roleta-mundos.spec.ts",
         "roleta.spec.ts",
         "t04-braco-primeira-pessoa.spec.ts"

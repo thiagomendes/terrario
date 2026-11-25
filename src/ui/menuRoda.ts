@@ -37,6 +37,17 @@ const IC = {
 
 const svg = (miolo: string) =>
   `<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">${miolo}</svg>`;
+
+/** O olhinho (spec 037): o branco do olho, a íris azul, a pupila e o brilho. */
+const OLHO =
+  '<path d="M2.5 16 Q16 3 29.5 16 Q16 29 2.5 16 Z" fill="#ffffff" stroke="#24314d" stroke-width="2.4" stroke-linejoin="round"/>' +
+  '<circle cx="16" cy="16" r="6" fill="#3f8be0" stroke="#24314d" stroke-width="1.6"/>' +
+  '<circle cx="16" cy="16" r="2.9" fill="#24314d"/>' +
+  '<circle cx="18.1" cy="13.9" r="1.4" fill="#ffffff"/>';
+/** Ver de dentro: o olhinho. */
+export const ICONE_OLHINHO = svg(OLHO);
+/** Ver de fora (já está dentro): o mesmo olhinho num círculo amarelo, como um botão aceso. */
+export const ICONE_OLHINHO_LIGADO = svg('<circle cx="16" cy="16" r="15" fill="#ffd34d"/>' + OLHO);
 /** O ícone de cada item; o de "Gestos" é a carinha do boneco (spec 034, a dos ícones dos gestos). */
 const iconeDoItem = (id: ItemMenu['id']) =>
   id === 'gestos' ? svgDoIcone(ICONE_CARINHA) : svg(IC[id]);

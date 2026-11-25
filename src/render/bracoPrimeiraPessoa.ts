@@ -9,7 +9,7 @@
  * a cada golpe do jogo e um empurrão a cada colocação (os mesmos eventos que tocam o som). O item
  * fica como a criança seguraria olhando para a frente, encostado na mão.
  *
- * Quem liga: a câmera da primeira pessoa (a T03; até lá, o esboço `?esboco=primeira-pessoa`)
+ * Quem liga: a câmera da primeira pessoa (a T03, `primeiraPessoa.ts`)
  * põe a câmera nos olhos e chama `quadro(dt, entrada)` a cada quadro, depois do boneco, com a
  * fração da entrada (0 em terceira pessoa, 1 dentro). Com 0, nada daqui aparece e o boneco de
  * verdade fica inteiro. A cena repassa a luz (`definirLuz`) e a recusa de colocar (`nao`).

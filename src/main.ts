@@ -7,7 +7,7 @@ import {
 import { EVENTO_BAU, EVENTO_LOJINHA, EVENTO_MISSOES, ligarAlmaUi } from './ui/alma';
 import { ligarGuiaMissao, QUADRO_SVG } from './ui/alma/guia';
 import { arte as arteAlma } from './ui/alma/arte';
-import { EXTRAS_RODA } from './ui/menuRoda';
+import { EXTRAS_RODA, ICONE_OLHINHO, ICONE_OLHINHO_LIGADO } from './ui/menuRoda';
 import { ICONES_ANDAR, ICONE_DESCER, NOME_ANDAR } from './ui/iconesAndar';
 import { IDS_ANDAR } from './personagem/brinquedoAndar';
 import { CATEGORIAS_PREMIUM, ganhoTemAlgo, mundoAlmaDoEstilo, nivelDoXp } from './jogo/alma';
@@ -254,9 +254,6 @@ async function iniciar(app: HTMLElement): Promise<void> {
   if (esboco === 'amigos') (await import('./esboco/amigos')).prepararEsbocoAmigos();
   // esboço 014d (só com ?esboco=estetica): a estética firme dos veículos ao lado da de hoje
   if (esboco === 'estetica') (await import('./esboco/veiculosEstetica')).prepararEsbocoEstetica();
-  // esboço 037 (só com ?esboco=primeira-pessoa): a câmera de dentro, num botão com um olhinho
-  if (esboco === 'primeira-pessoa')
-    (await import('./esboco/primeiraPessoa')).prepararEsbocoPrimeiraPessoa();
   // spec 023 (T14): a lojinha premium na roda do menu, de qualquer mundo (a roda é montada
   // com a cena; a alma, que abre a lojinha, vem depois e ouve o pedido)
   // spec 030: o quadro de missões (só onde há missões) e o baú moram na roda do menu
@@ -346,6 +343,29 @@ async function iniciar(app: HTMLElement): Promise<void> {
       inicio: 2,
       aoEscolher: () => void window.__brumaluz?.personagem?.descer?.(),
     });
+  // spec 037 (dono, 25 nov 2026): o olhinho troca entre ver de dentro (a primeira pessoa) e de
+  // fora; mora na roda, e não solto na tela. A escolha fica guardada no aparelho. Nos lugares com
+  // câmera própria (a foto, a casa, o parque, montada, dormindo) a roda não mostra o olhinho
+  const pp = () => window.__brumaluz?.primeiraPessoa;
+  if (!EXTRAS_RODA.some((x) => x.id === 'ver-de-dentro'))
+    EXTRAS_RODA.push(
+      {
+        id: 'ver-de-dentro',
+        nome: 'Ver de dentro',
+        icone: ICONE_OLHINHO,
+        visivel: () => !!pp() && !pp()!.ligada() && pp()!.propria() === null,
+        semTela: true,
+        aoEscolher: () => pp()?.ligar(true),
+      },
+      {
+        id: 'ver-de-fora',
+        nome: 'Ver de fora',
+        icone: ICONE_OLHINHO_LIGADO,
+        visivel: () => !!pp()?.ligada() && pp()!.propria() === null,
+        semTela: true,
+        aoEscolher: () => pp()?.ligar(false),
+      },
+    );
   // em prévia de outro tema nada é salvo: o mundo continua sendo do tema dele
   cena = criarCena(canvas, hotbar, {
     mundo: atual,
