@@ -81,11 +81,14 @@ declare global {
 /** A entrada e a saída pela cabeça (s). */
 const DURACAO_TRANSICAO = 0.7;
 /**
- * Os olhos de verdade do boneco, em relação aos pés (blocos, com a escala 1,15): o ponto entre os
- * olhos, logo atrás do rosto (o plano do boneco: os olhos a 1,207 de altura; a cara a 0,37 à
- * frente do centro do corpo). A câmera sai da posição do corpo no quadro, sem o balanço da cabeça.
+ * A câmera de dentro, em relação aos pés (blocos): à altura dos olhos do controle (1,62, a mesma
+ * do jogo de blocos de referência num corpo de 1,8, e a mesma de onde o alcance é medido), na
+ * frente da cabeça escondida. Os olhos desenhados do boneco ficam a 1,21 (a cabeça é grande); com
+ * eles, o bloco à frente chegava quase à altura dos olhos e o mundo parecia de formiga (o estudo:
+ * `.sdd/specs/037-construir-melhor/referencia/estudo-visao-primeira-pessoa.md`). A câmera sai da
+ * posição do corpo no quadro, sem o balanço da cabeça.
  */
-const OLHOS_ALTURA = 1.21;
+const OLHOS_ALTURA = 1.62;
 const OLHOS_FRENTE = 0.345;
 /** Olhando bem para baixo, o olhar passa um tico da vertical: aparecem o peito e os sapatos. */
 const PITCH_CURVADO = 0.35;
@@ -129,11 +132,12 @@ const DURACAO_EMPURRAO = 0.3;
 /** O campo de visão em que o braço foi medido (a conta do ombro e a aparência dele). */
 const FOV_BRACO = (70 * Math.PI) / 180;
 /**
- * O campo de visão de dentro: o vertical de hoje (70°), mas nunca menos que 50° na horizontal (no
- * celular em pé, 70° na vertical dava só 36° na horizontal: a tela parecia um zoom). A conta e a
- * medida estão em `.sdd/specs/037-construir-melhor/referencia/conta-visao.mjs`.
+ * O campo de visão de dentro: o vertical de hoje (70°), mas nunca menos que 42,4° na horizontal
+ * (no celular em pé, 80° na vertical). Com 70° na vertical em pé, só 36° na horizontal (o "zoom");
+ * com 90°, a beira de cima e de baixo esticava 2 vezes (o campo "ia embora"); 80° estica 1,7. A
+ * conta e a grade estão em `.sdd/specs/037-construir-melhor/referencia/conta-escala.mjs`.
  */
-const FOV_H_MINIMO = (50 * Math.PI) / 180;
+const FOV_H_MINIMO = (42.4 * Math.PI) / 180;
 const fovDeDentro = (aspecto: number, fovJogo: number) =>
   Math.max(fovJogo, 2 * Math.atan(Math.tan(FOV_H_MINIMO / 2) / aspecto));
 /** Ao entrar, o olhar vai para a frente: o horizonte no terço de cima da tela. */
