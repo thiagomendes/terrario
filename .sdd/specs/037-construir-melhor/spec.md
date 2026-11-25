@@ -41,6 +41,7 @@ A investigação completa está em `referencia/investigacao-colocar.md` (engenhe
 | Data | Decisão |
 |---|---|
 | 24 nov | A ordem: logo depois da lojinha |
+| 25 nov | O braço segue a recomendação do estudo (`referencia/estudo-braco-primeira-pessoa.md`): a câmera na altura dos olhos de verdade; o braço do próprio boneco, no tamanho dele, sem dobrar e sem esticar, girando num ombro fixo fora da beira direita; a mãozinha discreta com o item; os ângulos da terceira pessoa em escala menor |
 | 24 nov | A câmera: um botão com olhinho troca entre a primeira e a terceira pessoa, com transição suave pela cabeça; a escolha fica guardada no aparelho; ao comprar ou vestir na lojinha, volta sozinha à terceira pessoa |
 | 24 nov | A mão vazia não aparece andando: entra só para agir (tocar, colocar, acenar, comer) e sai. Com item, uma mão só, como na terceira pessoa (nada de duas mãos) |
 | 24 nov | A câmera solta de hoje fica igual na primeira pessoa (arrastar para olhar, girar) |
