@@ -46,8 +46,24 @@ const OLHO =
   '<circle cx="18.1" cy="13.9" r="1.4" fill="#ffffff"/>';
 /** Ver de dentro: o olhinho. */
 export const ICONE_OLHINHO = svg(OLHO);
-/** Ver de fora (já está dentro): o mesmo olhinho num círculo amarelo, como um botão aceso. */
-export const ICONE_OLHINHO_LIGADO = svg('<circle cx="16" cy="16" r="15" fill="#ffd34d"/>' + OLHO);
+/**
+ * Ver de fora (já está dentro): o bonequinho inteiro, de pé no chão, como a criança se vê de fora
+ * (portão da 037: o mesmo olhinho nos dois não se distinguia sem ler). Diferente do "Personagem"
+ * (só a cabeça e o peito): aqui tem cabelo, braços, pernas e o chãozinho verde.
+ */
+export const ICONE_VER_DE_FORA = svg(
+  '<ellipse cx="16" cy="28.6" rx="10" ry="2.3" fill="#7cc35a" stroke="#3b2a1e" stroke-width="1.4"/>' +
+    '<rect x="11.6" y="20.5" width="3.8" height="7" rx="1.4" fill="#2b4f8f" stroke="#3b2a1e" stroke-width="1.4"/>' +
+    '<rect x="16.6" y="20.5" width="3.8" height="7" rx="1.4" fill="#2b4f8f" stroke="#3b2a1e" stroke-width="1.4"/>' +
+    '<rect x="6.6" y="13.6" width="4" height="7.4" rx="1.8" fill="#3b6fb6" stroke="#3b2a1e" stroke-width="1.4"/>' +
+    '<rect x="21.4" y="13.6" width="4" height="7.4" rx="1.8" fill="#3b6fb6" stroke="#3b2a1e" stroke-width="1.4"/>' +
+    '<circle cx="8.6" cy="21.6" r="1.7" fill="#e8b48a" stroke="#3b2a1e" stroke-width="1.2"/>' +
+    '<circle cx="23.4" cy="21.6" r="1.7" fill="#e8b48a" stroke="#3b2a1e" stroke-width="1.2"/>' +
+    '<rect x="10.2" y="12.8" width="11.6" height="9.4" rx="2.6" fill="#3b6fb6" stroke="#3b2a1e" stroke-width="1.6"/>' +
+    '<rect x="10" y="2.6" width="12" height="10.6" rx="3" fill="#e8b48a" stroke="#3b2a1e" stroke-width="1.6"/>' +
+    '<path d="M10 7.6 V5.6 a3 3 0 0 1 3 -3 H19 a3 3 0 0 1 3 3 V7.6 Q16 5.4 10 7.6 Z" fill="#7a4a2a" stroke="#3b2a1e" stroke-width="1.4" stroke-linejoin="round"/>' +
+    '<circle cx="13.8" cy="9.6" r="1.1" fill="#3b2a1e"/><circle cx="18.2" cy="9.6" r="1.1" fill="#3b2a1e"/>',
+);
 /** O ícone de cada item; o de "Gestos" é a carinha do boneco (spec 034, a dos ícones dos gestos). */
 const iconeDoItem = (id: ItemMenu['id']) =>
   id === 'gestos' ? svgDoIcone(ICONE_CARINHA) : svg(IC[id]);

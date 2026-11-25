@@ -7,7 +7,7 @@ import {
 import { EVENTO_BAU, EVENTO_LOJINHA, EVENTO_MISSOES, ligarAlmaUi } from './ui/alma';
 import { ligarGuiaMissao, QUADRO_SVG } from './ui/alma/guia';
 import { arte as arteAlma } from './ui/alma/arte';
-import { EXTRAS_RODA, ICONE_OLHINHO, ICONE_OLHINHO_LIGADO } from './ui/menuRoda';
+import { EXTRAS_RODA, ICONE_OLHINHO, ICONE_VER_DE_FORA } from './ui/menuRoda';
 import { ICONES_ANDAR, ICONE_DESCER, NOME_ANDAR } from './ui/iconesAndar';
 import { IDS_ANDAR } from './personagem/brinquedoAndar';
 import { CATEGORIAS_PREMIUM, ganhoTemAlgo, mundoAlmaDoEstilo, nivelDoXp } from './jogo/alma';
@@ -360,7 +360,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
       {
         id: 'ver-de-fora',
         nome: 'Ver de fora',
-        icone: ICONE_OLHINHO_LIGADO,
+        icone: ICONE_VER_DE_FORA,
         visivel: () => !!pp()?.ligada() && pp()!.propria() === null,
         semTela: true,
         aoEscolher: () => pp()?.ligar(false),
