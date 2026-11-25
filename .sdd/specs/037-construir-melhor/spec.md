@@ -1,7 +1,7 @@
 ---
 id: 037-construir-melhor
 title: 'Construir melhor: primeira pessoa num botão, bloco nunca em cima de ninguém e bloco só encostado'
-status: REVIEW
+status: APPROVED
 base_branch: main
 branch: feat/037-construir-melhor
 created_at: 2026-11-25T09:00:00Z
@@ -46,6 +46,8 @@ A investigação completa está em `referencia/investigacao-colocar.md` (engenhe
 | 24 nov | A mão vazia não aparece andando: entra só para agir (tocar, colocar, acenar, comer) e sai. Com item, uma mão só, como na terceira pessoa (nada de duas mãos) |
 | 24 nov | A câmera solta de hoje fica igual na primeira pessoa (arrastar para olhar, girar) |
 | 24 nov | A mira de colocar é importante e tem que ficar clara e certeira na primeira pessoa |
+| 25 nov | No computador, a primeira pessoa usa o mouse travado como a terceira pessoa de hoje (e o outro jogo no PC): arrastar gira, o clique age na mira do meio, com um pontinho só no computador. No celular, o bloco vai onde o dedo toca |
+| 25 nov | As exceções do apoio ficam: a planta da obra e do bolo segue a própria planta (o telhado da casinha só encosta pela quina), e as ferramentas do criativo no computador (colar, espelho) ficam sem a regra de apoio, mas com a de corpo |
 | 25 nov | O olhinho de trocar a câmera vai para a roda (o menu em carrossel), e não fica um botão solto na tela: tela limpa |
 | 25 nov | Na primeira pessoa, a mira segue o toque, não a câmera: no celular age onde o dedo tocou e no computador onde o mouse clicou, dentro do alcance de hoje, como na terceira pessoa. O pontinho do meio sai. Cada golpe tem um movimento de braço no ritmo do som. Todos os itens ficam de frente na mão, como a criança seguraria. A visão mostra à frente pelo menos o mesmo tanto que a terceira pessoa |
 | 24 nov | O braço não pode parecer "de madeira" nem balançar de lado, o que não acontece num braço de verdade |
@@ -113,7 +115,7 @@ O esboço `?esboco=primeira-pessoa` foi aprovado pelo dono no celular em 25 nov 
   - o ioiô e o pião aparecem;
   - a ferramenta fica menos alta na tela.
 - **Voltar para a terceira pessoa:** o item da mão some da tela e volta para o boneco. No esboço ele ficava preso na tela, um defeito achado pelo dono.
-- **A mira:** segue o toque ou o clique, como na terceira pessoa, pela mesma conta. O contorno fino aparece embaixo do dedo ou do ponteiro.
+- **A mira:** no celular, segue o toque, como na terceira pessoa, pela mesma conta, e o contorno fino aparece embaixo do dedo. No computador, com o mouse travado, age na mira do meio, saindo dos olhos, com um pontinho e o contorno na célula da mira.
 - **Guardar e voltar:** a escolha fica no aparelho. Ao comprar ou vestir na lojinha, volta para a terceira pessoa.
 - **A sombra:** a do boneco aparece no chão na primeira pessoa.
 - **Lugares com câmera própria:** neles a primeira pessoa sai sozinha e volta ao sair:
@@ -147,4 +149,3 @@ O esboço `?esboco=primeira-pessoa` foi aprovado pelo dono no celular em 25 nov 
 ## Fora desta spec
 - Bloco cair quando o apoio é quebrado: o dono decidiu que ele fica onde está.
 - Mexer nos mundos salvos.
-- A primeira pessoa no computador com mouse travado: aqui, o arrastar de hoje vale nas duas câmeras.
