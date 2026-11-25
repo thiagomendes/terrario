@@ -129,9 +129,19 @@ function quebrar(n: Nucleo, quem: string, c: Celula): number {
   mandar(n, quem, { t: 'quebrar', id: i, ...c, slot: 0 });
   return i;
 }
+/**
+ * Spec 037: o bloco novo precisa encostar num sólido. Estas regras são testadas no céu (longe
+ * de tudo o que a geração põe), então o teste põe embaixo uma pedra solta, como a de um mundo
+ * salvo com bloco no ar.
+ */
+function apoiar(n: Nucleo, c: Celula): void {
+  if (n.estado.mundo.bloco(c.x, c.y - 1, c.z) === Bloco.AR)
+    n.estado.edicoes.definir(c.x, c.y - 1, c.z, Bloco.PEDRA_LISA);
+}
 function colocar(n: Nucleo, quem: string, c: Celula, b: number = Bloco.TABUAS, slot = 0): number {
   const i = id();
   ir(n, quem, c);
+  apoiar(n, c);
   mandar(n, quem, { t: 'colocar', id: i, ...c, bloco: b, meta: 0, slot });
   return i;
 }
@@ -621,6 +631,7 @@ describe('auditoria da 016: lote do criativo e portas empilhadas (nuvem)', () =>
     const n = abrir('nuvem', 'criativo', C);
     const i = id();
     ir(n, 'leo', C);
+    apoiar(n, C);
     mandar(n, 'leo', {
       t: 'colocar',
       id: i,

@@ -46,6 +46,7 @@
     "andar-construir": {
       "nome": "Andar, pôr e tirar bloco, mochila",
       "gatilhos": [
+        "src/jogo/construir.ts",
         "src/player/alvo.ts",
         "src/player/controle.ts",
         "src/player/entrada.ts",

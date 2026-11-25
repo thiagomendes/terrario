@@ -91,6 +91,22 @@ async function montar(
   };
   const noServidor = (p: P) => sala.nucleo.estado.mundo.bloco(p.x, p.y, p.z);
   const o = { x: Math.floor(bv3.pos.x), y: Math.floor(bv3.pos.y), z: Math.floor(bv3.pos.z) };
+  /**
+   * Spec 037: o bloco novo precisa encostar num sólido. As células do teste ficam no ar (em
+   * cima da cabeça, longe do corpo), então uma pedra solta embaixo de cada coluna dá o apoio,
+   * no servidor e nas duas telas (como num mundo salvo com bloco no ar). A célula de cima se
+   * apoia na de baixo, que vai antes.
+   */
+  const apoiar = (ps: P[]) => {
+    const k = (p: P) => `${p.x},${p.y},${p.z}`;
+    const delas = new Set(ps.map(k));
+    for (const p of ps) {
+      const b = { x: p.x, y: p.y - 1, z: p.z };
+      if (delas.has(k(b)) || noServidor(b) !== Bloco.AR) continue;
+      sala.nucleo.estado.edicoes.definir(b.x, b.y, b.z, Bloco.PEDRA_LISA);
+      for (const t of [pai.tela, filho.tela]) t.definir(b.x, b.y, b.z, Bloco.PEDRA_LISA);
+    }
+  };
   /** Como a cena põe um bloco: a previsão na tela e o comando com o mesmo id. */
   const por = (p: P, bloco: number = BLOCO) => {
     const id = pai.est.proximoId();
@@ -114,6 +130,7 @@ async function montar(
     recebidos,
     posicoes,
     noServidor,
+    apoiar,
     por,
     tirar,
     /** A mochila do pai no servidor (o teste põe o que precisa). */
@@ -147,6 +164,7 @@ async function cenario(como: Como, ip: string) {
     const antes = fileira(m.o, 2);
     const depois = fileira(m.o, 3);
     for (const p of [...antes, ...depois]) expect(noServidor(p), 'a célula começa vazia').toBe(0);
+    m.apoiar([...antes, ...depois]);
 
     // a primeira fileira, com a conexão boa: chega ao servidor e ao filho
     for (const p of antes) por(p);
@@ -247,6 +265,7 @@ describe('os blocos que o pai pôs não somem quando a conexão dele morre ou ca
           for (let dx = -3; dx <= 3; dx++)
             celulas.push({ x: m.o.x + dx, y: m.o.y + dy, z: m.o.z + dz });
       for (const p of celulas) expect(m.noServidor(p), 'a célula começa vazia').toBe(0);
+      m.apoiar(celulas);
       // a internet cai e ele constrói tudo enquanto ela volta: tudo fica guardado
       m.nuvem.segurar('pai');
       m.nuvem.derrubar('pai');
@@ -276,6 +295,7 @@ describe('os blocos que o pai pôs não somem quando a conexão dele morre ou ca
       const velhos = fileira(m.o, 2);
       const novo = { x: m.o.x, y: m.o.y + 3, z: m.o.z + 3 };
       for (const p of [...velhos, novo]) expect(m.noServidor(p), 'a célula começa vazia').toBe(0);
+      m.apoiar([...velhos, novo]);
       // uma posição com queda, pulo e golpe, que o servidor recebe e conta
       const pos = m.bv3.pos;
       m.pai.est.enviar({
@@ -331,6 +351,7 @@ describe('o que não vai de novo, ou vai sabendo o que acontece (sobrevivência)
       j.inventarioSujo = true;
       const c = { x: m.o.x + 1, y: m.o.y + 3, z: m.o.z + 3 };
       expect(m.noServidor(c), 'a célula começa vazia').toBe(0);
+      m.apoiar([c]);
       await espera(300);
       // a volta do pai morre; ele põe uma flor (o servidor recebe e põe)
       m.nuvem.emudecer('pai', true);
@@ -367,6 +388,7 @@ describe('o que não vai de novo, ou vai sabendo o que acontece (sobrevivência)
       // longe do corpo (o item que cai não chega à mão de ninguém)
       const c = { x: m.o.x + 3, y: m.o.y + 3, z: m.o.z + 4 };
       expect(m.noServidor(c), 'a célula começa vazia').toBe(0);
+      m.apoiar([c]);
       await espera(300);
       m.por(c);
       await ate(() => m.noServidor(c) === BLOCO, 3000, 'a tábua entrar');

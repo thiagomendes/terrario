@@ -11,6 +11,7 @@ import { Protecao, criarProtecaoMundo } from '../../src/world/protecao';
 import { ALCANCE_REGRAS, FOLGA_MOVIMENTO } from '../../src/jogo/alcance';
 import { COLHER_PEDREIRO } from '../../src/jogo/exclusivos';
 import { idDoBloco } from '../../src/jogo/itens';
+import { temApoio } from '../../src/jogo/construir';
 import {
   ALTURA_OBRA,
   MIOLO_CANTEIRO,
@@ -255,6 +256,36 @@ describe('encher a obra (nuvem: tudo pelo saneamento)', () => {
     expect(ev.find((e) => e.e === 'recusa' && e.comando === i)).toMatchObject({
       protecao: { motivo: 'obra', certo: Bloco.TABUAS },
     });
+  });
+
+  it('spec 037: a planta segue a planta (o telhado entra antes da parede), mas nunca em cima de alguém', () => {
+    const n = abrir('criativo');
+    const celulas = celulasPlanejadas(cidade(), 1);
+    const topo = Math.max(...celulas.map((c) => c.camada));
+    const ler = (x: number, y: number, z: number) => n.estado.mundo.bloco(x, y, z);
+    // uma célula do telhado sem nada encostado ainda (a parede de baixo vazia)
+    const c = celulas.find((q) => q.camada === topo && !temApoio(q, ler))!;
+    expect(c, 'a célula do telhado no ar').toBeDefined();
+    // o Léo em pé dentro dela: não entra
+    n.estado.jogadores.get('leo')!.saltoPermitido = true;
+    mandar(n, 'leo', tel(c.x + 0.5, c.y, c.z + 0.5));
+    const i = colocar(n, 'ana', c);
+    const recusa = eventos(n)
+      .get('ana')!
+      .find((e) => e.e === 'recusa' && e.comando === i);
+    expect(recusa).toBeDefined();
+    expect(n.estado.mundo.bloco(c.x, c.y, c.z)).toBe(Bloco.AR);
+    // o Léo sai: entra sem apoio, porque é a planta
+    n.estado.jogadores.get('leo')!.saltoPermitido = true;
+    mandar(n, 'leo', tel(c.x + 0.5, c.y + 6, c.z + 0.5));
+    colocar(n, 'ana', c);
+    eventos(n);
+    expect(n.estado.mundo.bloco(c.x, c.y, c.z)).toBe(c.bloco);
+    // o bloco certo fora da planta, no ar, não entra (só a planta tem a exceção)
+    const fora = { ...c, y: c.y + 3 };
+    colocar(n, 'ana', fora);
+    eventos(n);
+    expect(n.estado.mundo.bloco(fora.x, fora.y, fora.z)).toBe(Bloco.AR);
   });
 
   it('o canteiro que espera a vez não aceita nada', () => {

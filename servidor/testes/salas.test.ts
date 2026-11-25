@@ -1057,6 +1057,11 @@ describe('construções protegidas na sala (spec 016, três jogadores)', () => {
         slot: 0,
       });
     await s.avancar(100);
+    // spec 037: o bloco novo precisa encostar num sólido; a célula do teste fica no céu, então
+    // uma pedra solta embaixo dela dá o apoio (como num mundo salvo com bloco no ar)
+    // (a célula P e a do baú, dois para o lado)
+    for (const dz of [0, 2])
+      nucleo().estado.edicoes.definir(P.x, P.y - 1, P.z + dz, Bloco.PEDRA_LISA);
     return { ...s, b, c, nucleo, mandar, P };
   }
 
@@ -1190,6 +1195,8 @@ describe('construções protegidas na sala (spec 016, três jogadores)', () => {
       });
     await s.avancar(300);
     await s.g.receber(a, tel(1));
+    // spec 037: a pedra solta embaixo dá o apoio à célula no céu
+    s.g.ativas.get(codigo)!.nucleo.estado.edicoes.definir(P.x, P.y - 1, P.z, Bloco.PEDRA_LISA);
     await s.g.receber(
       a,
       JSON.stringify({ t: 'colocar', id: 1, ...P, bloco: Bloco.TABUAS, meta: 0, slot: 0, seq: 2 }),
