@@ -166,6 +166,12 @@ body .botao-amigos { top: calc(280px + env(safe-area-inset-top)); right: max(16p
   .menu-hud.mochila { --topo: 162px; }
   body .botao-amigos { top: calc(164px + env(safe-area-inset-top)); right: max(72px, calc(env(safe-area-inset-right) + 60px)); }
 }
+/* spec 037 (decisão do dono): na paisagem baixa, a mochila e os amigos vão para a esquerda, ao
+   lado do minimapa (o canto de baixo à direita fica para a mão de dentro) */
+@media (orientation: landscape) and (max-height: 500px) {
+  .menu-hud.mochila { --topo: 104px; right: auto; left: calc(max(10px, env(safe-area-inset-left)) + 106px); }
+  body .botao-amigos { top: calc(160px + env(safe-area-inset-top)); right: auto; left: calc(max(10px, env(safe-area-inset-left)) + 108px); }
+}
 /* tocar no minimapa abre o mapa grande */
 body:not(.tela-titulo) .minimapa { pointer-events: auto; cursor: pointer; }
 /* o botão de informações em todo aparelho (as pílulas abrem nele) */

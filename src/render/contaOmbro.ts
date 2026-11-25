@@ -92,7 +92,23 @@ export interface Tela {
    * ficam atrás deles em nenhuma ação, a não ser no aceno, que passa rápido.
    */
   obstaculos?: readonly Retangulo[];
+  /**
+   * Tela baixa (o celular deitado): o aceno pode sair pela beira de cima, o comer (0,7 s) pode
+   * passar atrás da interface, e o item fica inteiro dentro da tela (decisão do dono, estudo 037).
+   */
+  baixa?: boolean;
 }
+
+/**
+ * Spec 037 (decisão do dono, estudo dos tesouros): numa tela deitada e baixa (até 500 px de
+ * altura), a mão tem o mesmo tamanho que teria com a mesma tela de pé (no mesmo celular, a mesma
+ * mão no vidro): 76 px no celular de 390 × 844. A conta da tela de pé usa o alto dos botões na
+ * proporção do celular em pé medido (652 de 844).
+ */
+export const TELA_BAIXA = 500;
+const BOTOES_DE_PE = 652 / 844;
+/** O item inteiro na tela: o meio dele acima da mão e a meia largura (em raios da mão). */
+const ITEM_MEIA_LARGURA = 1.9;
 
 /** A folga (px) entre a mão, ou o item, e um retângulo da interface. */
 export const FOLGA_INTERFACE_PX = 6;
@@ -145,11 +161,19 @@ export function ombroServe(ombro: Vec3, tela: Tela, fovV = FOV_BRACO, acoes: rea
     const px = (w / 2) * (1 + m[0] / (m[2] * tanH));
     const py = (h / 2) * (1 - m[1] / (m[2] * tanV));
     const r = (RAIO_MAO / (m[2] * tanV)) * (h / 2);
-    if (px - r < 0 || px + r > w || py - r < 0 || py + r > h) return false;
+    // (na tela baixa, o aceno pode sair pela beira de cima: ele passa rápido)
+    const acena = PASSA_POR_CIMA.has(i);
+    if (!(tela.baixa && acena) && (px - r < 0 || px + r > w || py - r < 0 || py + r > h)) return false;
+    // na tela baixa, o item inteiro dentro da tela (o balde de pipoca não fica cortado pela beira)
+    if (tela.baixa && !acena) {
+      const meia = ITEM_MEIA_LARGURA * r;
+      const alto = py - (ITEM_ACIMA + ITEM_RAIO) * r;
+      if (px - meia < 4 || px + meia > w - 4 || alto < 4) return false;
+    }
     // segurando, o bloco (uma mão abaixo dela) fica acima dos botões
     if (i === 0 && py + 2.2 * r > botoes - 8) return false;
-    // a mão e o item fora dos botões, da barra e do mapinha
-    if (tela.obstaculos && !PASSA_POR_CIMA.has(i))
+    // a mão e o item fora dos botões, da barra e do mapinha (na tela baixa, o comer passa atrás)
+    if (tela.obstaculos && !acena && !(tela.baixa && i === 7))
       for (const q of tela.obstaculos)
         if (encosta(px, py, r, q) || encosta(px, py - ITEM_ACIMA * r, ITEM_RAIO * r, q)) return false;
   }
@@ -166,6 +190,17 @@ const PASSO_Z_GROSSO = 0.03;
  * e a mesma grade de distâncias), com uma fração das contas.
  */
 export function acharOmbro(tela: Tela, fovV = FOV_BRACO): ResultadoOmbro | null {
+  // a tela deitada e baixa: a mão do tamanho da tela de pé, no lugar mais baixo e mais à direita
+  // onde ela e o item cabem fora da interface
+  if (tela.h <= TELA_BAIXA && tela.w > tela.h) {
+    const dePe = buscarOmbro({ w: tela.h, h: tela.w, botoes: tela.w * BOTOES_DE_PE }, fovV, GRADE_ESBOCO);
+    if (dePe) {
+      // (os retângulos de verdade já guardam a mão e o item dos botões de baixo: o alto dos botões
+      // da metade direita, que aqui é a ponta da barra, não vale para a mão no canto)
+      const r = buscarOmbro({ ...tela, baixa: true, botoes: tela.h }, fovV, { ...GRADE_LARGA, alvoPx: dePe.maoPx });
+      if (r) return r;
+    }
+  }
   // primeiro, os pontos da tela do esboço aprovado; com a interface ocupando todos eles (o celular
   // deitado: a barra embaixo, o mapinha e a mochila à direita), a faixa livre mais embaixo e
   // mais à direita
@@ -179,6 +214,8 @@ interface Grade {
   /** A mão procurada (diâmetro em frações da altura da tela); sem ela, a regra do esboço. */
   alvoAltura?: number;
   segurar: readonly [number, number];
+  /** A mão neste tamanho (px): o lugar mais baixo e, dele, o mais à direita onde ela cabe. */
+  alvoPx?: number;
 }
 /**
  * Na faixa larga, a mão tem até 12% da altura da tela (em pé, 9%; no computador, 14%). No celular
@@ -237,6 +274,17 @@ function buscarOmbro(tela: Tela, fovV: number, grade: Grade): ResultadoOmbro | n
     ? Math.min(h * grade.alvoAltura, w * MAO_MAX_LARGURA)
     : Math.min(menor * FATOR_MAO, w * MAO_MAX_LARGURA);
   let melhor: { tx: number; ty: number; z: number; px: number } | null = null;
+  if (grade.alvoPx) {
+    // a mão no tamanho pedido: entre os pontos onde essa distância serve, o mais baixo e, dele,
+    // o mais à direita (o canto da mão de segurar)
+    const zAlvo = (RAIO_MAO / (tanV * grade.alvoPx)) * h;
+    for (const t of trechos) {
+      if (zAlvo > zDe(t.kIni) + 1e-6 || zAlvo < zDe(t.kFim) - 1e-6) continue;
+      if (!ombroServe(ombroEm(t.tx, t.ty, zAlvo), tela, fovV, acoes)) continue;
+      if (!melhor || t.ty < melhor.ty - 1e-6 || (Math.abs(t.ty - melhor.ty) < 1e-6 && t.tx > melhor.tx))
+        melhor = { tx: t.tx, ty: t.ty, z: zAlvo, px: grade.alvoPx };
+    }
+  } else
   for (const t of trechos) {
     // a distância mais perto (mão maior) do trecho com a mão ainda ≤ alvo
     let k = t.kFim;
