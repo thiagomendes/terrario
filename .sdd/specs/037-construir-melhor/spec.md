@@ -49,7 +49,7 @@ A investigação completa está em `referencia/investigacao-colocar.md` (engenhe
 | 25 nov | Braço sem articulação, como na terceira pessoa (a opção 2 do esboço). Ele não pode parecer levantado nem solto do corpo, com a ponta do ombro à mostra. A forma final sai do estudo geométrico (`referencia/estudo-braco-primeira-pessoa.md`), feito a pedido do dono para parar de ajustar no chute |
 | 24 nov | Bloco nunca em cima de corpo (é defeito); quem já ficou preso é solto |
 | 24 nov | Bloco só encostado num bloco ou no chão, em todos os modos |
-| pendente | Quebrar o bloco de baixo: o de cima continua no ar (recomendado, como no outro jogo e sem mexer nos mundos salvos) ou cai |
+| 25 nov | Quebrar o bloco de baixo, ou o do lado que serviu de apoio, deixa o bloco que estava encostado onde está. A regra do apoio vale só na hora de colocar: um bloco novo nunca começa do nada, precisa encostar num bloco ou no chão. Depois de colocado, ele fica, mesmo que o apoio seja quebrado (como no outro jogo) |
 
 ## Decisões do orquestrador
 - **As exceções do apoio:**
@@ -99,6 +99,6 @@ O detalhe vem do estudo do braço, a pedido do dono. Já está decidido:
 - Nada que lembre o jogo famoso: nem a mão quadrada esticada nem o braço sempre erguido.
 
 ## Fora desta spec
-- O bloco cair quando o de baixo é quebrado, a não ser que o dono decida o contrário.
+- Bloco cair quando o apoio é quebrado: o dono decidiu que ele fica onde está.
 - Mexer nos mundos salvos.
 - A primeira pessoa no computador com mouse travado: aqui, o arrastar de hoje vale nas duas câmeras.
