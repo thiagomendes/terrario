@@ -11,6 +11,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import { criarGerenciador, type Canal } from './salas';
 import { armazemMemoria } from './armazem';
 import { armazemAzure } from './armazemAzure';
+import { criarLimitador, MAX_POR_SEGUNDO } from './limitador';
 import { PASSO } from '../../src/nucleo/protocolo';
 
 const PORTA = Number(process.env.PORT ?? 8080);
@@ -20,8 +21,6 @@ const ORIGENS = (process.env.TERRARIO_ORIGENS ?? '')
   .filter(Boolean);
 /** Mensagem maior que isto fecha a conexão (levar um mundo grande para a nuvem cabe). */
 const MAX_MENSAGEM = 8 * 1024 * 1024;
-/** Mensagens por segundo por conexão (telemetria são 20; o resto é folga para ações). */
-const MAX_POR_SEGUNDO = 150;
 
 const log = (m: string) => console.log(`[${new Date().toISOString()}] ${m}`);
 const conta = process.env.TERRARIO_CONTA;
@@ -110,18 +109,13 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     },
     fechar: () => ws.close(),
   };
-  let janela = Date.now();
-  let contagem = 0;
+  const limite = criarLimitador();
   ws.on('message', (dados) => {
-    const agora = Date.now();
-    if (agora - janela > 1000) {
-      janela = agora;
-      contagem = 0;
-    }
     // excesso fecha a conexão: o navegador reconecta e renumera (ignorar uma mensagem
     // deixaria um buraco na ordem e o jogador parado esperando por ela)
-    if (++contagem > MAX_POR_SEGUNDO) {
-      if (contagem === MAX_POR_SEGUNDO + 1) {
+    const v = limite();
+    if (v !== 'passa') {
+      if (v === 'fechar') {
         log(`conexão fechada: mais de ${MAX_POR_SEGUNDO} mensagens por segundo`);
         ws.close(4008, 'devagar');
       }
