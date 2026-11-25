@@ -4,7 +4,7 @@ import type { DadosMundo } from '../jogo/mundos';
  * WebSocket. Entra (ou cria) o mundo, renumera os comandos a cada conexão, guarda o que
  * o jogador fez enquanto a internet caiu e reconecta sozinha, voltando ao mesmo lugar.
  */
-import type { Comando, Mensagem } from '../nucleo/protocolo';
+import type { Comando, Mensagem, Quadro } from '../nucleo/protocolo';
 import {
   VERSAO_REDE,
   type EstadoSala,
@@ -74,6 +74,13 @@ const TETO_FILA = 200;
 const PRAZO_RESSINCRONIZAR = 5000;
 /** Código do fechamento da ressincronização (aparece no registro do servidor). */
 const FECHA_RESSINCRONIZAR = 4001;
+/**
+ * Os comandos de bloco, que vão de novo na volta se o núcleo não confirmou: o núcleo confere
+ * cada um outra vez (repetir o que já entrou é recusado e não muda nada).
+ */
+const REENVIAVEIS: ReadonlySet<string> = new Set(['colocar', 'quebrar', 'editar', 'arar']);
+/** Teto dos que esperam confirmação (uns 25 s de construção sem parar). */
+const MAX_SEM_CONFIRMACAO = 500;
 
 export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
   const ouvintes: ((m: Mensagem) => void)[] = [];
@@ -98,6 +105,19 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
   let seq = 0;
   /** Feito enquanto a internet caiu: vai assim que voltar (a telemetria não precisa). */
   const guardados: Comando[] = [];
+  /**
+   * Os blocos postos e tirados que já saíram por uma conexão e que o núcleo ainda não confirmou
+   * (o `ack` dos quadros). A conexão pode estar morta sem ninguém saber (o wi-fi que trocou de
+   * antena): o navegador ainda vê `OPEN` e o que vai por ela some. Na volta, vão de novo, antes
+   * dos guardados. Só os de bloco: o núcleo confere cada um outra vez (o que já entrou é
+   * recusado sem mudar nada, e a recusa vem com o valor certo da célula), então repetir não dá
+   * nada em dobro.
+   */
+  const semConfirmacao: Comando[] = [];
+  /** Ids que foram de novo: a recusa deles (o que já tinha entrado) não toca o "não pode". */
+  const reenviados = new Set<number>();
+  /** A última posição mandada: na volta vai antes dos blocos (o alcance é conferido nela). */
+  let ultimaTelemetria: Comando | null = null;
   let resolver!: (b: BemVindo) => void;
   let rejeitar!: (e: Error) => void;
   const pronta = new Promise<BemVindo>((res, rej) => {
@@ -142,6 +162,7 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
   };
 
   function mandar(c: Comando | PedidoCliente): void {
+    if ('t' in c && c.t === 'jogador') ultimaTelemetria = c;
     if (!ws || ws.readyState !== WebSocket.OPEN || estado !== 'conectado') {
       if (
         't' in c &&
@@ -155,6 +176,44 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
     }
     const comSeq = 'seq' in (c as Comando) ? { ...(c as Comando), seq: ++seq } : c;
     ws.send(JSON.stringify(comSeq));
+    if ('t' in c && REENVIAVEIS.has(c.t) && typeof (c as { id?: unknown }).id === 'number') {
+      semConfirmacao.push(c as Comando);
+      if (semConfirmacao.length > MAX_SEM_CONFIRMACAO) semConfirmacao.shift();
+    }
+  }
+
+  const idDe = (c: Comando) => (c as { id: number }).id;
+
+  /** O quadro diz até onde o núcleo já fez (`ack`): o que já entrou não precisa ir de novo. */
+  function confirmar(q: Quadro): void {
+    if (reenviados.size && q.eventos?.length) {
+      // a recusa do que foi de novo e já tinha entrado (a célula ocupada pelo próprio bloco):
+      // a correção da célula vem no quadro; o "não pode" ficaria sem motivo para a criança
+      q.eventos = q.eventos.filter(
+        (e) => !(e.e === 'recusa' && !e.protecao && reenviados.has(e.comando)),
+      );
+      if (!q.eventos.length) delete q.eventos;
+    }
+    for (let i = semConfirmacao.length - 1; i >= 0; i--)
+      if (idDe(semConfirmacao[i]) <= q.ack) semConfirmacao.splice(i, 1);
+  }
+
+  /**
+   * A volta: os blocos que saíram pela conexão que morreu e não foram confirmados vão de novo,
+   * em ordem, depois da última posição (o núcleo confere o alcance nela).
+   */
+  function reenviarSemConfirmacao(): void {
+    if (!semConfirmacao.length) return;
+    if (ultimaTelemetria) mandar(ultimaTelemetria);
+    for (const c of semConfirmacao.splice(0)) {
+      reenviados.add(idDe(c));
+      mandar(c);
+    }
+    // os ids não se repetem na página: os antigos só ocupam lugar
+    for (const id of reenviados) {
+      if (reenviados.size <= MAX_SEM_CONFIRMACAO) break;
+      reenviados.delete(id);
+    }
   }
 
   function abrir(): void {
@@ -188,19 +247,29 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
         codigo = m.sala.codigo;
         tentativa = 0;
         clearTimeout(prazoRessinc);
-        mudar('conectado');
         const { t: _t, ...bv } = m;
         void _t;
         const volta = !primeira;
         const reaberta = volta && m.instancia !== undefined && m.instancia !== instancia;
         primeira = false;
         instancia = m.instancia;
-        resolver(bv);
         if (reaberta) {
+          // o servidor recomeçou: a página abre o mundo de novo (nada vai de novo por aqui)
+          semConfirmacao.length = 0;
+          mudar('conectado');
+          resolver(bv);
           for (const f of ouvintesReaberta) f();
           return;
         }
+        // de pé: primeiro o que se perdeu na conexão morta e o guardado com ela caída, e só
+        // depois quem ouve o 'conectado'. O `reconferir` da volta (src/nuvem.ts) pede o valor
+        // das células previstas: indo antes dos blocos guardados, a resposta chegava com a
+        // célula ainda vazia e tirava da tela o bloco que o servidor pôs logo em seguida.
+        estado = 'conectado';
+        if (volta) reenviarSemConfirmacao();
         for (const c of guardados.splice(0)) mandar(c);
+        mudar('conectado');
+        resolver(bv);
         for (const f of ouvintesSala) f(m.sala);
         // a volta: a página acerta o que mudou no mundo com ela fora (os quadros vêm depois)
         if (volta) for (const f of ouvintesBemVindo) f(bv);
@@ -223,7 +292,10 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
       } else if (m.t === 'sala') {
         codigo = m.sala.codigo;
         for (const f of ouvintesSala) f(m.sala);
-      } else chegou(m);
+      } else {
+        if (m.t === 'quadro') confirmar(m);
+        chegou(m);
+      }
     };
     s.onclose = () => {
       if (ws !== s) return;
