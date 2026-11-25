@@ -4,26 +4,22 @@
  * um pedaço à parte que o jogo nunca baixa.
  *
  * Tudo é o jogo de verdade: a câmera solta de hoje (girar, arrastar, o mesmo controle) continua
- * mandando no olhar; o esboço só leva a câmera que desenha a tela para dentro da cabeça do
- * boneco, esconde a cabeça dele e põe na frente dos olhos o braço de um segundo boneco de
- * verdade, com a mesma roupa e o mesmo item na mão (as peças, a junta e o desenho do item são os
- * do boneco: `criarBoneco` e `definirNaMao`).
- *
- * O dono escolheu a variante A (24 nov): a mão vazia some e só entra para agir (tocar, colocar,
- * acenar, comer); com item, aparece uma mão só. A A2 (cotovelo de dois ossos e a manga esticada)
- * ficou desproporcional; agora ele compara duas opções de braço, os botões "1" e "2":
- * - 1, articulação leve: o braço do boneco, do tamanho dele, é o antebraço; um pedaço da manga
- *   dele, sem esticar, é a parte de cima. O cotovelo dobra pouco e macio (a bolinha do ombro do
- *   boneco cobre a junta) e aparece perto da beira; a parte de cima sai da tela.
- * - 2, sem articulação: só o braço do boneco, inteiro e do tamanho dele, girando do ombro, que
- *   fica fora da tela, à direita.
- * Nas duas: a mão e a manga na mesma proporção do boneco em terceira pessoa (a mesma escala nas
- * três direções, nada esticado), a mola discreta (desce um tico ao começar a andar, sobe no pulo,
- * afunda e volta ao pousar), no passo só um sobe e desce leve (nada de balanço de lado), a mira
- * de colocar, a câmera solta e a entrada e a saída pela cabeça.
+ * mandando no olhar. O esboço segue a recomendação do estudo do braço
+ * (`.sdd/specs/037-construir-melhor/referencia/estudo-braco-primeira-pessoa.md`), aprovada pelo
+ * dono em 25 nov:
+ * - a câmera fica nos olhos de verdade do boneco (o ponto entre os olhos, logo atrás do rosto);
+ *   a cabeça some e o resto do corpo fica;
+ * - o braço da frente é o braço inteiro de um segundo boneco de verdade (`criarBoneco`, a mesma
+ *   roupa e o mesmo item: `definirNaMao`), no tamanho dele, sem dobra e sem esticar, girando num
+ *   ombro fixo fora da beira direita. O ponto do ombro sai de uma conta para cada tela
+ *   (`acharOmbro`, a mesma de `conta-braco.mjs`);
+ * - os ângulos de junta vêm da terceira pessoa: segurar é o "comer" baixado 15°; o passo, o pulo,
+ *   o aceno e o comer são os do boneco de verdade, em escala;
+ * - a mão vazia só entra para agir (a variante A); a mira (o pontinho e o contorno fino); a
+ *   câmera solta; a entrada e a saída pela cabeça com o olhinho.
  */
 import { Color3 } from '@babylonjs/core/Maths/math.color';
-import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
@@ -36,28 +32,27 @@ import type { Personagem } from '../render/personagem';
 import { criarBoneco } from '../render/boneco';
 import type { Aparencia } from '../personagem/aparencia';
 
-export type Opcao = '1' | '2';
-
 interface EsbocoPrimeiraPessoa {
   /** Liga (true) ou desliga a primeira pessoa, com a transição. */
   primeira(sim: boolean): void;
   ligada(): boolean;
   /** 0 em terceira pessoa, 1 dentro da cabeça (a transição no meio). */
   fracao(): number;
-  /** A opção de braço: 1 com articulação leve, 2 sem articulação. */
-  opcao(o: Opcao): void;
   /** Peso da mão na tela (0 fora, 1 inteira). */
   maos(): { direita: number; esquerda: number };
   /** A célula onde o bloco entra se a criança tocar no meio da tela (null sem mira). */
   mira(): [number, number, number] | null;
   /** Malhas e triângulos do que o esboço soma. */
   custo(): { malhas: number; triangulos: number };
-  /** Onde a mão, o cotovelo e o ombro caem na tela (px), para conferir que nada sobra. */
-  tela(): Record<string, [number, number]>;
-  /** Só para as fotos de ajuste: segura o braço numa pose (null solta). */
-  forcar(p: NomePose | null): void;
+  /** Onde a mão e o ombro caem na tela (px), e o ombro achado para esta tela. */
+  tela(): { mao: [number, number]; ombro: [number, number]; ombroCamera: number[]; maoPx: number };
+  /**
+   * A conferência do ombro desde o último `zerarPonta`: em quantos quadros o braço apareceu e a
+   * menor folga (px) entre o ombro, com a grossura da manga, e a beira da tela (positiva: fora).
+   */
+  ponta(): { quadros: number; menorFolgaPx: number };
+  zerarPonta(): void;
 }
-type NomePose = 'FORA' | 'SEGURAR' | 'RELAXADA' | 'ALCANCAR' | 'ACENAR' | 'COMER';
 
 declare global {
   interface Window {
@@ -68,104 +63,122 @@ declare global {
 // ------------------------------------------------------------------ números do esboço
 /** A entrada e a saída pela cabeça (s). */
 const DURACAO_TRANSICAO = 0.7;
-/** A mão vai até o lugar do bloco e volta (s). */
+/** O empurrão de colocar, visto de dentro (s): o do corpo dura 0,2 s, rápido demais. */
 const DURACAO_ALCANCE = 0.45;
-/** Os olhos um pouco à frente da cabeça: olhando para baixo, aparece a frente do corpo e os pés. */
-const FRENTE_OLHOS = 0.1;
-const FRENTE_OLHANDO_BAIXO = 0.32;
-/** E descem um pouco (blocos), como quem abaixa a cabeça para se ver. */
-const DESCE_OLHANDO_BAIXO = 0.3;
-/** Bem no fim do olhar para baixo: a cabeça vai mais à frente e o olhar passa um tico da vertical. */
-const FRENTE_CURVADO = 0.3;
-const PITCH_CURVADO = 0.55;
-/** O sobe e desce do passo (blocos), por passada. Nada de balanço de lado. */
-const BALANCO_ALTURA = 0.02;
+/**
+ * Os olhos, no espaço da cabeça do boneco (sem a escala): o ponto entre os olhos (que ficam a
+ * −0,04 e 0,33 à frente do centro), logo atrás do rosto (a cara da cabeça fica a 0,325).
+ */
+const OLHOS_NA_CABECA = new Vector3(0, -0.04, 0.3);
+/** Olhando bem para baixo, o olhar passa um tico da vertical: aparecem o peito e os sapatos. */
+const PITCH_CURVADO = 0.35;
 /** Pouso: quanto a câmera abaixa (blocos) por segundo de queda, no máximo POUSO_MAXIMO. */
 const POUSO_POR_SEGUNDO = 0.14;
 const POUSO_MAXIMO = 0.09;
-/** Olhando mais para baixo que isto, a mão sai de vista (o braço do corpo aparece). */
+/** Olhando mais para baixo que isto, a mão sai de vista (o corpo aparece). */
 const PITCH_SEM_MAO = 0.85;
-/**
- * O braço da frente é o do boneco, em miniatura e com a mesma escala nas três direções: a mão e
- * a manga ficam na proporção do boneco em terceira pessoa. Desenha por cima do mundo (nunca entra
- * na parede).
- */
-const ESCALA_VISTA = 0.19;
-/** O item na mão da frente, um pouco menor que o da mão do boneco (não tapa a obra). */
-const ESCALA_ITEM = 0.85;
-/** Deitado, o braço inteiro um pouco maior (a mão e a manga crescem juntas). */
-const ESCALA_DEITADO = 1.37;
-/** Do ombro à junta da mão, nas medidas do boneco (a escala vem da matriz). */
-const BRACO = 0.27;
-/** Na opção 1, a parte de cima (a manga do outro braço, sem esticar) até o cotovelo. */
-const BRACO_CIMA = 0.2;
+/** O braço do boneco, já com a escala 1,15: do ombro à junta da mão e o raio da mão (blocos). */
+const ESCALA_BONECO = 1.15;
+const BRACO = 0.27 * ESCALA_BONECO;
+const RAIO_MAO = 0.085 * ESCALA_BONECO;
+/** Meia grossura da manga com a quina (o que tem de ficar fora da tela junto com o ombro). */
+const MEIA_MANGA = 0.11;
+/** O ombro nunca chega mais perto da câmera que isto (o plano de corte é 0,1). */
+const PERTO = 0.15;
+/** A mão fica 1,2 vez a menor que a conta permite (mais antebraço), sem passar de 22% da largura. */
+const FATOR_MAO = 1.2;
+const MAO_MAX_LARGURA = 0.22;
 
 /**
- * Uma pose do braço na tela: onde a mão fica (x e y de -1 a 1 na tela, `d` à frente dos olhos),
- * para onde o braço volta a partir da mão (`u`, no espaço da câmera: x direita, y cima, z frente),
- * quanto o cotovelo dobra (`dobra`, só na opção 1) e para onde a frente da mão aponta (`frente`).
+ * Os ângulos de junta do braço (rad, como no boneco: x leva para a frente, z abre para fora;
+ * negativo leva para dentro). Segurar é o "comer" da terceira pessoa (x −1,5, z −0,69, medido
+ * no jogo) baixado 15°. O aceno sobe o braço para a frente, com o abano do boneco em volta de
+ * −1,0 (para a mão não sair pela direita).
  */
-interface PoseMao {
-  sx: number;
-  sy: number;
-  d: number;
-  u: [number, number, number];
-  dobra: number;
-  frente: [number, number, number];
+const SEGURAR: [number, number] = [-1.24, -0.69];
+const ACENAR: [number, number] = [-2.2, -1.0];
+/** O quanto dos movimentos da terceira pessoa entra (passo, pulo, colocar, comer). */
+const GANHO_PASSO = 0.12;
+const GANHO_PULO = 0.25;
+const EMPURRAO_COLOCAR = -0.32;
+const GANHO_COMER_X = 0.37;
+const GANHO_COMER_Z = 0.3;
+/** Fora: o braço gira para baixo até a mão sumir pela beira de baixo. */
+const FORA_X = 0.2;
+
+/** A direção do braço (do ombro para a mão) pelos ângulos de junta, como no boneco. */
+const direcao = (x: number, z: number) =>
+  new Vector3(Math.sin(z), -Math.cos(z) * Math.cos(x), -Math.cos(z) * Math.sin(x));
+
+/**
+ * O ombro fixo (no espaço da câmera: x direita, y cima, z frente) para uma tela: a mão de segurar
+ * no canto de baixo à direita, com o bloco acima dos botões; o ombro, com a grossura da manga,
+ * fora da tela e na frente do plano de corte; e, nas outras ações, a mão inteira na tela. Acha o
+ * de mão menor e aproxima o braço até a mão ficar FATOR_MAO maior, se ainda couber.
+ * (A mesma conta de `.sdd/specs/037-construir-melhor/referencia/conta-braco.mjs`.)
+ */
+export function acharOmbro(
+  w: number,
+  h: number,
+  fovV: number,
+  botoes: number,
+): { ombro: Vector3; maoPx: number } | null {
+  const aspecto = w / h;
+  const tanV = Math.tan(fovV / 2);
+  const tanH = tanV * aspecto;
+  const proj = (p: Vector3) => [(w / 2) * (1 + p.x / (p.z * tanH)), (h / 2) * (1 - p.y / (p.z * tanV))];
+  const fora = (p: Vector3, r: number) => {
+    const [x, y] = proj(p);
+    return Math.max(-x, x - w, -y, y - h) - (r / (p.z * tanV)) * (h / 2);
+  };
+  const d0 = direcao(SEGURAR[0], SEGURAR[1]);
+  const acoes: [number, number][] = [
+    SEGURAR,
+    [SEGURAR[0] - 0.06, SEGURAR[1]],
+    [SEGURAR[0] + 0.06, SEGURAR[1]],
+    [SEGURAR[0], SEGURAR[1] + 0.12],
+    [SEGURAR[0] + EMPURRAO_COLOCAR, SEGURAR[1]],
+    [ACENAR[0], ACENAR[1] + 0.35],
+    [ACENAR[0], ACENAR[1] - 0.35],
+    [SEGURAR[0] - 1.5 * GANHO_COMER_X, SEGURAR[1] - 0.78 * GANHO_COMER_Z],
+  ];
+  const serve = (ombro: Vector3) => {
+    if (ombro.z < PERTO || fora(ombro, MEIA_MANGA) < 4) return false;
+    for (let i = 0; i < acoes.length; i++) {
+      const m = ombro.add(direcao(acoes[i][0], acoes[i][1]).scale(BRACO));
+      const [px, py] = proj(m);
+      const r = (RAIO_MAO / (m.z * tanV)) * (h / 2);
+      if (m.z < PERTO || px - r < 0 || px + r > w || py - r < 0 || py + r > h) return false;
+      // segurando, o bloco (uma mão abaixo dela) fica acima dos botões
+      if (i === 0 && py + 2.2 * r > botoes - 8) return false;
+    }
+    return true;
+  };
+  // todas as posições que servem (a mão no canto, em cada distância)
+  const servem: { tx: number; ty: number; z: number; px: number }[] = [];
+  for (let tx = 0.2; tx <= 0.751; tx += 0.025)
+    for (let ty = -0.45; ty <= -0.149; ty += 0.025)
+      for (let z = 3; z >= 0.2; z -= 0.006) {
+        const mao = new Vector3(tx * z * tanH, ty * z * tanV, z);
+        if (serve(mao.subtract(d0.scale(BRACO)))) servem.push({ tx, ty, z, px: (RAIO_MAO / (z * tanV)) * h });
+      }
+  if (!servem.length) return null;
+  // a menor mão que serve; e, dela, a maior que não passa de FATOR_MAO vezes (mais antebraço na
+  // tela) nem de MAO_MAX_LARGURA da largura
+  const menor = Math.min(...servem.map((s) => s.px));
+  const alvo = Math.min(menor * FATOR_MAO, w * MAO_MAX_LARGURA);
+  let melhor = servem[0];
+  for (const s of servem) if (s.px <= alvo && (melhor.px > alvo || s.px > melhor.px)) melhor = s;
+  const mao = new Vector3(melhor.tx * melhor.z * tanH, melhor.ty * melhor.z * tanV, melhor.z);
+  return { ombro: mao.subtract(d0.scale(BRACO)), maoPx: Math.round(melhor.px) };
 }
-const pose = (
-  sx: number,
-  sy: number,
-  d: number,
-  u: [number, number, number],
-  dobra = 0,
-  frente: [number, number, number] = [-0.9, 0.2, -0.45],
-): PoseMao => ({ sx, sy, d, u, dobra, frente });
 
-/**
- * As poses de cada opção (no celular em pé; a faixa de baixo é do controle, dos botões e da barra:
- * a mão fica logo acima deles, à direita, e o braço sai pela beira direita, acima dos botões).
- */
-const POSES: Record<Opcao, Record<NomePose, PoseMao>> = {
-  // 1: o antebraço inteiro na tela, o cotovelo perto da beira, a parte de cima saindo
-  '1': {
-    FORA: pose(0.55, -1.35, 0.27, [1, -0.7, -0.4], 0.4),
-    SEGURAR: pose(0.25, -0.2, 0.28, [1, -0.5, -0.15], 0.4),
-    RELAXADA: pose(0.4, -0.45, 0.27, [1, -0.55, -0.2], 0.4),
-    ALCANCAR: pose(0.16, -0.1, 0.34, [1, -0.35, -0.05], 0.3),
-    ACENAR: pose(0.3, -0.02, 0.27, [0.8, -1, -0.1], 0.45, [-0.1, 0, -1]),
-    COMER: pose(0.1, -0.22, 0.23, [1, -0.35, -0.1], 0.4, [-0.5, 0.3, -1]),
-  },
-  // 2: o braço inteiro, o ombro fora da tela à direita
-  '2': {
-    FORA: pose(0.7, -1.35, 0.27, [1, -0.7, -0.6]),
-    SEGURAR: pose(0.48, -0.25, 0.28, [1, -0.6, -0.8]),
-    RELAXADA: pose(0.55, -0.45, 0.27, [1, -0.6, -0.8]),
-    ALCANCAR: pose(0.42, -0.18, 0.33, [1, -0.4, -0.15]),
-    ACENAR: pose(0.5, -0.08, 0.27, [1, -1.1, -0.1], 0, [-0.1, 0, -1]),
-    COMER: pose(0.32, -0.22, 0.23, [1, -0.5, -0.4], 0, [-0.5, 0.3, -1]),
-  },
-};
-
-const mistura3 = (a: [number, number, number], b: [number, number, number], t: number) =>
-  [0, 1, 2].map((i) => a[i] + (b[i] - a[i]) * t) as [number, number, number];
-const misturar = (a: PoseMao, b: PoseMao, t: number): PoseMao => ({
-  sx: a.sx + (b.sx - a.sx) * t,
-  sy: a.sy + (b.sy - a.sy) * t,
-  d: a.d + (b.d - a.d) * t,
-  u: mistura3(a.u, b.u, t),
-  dobra: a.dobra + (b.dobra - a.dobra) * t,
-  frente: mistura3(a.frente, b.frente, t),
-});
 const suave = (t: number) => {
   const c = Math.min(1, Math.max(0, t));
   return c * c * (3 - 2 * c);
 };
 const aproximar = (a: number, b: number, taxa: number, dt: number) =>
   a + (b - a) * (1 - Math.exp(-taxa * dt));
-const v3 = (a: [number, number, number]) => new Vector3(a[0], a[1], a[2]);
-/** A frente da manga (o +z do boneco) olha para a câmera: o punho e a costura ficam de frente. */
-const FRENTE_MANGA = new Vector3(0, 0.2, -1);
 
 export function prepararEsbocoPrimeiraPessoa(): void {
   const esperar = () => {
@@ -181,7 +194,6 @@ export function prepararEsbocoPrimeiraPessoa(): void {
 
 function ligar(g: GanchoPrimeiraPessoa): void {
   const { scene, visao, olhos } = g;
-  let opcao: Opcao = '1';
   let ligado = false;
   let t = 0;
   // nada do esboço entra no brilho da tela (o halo borrava a mão e o contorno da mira)
@@ -196,40 +208,15 @@ function ligar(g: GanchoPrimeiraPessoa): void {
   scene.setRenderingAutoClearDepthStencil(GRUPO, true, true, true);
   const suporte = new TransformNode('esb-pp-suporte', scene);
   suporte.parent = visao;
+  /** O braço da frente: gira no ombro fixo (no espaço da câmera). */
+  const osso = new TransformNode('esb-pp-ossoD', scene);
+  osso.parent = suporte;
+  osso.rotationQuaternion = Quaternion.Identity();
   let vista: Personagem | null = null;
   let aparenciaDaVista: Aparencia | null = null;
-  // D: o braço do boneco (na opção 2 é o braço inteiro; na 1, o antebraço). E: na opção 1, a
-  // parte de cima (a manga do outro braço, sem a mão e sem o punho)
-  const ossos: Record<'D' | 'E', TransformNode> = {
-    D: new TransformNode('esb-pp-ossoD', scene),
-    E: new TransformNode('esb-pp-ossoE', scene),
-  };
-  ossos.D.parent = suporte;
-  ossos.E.parent = suporte;
-  let malhasBraco: Record<'D' | 'E', AbstractMesh[]> = { D: [], E: [] };
-  /** Do ombro à junta da mão (medidas do boneco). */
-  let comprimento = BRACO;
-  let k = 0.2;
-  /** A junta da mão da frente: fica sempre de pé na tela (o item não deita com o braço). */
+  let malhasBraco: AbstractMesh[] = [];
+  /** A junta da mão da frente: fica de pé na tela (o item não deita com o braço). */
   let juntaMao: TransformNode | null = null;
-  const matrizOsso = new Matrix();
-  const matrizMao = new Matrix();
-  /**
-   * A mão e o item de pé na tela, com a frente da mão (+z do boneco, onde o item fica) para o
-   * lado de `frente`: o braço gira, a mão não deita junto.
-   */
-  const orientarMao = (frente: Vector3) => {
-    if (!juntaMao || !ossos.D.rotationQuaternion) return;
-    const z = frente.normalizeToNew();
-    const cima = new Vector3(0, 1, 0);
-    const y = cima.subtract(z.scale(Vector3.Dot(cima, z))).normalize();
-    const x = Vector3.Cross(y, z).normalize();
-    Quaternion.RotationQuaternionFromAxis(x, y, z).toRotationMatrix(matrizMao);
-    ossos.D.rotationQuaternion.toRotationMatrix(matrizOsso);
-    // a mão é filha do osso: local = desejada × inversa do osso (a inversa de giro é a transposta)
-    const local = matrizMao.multiply(matrizOsso.transpose());
-    juntaMao.rotationQuaternion = Quaternion.FromRotationMatrix(local);
-  };
   // a luz do jogador (de noite, na caverna) vale também para o braço da frente: o jogo passa a
   // luz ao boneco a cada quadro, e o esboço repassa a mesma ao braço
   let luz = 1;
@@ -248,45 +235,58 @@ function ligar(g: GanchoPrimeiraPessoa): void {
     // (sem fundir: a mão fica numa junta própria)
     vista = criarBoneco(scene, semMontar, 'esb-pp', undefined, false, true);
     const todas = vista.raiz.getChildMeshes(false);
-    const escala = scene.getTransformNodeByName('esb-pp-escala')?.scaling.x ?? 1.15;
-    k = escala * ESCALA_VISTA;
-    malhasBraco = { D: [], E: [] };
-    for (const lado of ['D', 'E'] as const) {
-      const braco = scene.getTransformNodeByName(`esb-pp-junta-braco${lado}`);
-      if (!braco) continue;
-      braco.parent = ossos[lado];
+    const braco = scene.getTransformNodeByName('esb-pp-junta-bracoD');
+    malhasBraco = [];
+    if (braco) {
+      braco.parent = osso;
       braco.position.setAll(0);
       braco.rotation.setAll(0);
-      // a mesma escala nas três direções: nada estica
-      ossos[lado].scaling.setAll(k);
-      const mao = scene.getTransformNodeByName(`esb-pp-junta-mao${lado}`);
-      if (lado === 'D') {
-        juntaMao = mao;
-        comprimento = mao ? -mao.position.y : BRACO;
-      } else mao?.setEnabled(false);
     }
-    vista.noDaMao().scaling.setAll(ESCALA_ITEM);
+    // o braço no tamanho de verdade, a mesma escala nas três direções: nada estica
+    osso.scaling.setAll(ESCALA_BONECO);
+    juntaMao = scene.getTransformNodeByName('esb-pp-junta-maoD');
     for (const m of todas) {
-      const lado = (['D', 'E'] as const).find((l) => {
-        const b = scene.getTransformNodeByName(`esb-pp-junta-braco${l}`);
-        return b && m.isDescendantOf(b);
-      });
-      // na parte de cima, o punho sai (no cotovelo não há punho: a junta fica lisa)
-      if (!lado || (lado === 'E' && /punho|mao/.test(m.name))) m.setEnabled(false);
-      else malhasBraco[lado].push(m);
+      // só o braço direito; a bolinha do ombro fica fora da tela de qualquer jeito
+      if (braco && m.isDescendantOf(braco)) malhasBraco.push(m);
+      else m.setEnabled(false);
+      semBrilho(m);
     }
-    for (const m of todas) semBrilho(m);
     vista.definirLuz(luz);
     marcarGrupo();
   };
   const marcarGrupo = () => {
-    for (const lado of ['D', 'E'] as const)
-      for (const m of ossos[lado].getChildMeshes(false)) {
-        m.renderingGroupId = GRUPO;
-        m.isPickable = false;
-        m.alwaysSelectAsActiveMesh = true;
-        semBrilho(m);
-      }
+    for (const m of osso.getChildMeshes(false)) {
+      m.renderingGroupId = GRUPO;
+      m.isPickable = false;
+      m.alwaysSelectAsActiveMesh = true;
+      semBrilho(m);
+    }
+  };
+
+  // ---------------------------------------------------------------- o ombro desta tela
+  let ombro = new Vector3(0.594, -0.307, 1.466);
+  let maoPx = 0;
+  let chaveTela = '';
+  /** O alto dos botões e da barra na metade direita, embaixo (a mão e o bloco ficam acima). */
+  const altoDosBotoes = (w: number, h: number) => {
+    let alto = h;
+    for (const el of document.querySelectorAll<HTMLElement>('button, .barra')) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height || r.top < h * 0.55 || r.right < w * 0.5) continue;
+      alto = Math.min(alto, r.top);
+    }
+    return alto;
+  };
+  const conferirTela = () => {
+    const r = scene.getEngine().getRenderingCanvas()!.getBoundingClientRect();
+    const chave = `${Math.round(r.width)}x${Math.round(r.height)}|${visao.fov.toFixed(3)}`;
+    if (chave === chaveTela) return;
+    chaveTela = chave;
+    const achado = acharOmbro(r.width, r.height, visao.fov, altoDosBotoes(r.width, r.height));
+    if (achado) {
+      ombro = achado.ombro;
+      maoPx = achado.maoPx;
+    }
   };
 
   // ---------------------------------------------------------------- a sombra no chão
@@ -317,7 +317,6 @@ function ligar(g: GanchoPrimeiraPessoa): void {
   sombra.setEnabled(false);
 
   // ---------------------------------------------------------------- estado do quadro
-  let fase = 0;
   let noArDesde = -1;
   let pouso = 0;
   let pousoVel = 0;
@@ -327,21 +326,20 @@ function ligar(g: GanchoPrimeiraPessoa): void {
   let troca = -1;
   let pendente: ReturnType<GanchoPrimeiraPessoa['naMao']> | null = null;
   let golpeAntes = 0;
-  /** O impulso de tocar ou colocar (0 a 1; -1 parado). */
+  /** O empurrão de tocar ou colocar (0 a 1; -1 parado). */
   let alcance = -1;
-  /** A mola do braço (na tela, de -1 a 1) e o passo suavizado (o atraso ao começar a andar). */
+  /** A mola do braço (rad): sobe um tico no pulo, afunda e volta ao pousar. */
   let mola = 0;
   let molaVel = 0;
-  let passadaLenta = 0;
-  /** Onde as peças caíram na tela no último quadro (px). */
-  const naTela: Record<string, [number, number]> = {};
-  let forcada: NomePose | null = null;
+  let maoNaTela: [number, number] = [0, 0];
+  let ombroNaTela: [number, number] = [0, 0];
+  const vigia = { quadros: 0, menorFolgaPx: Infinity };
 
   // ---------------------------------------------------------------- a mira de colocar
   // onde o bloco vai entrar se a criança tocar no meio da tela: um contorno de gomos finos e
-  // claros na célula, com o miolo bem de leve (a mesma conta do toque: `preverToque`). A
-  // grossura do gomo acompanha a distância: de perto fica fino (não toma meia tela) e, fora do
-  // brilho da tela, não borra.
+  // claros na célula, com o miolo bem de leve (a mesma conta do toque: `preverToque`, com o raio
+  // saindo da câmera que desenha a tela). A grossura do gomo acompanha a distância: de perto fica
+  // fino (não toma meia tela) e, fora do brilho da tela, não borra.
   const matMira = new StandardMaterial('esb-pp-mira', scene);
   matMira.diffuseColor = Color3.Black();
   matMira.emissiveColor = new Color3(0.96, 0.96, 0.92);
@@ -445,19 +443,22 @@ function ligar(g: GanchoPrimeiraPessoa): void {
     junta('bracoD')?.setEnabled(bracos);
     junta('bracoE')?.setEnabled(bracos);
   };
-
   /**
-   * Gira o osso (que pende para -y) para apontar de `de` até `ate`, com a frente (+z do boneco)
-   * para o lado de `frente`, e o põe em `de`.
+   * Os olhos do boneco de verdade, no mundo: o ponto da cabeça (o pescoço anda com o corpo: o
+   * passo, o pulo, o pouso), com o rumo do corpo e sem o balanço da cabeça (a cabeça acenando
+   * com o olhar balançaria a câmera).
    */
-  const apontarOsso = (o: TransformNode, de: Vector3, ate: Vector3, frente: Vector3) => {
-    const y = de.subtract(ate).normalize();
-    let z = frente.subtract(y.scale(Vector3.Dot(frente, y)));
-    if (z.lengthSquared() < 1e-8) z = new Vector3(0, 0, -1);
-    z.normalize();
-    const x = Vector3.Cross(y, z).normalize();
-    o.rotationQuaternion = Quaternion.RotationQuaternionFromAxis(x, y, z);
-    o.position.copyFrom(de);
+  const olhosDoBoneco = (yaw: number): Vector3 | null => {
+    const cab = junta('cabeca');
+    if (!cab) return null;
+    cab.computeWorldMatrix(true);
+    const p = cab.getAbsolutePosition();
+    const o = OLHOS_NA_CABECA.scale(ESCALA_BONECO);
+    return new Vector3(
+      p.x + Math.sin(yaw) * o.z,
+      p.y + o.y,
+      p.z + Math.cos(yaw) * o.z,
+    );
   };
   const projetar = (p: Vector3): [number, number] => {
     const tanV = Math.tan(visao.fov / 2);
@@ -467,73 +468,6 @@ function ligar(g: GanchoPrimeiraPessoa): void {
       Math.round((r.width / 2) * (1 + p.x / (p.z * tanH))),
       Math.round((r.height / 2) * (1 - p.y / (p.z * tanV))),
     ];
-  };
-  /**
-   * Põe o braço na pose `p`, com a mão deslocada `sobe` e `abana` (na tela) pela mola, pelo passo
-   * e pelo aceno. O movimento vem do ombro: o ombro fica onde a pose o põe e o braço gira nele
-   * até a mão; na opção 1 o cotovelo dobra um tico a mais ou a menos (nada estica).
-   */
-  const posicionarBraco = (p: PoseMao, sobe: number, abana: number) => {
-    const tanV = Math.tan(visao.fov / 2);
-    const aspecto = scene.getEngine().getAspectRatio(visao);
-    // deitado, a tela é baixa e larga: a beira de baixo é dos botões e da barra, e a direita fica
-    // longe. A mão vai mais para a direita (acima dos botões) e o braço, um pouco maior (na mesma
-    // proporção), sai pela beira direita como em pé
-    const deitado = aspecto > 1;
-    const tanH = tanV * Math.min(aspecto, 0.8);
-    const kk = k * (deitado ? ESCALA_DEITADO : 1);
-    ossos.D.scaling.setAll(kk);
-    ossos.E.scaling.setAll(kk);
-    const sx = deitado ? (0.45 + p.sx * 0.55) * (tanV * aspecto) / tanH : p.sx;
-    const mao = new Vector3(sx * p.d * tanH, p.sy * p.d * tanV, p.d);
-    const u = v3(p.u).normalize();
-    const frente = v3(p.frente);
-    const l2 = comprimento * kk;
-    const alvo = mao.add(new Vector3(abana * p.d * tanH, sobe * p.d * tanV, 0));
-    if (opcao === '2') {
-      // o braço inteiro, de uma peça: o ombro fica parado e o braço gira nele até a mão
-      const ombro = mao.add(u.scale(l2));
-      const dir = ombro.subtract(alvo).normalize();
-      const fim = ombro.subtract(dir.scale(l2));
-      apontarOsso(ossos.D, ombro, fim, FRENTE_MANGA);
-      orientarMao(frente);
-      naTela.mao = projetar(fim);
-      naTela.ombro = projetar(ombro);
-      delete naTela.cotovelo;
-      return;
-    }
-    // opção 1: o antebraço (o braço do boneco) e a parte de cima (a manga, sem esticar), com o
-    // cotovelo dobrado pouco; o ombro fica onde a pose o põe e a mão vai até o alvo
-    const l1 = BRACO_CIMA * kk;
-    const cotovelo0 = mao.add(u.scale(l2));
-    const baixo = new Vector3(0, -0.6, -0.8);
-    const n = baixo.subtract(u.scale(Vector3.Dot(baixo, u))).normalize();
-    const w = u.scale(Math.cos(p.dobra)).add(n.scale(Math.sin(p.dobra))).normalize();
-    const ombro = cotovelo0.add(w.scale(l1));
-    // o lado para onde o cotovelo aponta (o da pose)
-    const meio = ombro.add(mao.subtract(ombro).scale(l1 / (l1 + l2)));
-    const dica = cotovelo0.subtract(meio);
-    let r = alvo.subtract(ombro);
-    let dist = r.length();
-    const max = (l1 + l2) * 0.995;
-    let fim = alvo;
-    if (dist > max) {
-      r = r.scale(max / dist);
-      dist = max;
-      fim = ombro.add(r);
-    }
-    const dir = r.scale(1 / dist);
-    const a = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist);
-    const h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
-    const perp = dica.subtract(dir.scale(Vector3.Dot(dica, dir)));
-    if (perp.lengthSquared() < 1e-10) perp.set(0, -1, 0);
-    const cotovelo = ombro.add(dir.scale(a)).add(perp.normalize().scale(h));
-    apontarOsso(ossos.E, ombro, cotovelo, FRENTE_MANGA);
-    apontarOsso(ossos.D, cotovelo, fim, FRENTE_MANGA);
-    orientarMao(frente);
-    naTela.mao = projetar(fim);
-    naTela.cotovelo = projetar(cotovelo);
-    naTela.ombro = projetar(ombro);
   };
 
   /** O corpo está com partes escondidas (volta inteiro ao sair). */
@@ -545,7 +479,6 @@ function ligar(g: GanchoPrimeiraPessoa): void {
     const e = suave(t);
     const jog = g.jogador();
     const v = g.vista();
-    const vel = g.velocidade();
     const pitch = olhos.rotation.x;
     const yaw = olhos.rotation.y;
     const ap = g.aparencia();
@@ -556,20 +489,25 @@ function ligar(g: GanchoPrimeiraPessoa): void {
       visao.upVector.set(0, 1, 0);
       g.travarYaw(null);
       sombra.setEnabled(false);
-      for (const lado of ['D', 'E'] as const) for (const m of malhasBraco[lado]) m.setEnabled(false);
+      for (const m of malhasBraco) m.setEnabled(false);
       peso = 0;
       atualizarMira(false);
       return;
     }
     if (!vista || ap !== aparenciaDaVista) montarVista(ap);
-    // ---------------- a câmera entra pela cabeça (sem corte seco) e sobe e desce no passo
+    conferirTela();
+    // ---------------- o corpo vira junto com o olhar
+    const yawCorpo = window.__brumaluz?.yawBoneco?.() ?? yaw;
+    g.travarYaw(e >= 1 ? yaw : yawCorpo + ((((yaw - yawCorpo + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) - Math.PI) * e);
+    g.personagem.definirOpacidade(1);
+    // ---------------- a câmera entra pela cabeça (sem corte seco) até os olhos de verdade
     if (jog.noChao) {
       if (noArDesde >= 0) {
         const noAr = performance.now() / 1000 - noArDesde;
         if (noAr > 0.25 && !jog.voando) {
           pousoVel -= Math.min(POUSO_MAXIMO * 9, noAr * POUSO_POR_SEGUNDO * 9);
           // o braço afunda junto e volta na mola
-          molaVel -= Math.min(2.2, noAr * 3);
+          molaVel += Math.min(1.6, noAr * 2.2);
         }
       }
       noArDesde = -1;
@@ -577,33 +515,17 @@ function ligar(g: GanchoPrimeiraPessoa): void {
     // mola do pouso: abaixa rápido e volta macia
     pousoVel += (-pouso * 90 - pousoVel * 12) * dt;
     pouso = Math.max(-POUSO_MAXIMO, Math.min(0.02, pouso + pousoVel * dt));
-    const passada = Math.min(1.4, v.passada) * (jog.noChao ? 1 : 0);
-    fase += dt * (4.2 + vel * 0.9) * (passada > 0.05 ? 1 : 0);
-    const bobY = Math.sin(fase * 2) * BALANCO_ALTURA * passada;
-    // olhando para baixo, os olhos vão um pouco para a frente e descem: o peito largo do boneco
-    // não tapa a barriga, os pés e o brinquedo de andar (como quem se inclina para se ver)
-    const baixo = suave((pitch - 0.45) / 0.95);
-    // e, no fim do olhar para baixo, a cabeça se curva para a frente e olha para trás, para os
-    // pés: a roupa, as pernas e os sapatos sobem para o meio da tela, acima do controle
-    const curva = suave((pitch - 1.0) / 0.45);
-    const frente = FRENTE_OLHOS + FRENTE_OLHANDO_BAIXO * baixo + FRENTE_CURVADO * curva;
-    const destino = new Vector3(
-      olhos.position.x + Math.sin(yaw) * frente,
-      olhos.position.y + bobY + pouso - DESCE_OLHANDO_BAIXO * baixo,
-      olhos.position.z + Math.cos(yaw) * frente,
-    );
+    const destino = olhosDoBoneco(yaw) ?? olhos.position.clone();
+    destino.y += pouso;
     visao.position.copyFrom(Vector3.Lerp(visao.position, destino, e));
+    // olhando bem para baixo, o olhar passa um tico da vertical: o peito e os sapatos aparecem
+    // (o alto da tela continua sendo a frente: nada vira de ponta-cabeça)
+    const curva = suave((pitch - 1.0) / 0.45);
     visao.rotation.x = pitch + PITCH_CURVADO * curva * e;
-    // (passando da vertical, o alto da tela continua sendo a frente: nada de virar de ponta-cabeça)
     visao.updateUpVectorFromRotation = curva > 0;
     if (curva <= 0) visao.upVector.set(0, 1, 0);
-    // o corpo debaixo dos olhos: vira junto com o olhar
-    const yawCorpo = window.__brumaluz?.yawBoneco?.() ?? yaw;
-    g.travarYaw(e >= 1 ? yaw : yawCorpo + ((((yaw - yawCorpo + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) - Math.PI) * e);
-    g.personagem.definirOpacidade(1);
-    // a cabeça some quando a câmera passa por ela
-    // (os braços do corpo só aparecem olhando para baixo, quando a mão da frente já saiu: nunca
-    // dois braços, e o ombro nunca entra na frente da câmera)
+    // a cabeça some quando a câmera passa por ela; os braços do corpo só aparecem olhando para
+    // baixo, quando a mão da frente já saiu (nunca dois braços)
     const verBracos = suave((pitch - PITCH_SEM_MAO) / 0.25) > 0.5 || t < 0.55;
     mostrarCorpo(t <= 0.55, verBracos);
     cheio = true;
@@ -617,14 +539,13 @@ function ligar(g: GanchoPrimeiraPessoa): void {
       sombra.scaling.set(ks, 1, ks);
       matSombra.alpha = e * ks;
     } else sombra.setEnabled(false);
-    // ---------------- a mão: o que ela faz agora
+    // ---------------- a mão: o que ela segura
     const mao = g.naMao();
     const chave = `${mao.bloco ?? ''}|${mao.item ?? ''}`;
     const temItem = mao.bloco !== null || mao.item !== null;
     if (chave !== chaveMao) {
       if (chaveMao === '' && troca < 0) {
         vista!.definirNaMao(mao.bloco, mao.item, mao.qtd);
-        // (o item também desenha por cima do mundo, junto com a mão)
         marcarGrupo();
         chaveMao = chave;
       } else {
@@ -643,56 +564,94 @@ function ligar(g: GanchoPrimeiraPessoa): void {
       }
       if (troca >= 1) troca = -1;
     }
+    // ---------------- o que a mão faz: os ângulos de junta da terceira pessoa, em escala
     const gesto = g.gesto();
-    // tocar ou colocar: a mão vai até o lugar e volta num impulso próprio (o do corpo dura 0,2 s,
-    // rápido demais para se ver de dentro)
     const golpe = v.golpe ?? v.colocar;
     if (golpe !== null && !golpeAntes) alcance = 0;
     golpeAntes = golpe !== null ? 1 : 0;
     if (alcance >= 0) alcance += dt / DURACAO_ALCANCE;
     if (alcance >= 1) alcance = -1;
     const agindo = alcance >= 0;
-    const P = POSES[opcao];
-    let base: PoseMao | null = null;
-    if (gesto) base = P.ACENAR;
-    else if (v.comer !== null) base = P.COMER;
-    else if (agindo) {
-      const f = Math.sin(Math.PI * Math.min(1, alcance));
-      base = misturar(temItem ? P.SEGURAR : P.RELAXADA, P.ALCANCAR, f);
-    } else if (temItem) base = P.SEGURAR;
-    if (forcada) base = P[forcada];
-    // olhando bem para baixo, a mão sai (o braço do próprio corpo aparece)
+    const comendo = v.comer !== null;
+    // (a variante A: a mão vazia some; entra para tocar, colocar, acenar e comer)
+    const aparece = temItem || !!gesto || comendo || agindo;
     const sumir = suave((pitch - PITCH_SEM_MAO) / 0.25);
-    const quer = base ? (1 - sumir) * (troca >= 0 ? Math.abs(Math.cos(Math.PI * troca)) : 1) : 0;
+    const quer = aparece ? (1 - sumir) * (troca >= 0 ? Math.abs(Math.cos(Math.PI * troca)) : 1) : 0;
     peso = aproximar(peso, quer * e, troca >= 0 ? 40 : 9, dt);
-    // o braço acompanha o corpo com mola: um tico atrasado ao começar a andar (desce um pouco),
-    // sobe um tico no pulo, afunda e volta ao pousar; no passo, só um sobe e desce bem leve
-    // (nada de balançar de um lado para o outro)
-    passadaLenta = aproximar(passadaLenta, passada, 2.5, dt);
-    const alvoMola = (jog.noChao ? 0 : 0.07) - (passada - passadaLenta) * 0.06;
+    // o braço de verdade do boneco (escondido, mas animado como sempre)
+    const real = junta('bracoD');
+    const rx = real?.rotation.x ?? 0;
+    const rz = real?.rotation.z ?? 0.09;
+    const descansoX = temItem ? -0.32 : 0;
+    let [x, z] = SEGURAR;
+    // o aceno: o braço sobe para a frente, no tempo do aceno do boneco, e a mão abana com ele
+    const wAceno = gesto ? suave((rz - 0.09) / 2.3) : 0;
+    // o comer: a comida sobe para o meio, no tempo da refeição do boneco (leva, mordidas, desce)
+    const leva = comendo ? Math.max(0, Math.min(1, (descansoX - rx) / 1.5)) : 0;
+    if (wAceno > 0) {
+      x += (ACENAR[0] - x) * wAceno;
+      z += (ACENAR[1] - z) * wAceno + (rz - 2.6) * wAceno;
+    } else if (comendo) {
+      x += (rx - descansoX) * GANHO_COMER_X;
+      z += (rz - 0.09) * GANHO_COMER_Z * leva;
+    } else {
+      // o passo e o pulo vêm do corpo, bem menores: só um sobe e desce, nada de lado
+      x += (rx - descansoX) * GANHO_PASSO;
+      z += Math.max(0, rz - 0.09) * GANHO_PULO;
+      if (agindo) x += EMPURRAO_COLOCAR * Math.sin(Math.PI * Math.min(1, alcance));
+    }
+    // a mola: sobe um tico no ar, afunda e volta ao pousar
+    const alvoMola = jog.noChao || jog.voando ? 0 : -0.05;
     molaVel += ((alvoMola - mola) * 70 - molaVel * 11) * dt;
     mola += molaVel * dt;
-    const passoMao = -Math.abs(Math.sin(fase)) * 0.02 * passada;
-    let abana = 0;
-    if (gesto) abana = Math.sin((performance.now() / 1000) * 9) * 0.1 * peso;
-    posicionarBraco(misturar(P.FORA, base ?? P.SEGURAR, peso), mola + passoMao, abana);
+    x += mola;
+    // entrando e saindo: o braço gira no ombro para baixo (a mão some pela beira de baixo)
+    x += (FORA_X - x) * (1 - peso);
+    osso.position.copyFrom(ombro);
+    osso.scaling.setAll(ESCALA_BONECO);
+    Quaternion.RotationYawPitchRollToRef(0, x, z, osso.rotationQuaternion!);
+    // a mão e o item de pé (como na terceira pessoa, o bloco à frente da mão)
+    if (juntaMao) juntaMao.rotationQuaternion = Quaternion.Inverse(osso.rotationQuaternion!);
+    vista!.noDaMao().scaling.setAll(1);
     const ver = peso > 0.02;
-    for (const m of malhasBraco.D) m.setEnabled(ver);
-    for (const m of malhasBraco.E) m.setEnabled(ver && opcao === '1');
+    for (const m of malhasBraco) m.setEnabled(ver);
+    // a comida mordida do boneco de verdade vai até a boca, logo abaixo dos olhos: de dentro, ela
+    // tapava a beira de baixo, e as migalhas passavam grandes na frente dos olhos. Somem de perto
+    // da câmera (a maçã da mão da frente fica)
+    if (comendo)
+      for (const n of [...scene.transformNodes, ...scene.meshes])
+        if (
+          (n.name.startsWith('refeicao') || n.name.startsWith('migalha-')) &&
+          n.isEnabled() &&
+          Vector3.Distance(n.getAbsolutePosition(), visao.position) < 1.2
+        )
+          n.setEnabled(false);
+    maoNaTela = projetar(ombro.add(direcao(x, z).scale(BRACO)));
+    ombroNaTela = projetar(ombro);
+    if (ver) {
+      // a conferência: o ombro, com a grossura da manga, fora da tela
+      const r = scene.getEngine().getRenderingCanvas()!.getBoundingClientRect();
+      const tanV = Math.tan(visao.fov / 2);
+      const rp = (MEIA_MANGA / (ombro.z * tanV)) * (r.height / 2);
+      const [sx, sy] = ombroNaTela;
+      const folga = Math.max(-sx, sx - r.width, -sy, sy - r.height) - rp;
+      vigia.quadros++;
+      vigia.menorFolgaPx = Math.min(vigia.menorFolgaPx, folga);
+    }
     atualizarMira(temItem && mao.bloco !== null && e > 0.9);
   };
 
   function acharChao(x: number, y: number, z: number): number | null {
     const bloco = window.__brumaluz?.bloco;
     if (!bloco) return null;
-    for (let kk = 0; kk < 8; kk++) {
-      const yy = Math.floor(y + 0.01) - 1 - kk;
+    for (let k = 0; k < 8; k++) {
+      const yy = Math.floor(y + 0.01) - 1 - k;
       if (bloco(Math.floor(x), yy, Math.floor(z))) return yy + 1;
     }
     return null;
   }
 
-  // ---------------------------------------------------------------- os botões
+  // ---------------------------------------------------------------- o olhinho
   const estilo = document.createElement('style');
   estilo.textContent = `
     .esb-pp-olho { position: fixed; right: calc(14px + env(safe-area-inset-right)); top: 38%;
@@ -704,13 +663,6 @@ function ligar(g: GanchoPrimeiraPessoa): void {
     .esb-pp-ponto { position: fixed; left: 50%; top: 50%; width: 10px; height: 10px;
       margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; z-index: 40;
       box-shadow: 0 0 0 2px rgba(36, 49, 77, 0.55); pointer-events: none; }
-    .esb-pp-opcoes { position: fixed; left: calc(12px + env(safe-area-inset-left)); top: 118px;
-      display: flex; gap: 8px; align-items: center; z-index: 50; padding: 6px 8px;
-      border-radius: 14px; background: rgba(255, 255, 255, 0.85); font: 600 15px system-ui, sans-serif;
-      color: #24314d; }
-    .esb-pp-opcoes button { width: 40px; height: 40px; border-radius: 12px; border: 2px solid #8a93a6;
-      background: #fff; font: 700 19px system-ui, sans-serif; color: #24314d; padding: 0; }
-    .esb-pp-opcoes button.ativo { background: #3f7be0; border-color: #3f7be0; color: #fff; }
   `;
   document.head.appendChild(estilo);
   const olho = document.createElement('button');
@@ -730,23 +682,6 @@ function ligar(g: GanchoPrimeiraPessoa): void {
     api.primeira(!ligado);
   });
   document.body.appendChild(olho);
-  // as duas opções de braço, só no esboço (para o dono comparar)
-  const grupo = document.createElement('div');
-  grupo.className = 'esb-pp-opcoes';
-  grupo.innerHTML = '<span>Braço</span>';
-  const botoes: Record<Opcao, HTMLButtonElement> = { '1': document.createElement('button'), '2': document.createElement('button') };
-  for (const o of ['1', '2'] as const) {
-    const b = botoes[o];
-    b.textContent = o;
-    b.dataset.esbOpcao = o;
-    b.addEventListener('pointerdown', (ev) => ev.stopPropagation());
-    b.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      api.opcao(o);
-    });
-    grupo.appendChild(b);
-  }
-  document.body.appendChild(grupo);
 
   const api: EsbocoPrimeiraPessoa = {
     primeira(sim) {
@@ -755,25 +690,27 @@ function ligar(g: GanchoPrimeiraPessoa): void {
     },
     ligada: () => ligado,
     fracao: () => t,
-    opcao(o) {
-      opcao = o;
-      for (const x of ['1', '2'] as const) botoes[x].classList.toggle('ativo', x === o);
-    },
     mira: () => celulaMira,
     maos: () => ({ direita: peso, esquerda: 0 }),
     custo: () => {
-      const malhas = [...malhasBraco.D, ...malhasBraco.E, sombra].filter((m) => m.isEnabled());
+      const malhas = [...malhasBraco, sombra].filter((m) => m.isEnabled());
       if (contorno?.isEnabled()) malhas.push(contorno, miolo);
       const extra = vista ? vista.contarMalhasMao() : 0;
       let tri = 0;
       for (const m of malhas) tri += (m.getTotalIndices?.() ?? 0) / 3;
       return { malhas: malhas.length + extra, triangulos: Math.round(tri) };
     },
-    tela: () => ({ ...naTela }),
-    forcar(p) {
-      forcada = p;
+    tela: () => ({
+      mao: maoNaTela,
+      ombro: ombroNaTela,
+      ombroCamera: [ombro.x, ombro.y, ombro.z].map((n) => +n.toFixed(3)),
+      maoPx,
+    }),
+    ponta: () => ({ quadros: vigia.quadros, menorFolgaPx: Math.round(vigia.menorFolgaPx) }),
+    zerarPonta() {
+      vigia.quadros = 0;
+      vigia.menorFolgaPx = Infinity;
     },
   };
-  api.opcao('1');
   window.__primeiraPessoa = api;
 }

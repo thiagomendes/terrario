@@ -1,0 +1,438 @@
+{
+ "emPe": {
+  "alcance": {
+   "regra": "dos olhos do controle: o ponto atingido até 6,5 (ALCANCE_TOQUE) e o centro do bloco até 7,5 (ALCANCE_REGRAS − FOLGA); o núcleo aceita 8",
+   "hojeTerceiraPessoa": 6.74,
+   "deDentro": 7.04
+  },
+  "mira": {
+   "toques": 20,
+   "certos": 20,
+   "porFace": {
+    "chão": 6,
+    "parede": 10,
+    "pilha": 4
+   },
+   "lista": [
+    {
+     "cel": [
+      55,
+      76,
+      250
+     ],
+     "face": "chão",
+     "certo": true
+    },
+    {
+     "cel": [
+      54,
+      76,
+      250
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      54,
+      76,
+      249
+     ],
+     "face": "chão",
+     "certo": true
+    },
+    {
+     "cel": [
+      54,
+      77,
+      249
+     ],
+     "face": "pilha",
+     "certo": true
+    },
+    {
+     "cel": [
+      53,
+      76,
+      249
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      57,
+      76,
+      248
+     ],
+     "face": "chão",
+     "certo": true
+    },
+    {
+     "cel": [
+      57,
+      76,
+      247
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      56,
+      76,
+      247
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      56,
+      77,
+      247
+     ],
+     "face": "pilha",
+     "certo": true
+    },
+    {
+     "cel": [
+      56,
+      76,
+      246
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      59,
+      76,
+      246
+     ],
+     "face": "chão",
+     "certo": true
+    },
+    {
+     "cel": [
+      59,
+      76,
+      245
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      58,
+      76,
+      245
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      58,
+      77,
+      245
+     ],
+     "face": "pilha",
+     "certo": true
+    },
+    {
+     "cel": [
+      61,
+      76,
+      244
+     ],
+     "face": "chão",
+     "certo": true
+    },
+    {
+     "cel": [
+      61,
+      76,
+      243
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      60,
+      76,
+      243
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      60,
+      77,
+      243
+     ],
+     "face": "pilha",
+     "certo": true
+    },
+    {
+     "cel": [
+      63,
+      76,
+      242
+     ],
+     "face": "chão",
+     "certo": true
+    },
+    {
+     "cel": [
+      63,
+      76,
+      241
+     ],
+     "face": "parede",
+     "certo": true
+    }
+   ]
+  },
+  "braco": {
+   "mao": [
+    332,
+    559
+   ],
+   "ombro": [
+    445,
+    547
+   ],
+   "ombroCamera": [
+    0.548,
+    -0.274,
+    1.322
+   ],
+   "maoPx": 76
+  },
+  "ombroFora": {
+   "quadros": 1588,
+   "menorFolgaPx": 5
+  }
+ },
+ "deitado": {
+  "alcance": {
+   "regra": "dos olhos do controle: o ponto atingido até 6,5 (ALCANCE_TOQUE) e o centro do bloco até 7,5 (ALCANCE_REGRAS − FOLGA); o núcleo aceita 8",
+   "hojeTerceiraPessoa": 6.74,
+   "deDentro": 7.04
+  },
+  "mira": {
+   "toques": 20,
+   "certos": 20,
+   "porFace": {
+    "chão": 6,
+    "parede": 10,
+    "pilha": 4
+   },
+   "lista": [
+    {
+     "cel": [
+      55,
+      76,
+      250
+     ],
+     "face": "chão",
+     "certo": true
+    },
+    {
+     "cel": [
+      54,
+      76,
+      250
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      54,
+      76,
+      249
+     ],
+     "face": "chão",
+     "certo": true
+    },
+    {
+     "cel": [
+      54,
+      77,
+      249
+     ],
+     "face": "pilha",
+     "certo": true
+    },
+    {
+     "cel": [
+      53,
+      76,
+      249
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      57,
+      76,
+      248
+     ],
+     "face": "chão",
+     "certo": true
+    },
+    {
+     "cel": [
+      57,
+      76,
+      247
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      56,
+      76,
+      247
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      56,
+      77,
+      247
+     ],
+     "face": "pilha",
+     "certo": true
+    },
+    {
+     "cel": [
+      56,
+      76,
+      246
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      59,
+      76,
+      246
+     ],
+     "face": "chão",
+     "certo": true
+    },
+    {
+     "cel": [
+      59,
+      76,
+      245
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      58,
+      76,
+      245
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      58,
+      77,
+      245
+     ],
+     "face": "pilha",
+     "certo": true
+    },
+    {
+     "cel": [
+      61,
+      76,
+      244
+     ],
+     "face": "chão",
+     "certo": true
+    },
+    {
+     "cel": [
+      61,
+      76,
+      243
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      60,
+      76,
+      243
+     ],
+     "face": "parede",
+     "certo": true
+    },
+    {
+     "cel": [
+      60,
+      77,
+      243
+     ],
+     "face": "pilha",
+     "certo": true
+    },
+    {
+     "cel": [
+      63,
+      76,
+      242
+     ],
+     "face": "chão",
+     "certo": true
+    },
+    {
+     "cel": [
+      63,
+      76,
+      241
+     ],
+     "face": "parede",
+     "certo": true
+    }
+   ]
+  },
+  "braco": {
+   "mao": [
+    739,
+    224
+   ],
+   "ombro": [
+    895,
+    206
+   ],
+   "ombroCamera": [
+    1.377,
+    -0.031,
+    0.812
+   ],
+   "maoPx": 52
+  },
+  "ombroFora": {
+   "quadros": 1584,
+   "menorFolgaPx": 13
+  }
+ }
+}

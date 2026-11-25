@@ -113,8 +113,9 @@ async function instalar(p: Page) {
     const scene = g.scene;
     const V = g.visao.position.constructor as any;
     const no = (n: string) => scene.getTransformNodeByName(n);
-    // (o braço da frente do esboço sem a parte de cima: uma peça só, a do boneco)
-    w.__primeiraPessoa.opcao('2');
+    // (o braço da frente do esboço sem a parte de cima: uma peça só, a do boneco; o esboço final
+    // já não tem as opções, e este estudo fica como registro da conta)
+    w.__primeiraPessoa.opcao?.('2');
     const est: any = {
       modo: 'nada',
       fov: 70,
