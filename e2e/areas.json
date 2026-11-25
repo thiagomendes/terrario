@@ -409,6 +409,7 @@
         "capturas-camera.spec.ts",
         "esboco-primeira-pessoa.spec.ts",
         "estudo-braco-primeira-pessoa.spec.ts",
+        "estudo-visao-primeira-pessoa.spec.ts",
         "medidas-033-camera.spec.ts",
         "medidas-033-roleta.spec.ts",
         "mira-toque.spec.ts",

@@ -1,0 +1,105 @@
+{
+ "cena": {
+  "bloco": [
+   59,
+   76,
+   256
+  ],
+  "chao": 75,
+  "parede": 259,
+  "cx": 59,
+  "cz": 254
+ },
+ "medidas": {
+  "grade-h1_21-fov70": {
+   "altura": 1.21,
+   "fovV": 70,
+   "pitch": 0.229,
+   "bloco": {
+    "alturaPct": 43.7,
+    "larguraPct": 103.2,
+    "altoPx": 275
+   }
+  },
+  "grade-h1_21-fov80": {
+   "altura": 1.21,
+   "fovV": 80,
+   "pitch": 0.273,
+   "bloco": {
+    "alturaPct": 36.7,
+    "larguraPct": 86.6,
+    "altoPx": 299
+   }
+  },
+  "grade-h1_21-fov90": {
+   "altura": 1.21,
+   "fovV": 90,
+   "pitch": 0.322,
+   "bloco": {
+    "alturaPct": 30.8,
+    "larguraPct": 72.7,
+    "altoPx": 319
+   }
+  },
+  "grade-h1_45-fov70": {
+   "altura": 1.45,
+   "fovV": 70,
+   "pitch": 0.229,
+   "bloco": {
+    "alturaPct": 44.5,
+    "larguraPct": 98.7,
+    "altoPx": 333
+   }
+  },
+  "grade-h1_45-fov80": {
+   "altura": 1.45,
+   "fovV": 80,
+   "pitch": 0.273,
+   "bloco": {
+    "alturaPct": 37.1,
+    "larguraPct": 82.4,
+    "altoPx": 348
+   }
+  },
+  "grade-h1_45-fov90": {
+   "altura": 1.45,
+   "fovV": 90,
+   "pitch": 0.322,
+   "bloco": {
+    "alturaPct": 31,
+    "larguraPct": 68.8,
+    "altoPx": 360
+   }
+  },
+  "grade-h1_62-fov70": {
+   "altura": 1.62,
+   "fovV": 70,
+   "pitch": 0.229,
+   "bloco": {
+    "alturaPct": 44.8,
+    "larguraPct": 95.4,
+    "altoPx": 373
+   }
+  },
+  "grade-h1_62-fov80": {
+   "altura": 1.62,
+   "fovV": 80,
+   "pitch": 0.273,
+   "bloco": {
+    "alturaPct": 37.2,
+    "larguraPct": 79.2,
+    "altoPx": 381
+   }
+  },
+  "grade-h1_62-fov90": {
+   "altura": 1.62,
+   "fovV": 90,
+   "pitch": 0.322,
+   "bloco": {
+    "alturaPct": 31.4,
+    "larguraPct": 66.8,
+    "altoPx": 388
+   }
+  }
+ }
+}
