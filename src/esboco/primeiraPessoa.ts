@@ -67,6 +67,8 @@ interface EsbocoPrimeiraPessoa {
   zerarRitmo(): void;
   /** Os itens que a mão pode segurar (para a folha de itens). */
   itens(): { id: string; tipo: string }[];
+  /** Só para o estudo da escala: a altura dos olhos (blocos) e o campo vertical (graus); null volta à regra. */
+  ajustarCamera(altura: number | null, fovV: number | null): void;
 }
 
 declare global {
@@ -595,6 +597,8 @@ function ligar(g: GanchoPrimeiraPessoa): void {
    * vê): a entrada pela cabeça, o campo de visão, o olhar para a frente ao entrar, os olhos (da
    * posição do corpo neste quadro, sem esperar o boneco) e o pouso.
    */
+  /** Só para o estudo da escala: a altura dos olhos e o campo vertical (rad) da grade. */
+  const ajusteCamera: { altura?: number; fovV?: number } = {};
   g.antesDaMira = (dt) => {
     const alvoT = ligado ? 1 : 0;
     t = alvoT > t ? Math.min(1, t + dt / DURACAO_TRANSICAO) : Math.max(0, t - dt / DURACAO_TRANSICAO);
@@ -606,7 +610,7 @@ function ligar(g: GanchoPrimeiraPessoa): void {
     // ---------------- o campo de visão de dentro (mais aberto no celular em pé), entrando junto
     const tela = canvas.getBoundingClientRect();
     const fovJogo = visao.fov;
-    const fovDentro = fovDeDentro(tela.width / tela.height, fovJogo);
+    const fovDentro = ajusteCamera.fovV ?? fovDeDentro(tela.width / tela.height, fovJogo);
     visao.fov = fovJogo + (fovDentro - fovJogo) * e;
     // o braço aparece como no campo de 70°, qualquer que seja o campo de dentro
     const s = Math.tan(visao.fov / 2) / Math.tan(FOV_BRACO / 2);
@@ -633,7 +637,7 @@ function ligar(g: GanchoPrimeiraPessoa): void {
     // ---------------- os olhos de verdade (a câmera entra pela cabeça, sem corte seco)
     const destino = new Vector3(
       jog.x + Math.sin(yaw) * OLHOS_FRENTE,
-      jog.y + OLHOS_ALTURA + pouso,
+      jog.y + (ajusteCamera.altura ?? OLHOS_ALTURA) + pouso,
       jog.z + Math.cos(yaw) * OLHOS_FRENTE,
     );
     visao.position.copyFrom(Vector3.Lerp(visao.position, destino, e));
@@ -959,6 +963,12 @@ function ligar(g: GanchoPrimeiraPessoa): void {
       ritmo.golpes = ritmo.balancos = ritmo.colocacoes = ritmo.empurroes = 0;
     },
     itens: () => todosItens().map((i) => ({ id: i.id, tipo: i.tipo })),
+    ajustarCamera(altura, fovV) {
+      if (altura === null) delete ajusteCamera.altura;
+      else ajusteCamera.altura = altura;
+      if (fovV === null) delete ajusteCamera.fovV;
+      else ajusteCamera.fovV = (fovV * Math.PI) / 180;
+    },
   };
   window.__primeiraPessoa = api;
 }
