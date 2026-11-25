@@ -1,0 +1,19 @@
+{
+  "custos": {
+    "A": {
+      "malhas": 10,
+      "triangulos": 1786
+    },
+    "B": {
+      "malhas": 10,
+      "triangulos": 1786
+    },
+    "C": {
+      "malhas": 14,
+      "triangulos": 3570
+    }
+  },
+  "gl": {
+    "fps": 21.117837533525275
+  }
+}
