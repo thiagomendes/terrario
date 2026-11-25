@@ -64,6 +64,9 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 ## Testes instáveis e defeitos achados nos testes (24 nov 2026)
 - **A quarentena** fica em `e2e/areas.json`, com o motivo de cada teste (9 em 24 nov). Ela roda à parte e não segura a entrega. Instável novo entra lá com o motivo e só sai consertado.
 - **Defeitos do jogo achados pelos testes, ainda abertos:**
+  - **Nuvem, tirar e pôr na mesma célula com a conexão morrendo** (25 nov, do conserto dos blocos que somem): se os dois já entraram e a confirmação se perdeu, o reenvio pode deixar a célula vazia, calada. Precisa do núcleo ignorar o comando repetido (mexe no servidor).
+  - **Nuvem, a página recarregada em menos de 30 s não confere nada** (25 nov): os ids dos comandos recomeçam do 1. Começar o id de `Date.now()` ou zerar o `ack` em página nova.
+  - **Instável:** `amigos-sem-atrito.spec.ts:41` mostrou o nome sugerido em vez do digitado (1 vez; passou 4 de 4 sozinho).
   - **A tela trava ao ver um premium pela primeira vez:** quando a amiga veste um premium (capa de estrelas, pinguim, camiseta), a tela de quem vê para de 730 a 870 ms, provavelmente compilando os materiais. A amiga aparece em 1,1 a 3,5 s, e o limite é 1 s. Pesa na 036 (itens novos): conferir na T08.
   - **c6 no celular em pé:** a mãozinha da obra não aparece; a criança chega pela trilha de lado e os blocos azuis de baixo ficam fora da tela ou atrás do boneco.
   - **c3, a conferir:** às vezes a criança para na porta da padaria, o cliente diz que chegou, o ✓ do núcleo não vem e ela fica sem pegadas.
