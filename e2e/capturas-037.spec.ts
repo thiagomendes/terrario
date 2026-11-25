@@ -18,7 +18,7 @@ import { Bloco } from '../src/world/blocks';
 declare const process: { env: Record<string, string | undefined> };
 const QUAL = (process.env.CAPTURAS_037 ?? '').split(',').filter(Boolean);
 // (o portão barrou a t08: os consertos saem em t08b; CAPTURAS_037_PASTA escolhe outra)
-const PASTA = process.env.CAPTURAS_037_PASTA ?? 'capturas-037/t08b';
+const PASTA = process.env.CAPTURAS_037_PASTA ?? 'capturas-037/t08c';
 test.skip(!QUAL.length, 'fotos da 037 só com CAPTURAS_037');
 test.describe.configure({ mode: 'serial' });
 test.setTimeout(1_500_000);
@@ -149,6 +149,18 @@ test('T08: a primeira pessoa nas três telas, de dia e de noite', async ({ brows
         await page.waitForTimeout(700);
         await foto(page, `${pre}-fantasma-um-passo-atras`);
       });
+      // 1c. a tela de fora (a terceira pessoa), com as tábuas: no celular deitado, o mapinha e a
+      // mochila na esquerda
+      await tentar(`${pre}-de-fora`, async () => {
+        await ligar(page, false);
+        await fora(page);
+        await naMao(page, `bloco:${Bloco.TABUAS}`, 16);
+        await olhar(page, 0.6 + Math.PI / 2, 0.25);
+        await page.waitForTimeout(1200);
+        await foto(page, `${pre}-de-fora`);
+        await ligar(page, true);
+        await dentro(page);
+      });
       // 2. a mão vazia, olhando para a frente
       await tentar(`${pre}-mao-vazia`, async () => {
         await naMao(page, null);
@@ -224,9 +236,10 @@ test('T08: a primeira pessoa nas três telas, de dia e de noite', async ({ brows
           tesouro: await page.evaluate(() => {
             const s = window.__brumaluz!.cenaBabylon!();
             const n = s.getTransformNodeByName('pp-tesouro');
+            const g = s.getTransformNodeByName('pp-tesouro-mundo');
             const p = s.getTransformNodeByName('pp-pipa');
             const on = (x: typeof n) => (x ? x.getChildMeshes(false).filter((m) => m.isEnabled()).length : -1);
-            return { naMao: on(n), pipa: on(p), fio: !!s.getMeshByName('pp-pipa-fio')?.isEnabled() };
+            return { naMao: on(n), guardaChuva: on(g), pipa: on(p), fio: !!s.getMeshByName('pp-pipa-fio')?.isEnabled() };
           }),
         });
         await foto(page, `${pre}-tesouro-${id}`);
