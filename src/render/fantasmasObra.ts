@@ -54,15 +54,20 @@ const COR_BLOCO: Record<number, [number, number, number]> = {
  * apagado que ALFA_MIRA_PERTO.
  */
 const PERTO_SOME = 0.2;
-const PERTO_INTEIRO = 1.2;
+const PERTO_INTEIRO = 1.5;
 const ALFA_MIRA_PERTO = 0.55;
 
 /** De dentro, quanto de um fantasma aparece pela distância dos olhos até o cubo (0 some, 1 inteiro). */
-function aparecePerto(olho: { x: number; y: number; z: number }, f: { x: number; y: number; z: number }): number {
+function aparecePerto(
+  olho: { x: number; y: number; z: number },
+  f: { x: number; y: number; z: number },
+  some = PERTO_SOME,
+  inteiro = PERTO_INTEIRO,
+): number {
   const dx = Math.max(0, Math.abs(olho.x - (f.x + 0.5)) - 0.47);
   const dy = Math.max(0, Math.abs(olho.y - (f.y + 0.5)) - 0.47);
   const dz = Math.max(0, Math.abs(olho.z - (f.z + 0.5)) - 0.47);
-  const t = Math.max(0, Math.min(1, (Math.hypot(dx, dy, dz) - PERTO_SOME) / (PERTO_INTEIRO - PERTO_SOME)));
+  const t = Math.max(0, Math.min(1, (Math.hypot(dx, dy, dz) - some) / (inteiro - some)));
   return t * t * (3 - 2 * t);
 }
 /** A base é branca: o azul vem da textura, e a cor do bloco tinge por cima. */
@@ -343,7 +348,8 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
       if (alvo && mira) {
         // spec 037: de dentro, colado nos olhos, o bloquinho girando encolhe até sumir (de perto
         // ele tapava meia tela); o contorno do fantasma continua mostrando onde o bloco vai
-        const perto = olho ? aparecePerto(olho, mira) : 1;
+        // (só bem colado: no alcance de pôr, ele fica do tamanho de sempre)
+        const perto = olho ? aparecePerto(olho, mira, 0.02, 0.35) : 1;
         alvo.no.setEnabled(perto > 0.05);
         alvo.no.position.set(
           mira.x + 0.5,
