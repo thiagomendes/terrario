@@ -1,0 +1,529 @@
+{
+ "cameraMedidaNoJogo": {
+  "fora": {
+   "frente": -4.441,
+   "cima": 3.696,
+   "lado": 0.45,
+   "pitch": 0.5,
+   "fovV": 70
+  },
+  "dentro": {
+   "frente": 0.345,
+   "cima": 1.222,
+   "lado": 0,
+   "pitch": 0.325,
+   "fovV": 90.5
+  }
+ },
+ "visao": {
+  "explicacao": "celular em pé 390x844 (botões a 652 px); lajotasAte8 = lajotas inteiras à frente do boneco (até 8 blocos) acima dos botões; largura3/6 = largura do chão visível a 3 e 6 blocos à frente do boneco; horizonte = px de cima. Saída de .sdd/specs/037-construir-melhor/referencia/conta-visao.mjs, com as câmeras medidas no jogo (cameraMedidaNoJogo).",
+  "terceiraPessoa": {
+   "pitch02": {
+    "fovV": 70,
+    "fovH": 35.9,
+    "pitch": 0.2,
+    "horizonte": 300,
+    "lajotaMaisPerto": 0,
+    "lajotasAte8": 38,
+    "largura3": 5.34,
+    "largura6": 7.24
+   },
+   "pitch05": {
+    "fovV": 70,
+    "fovH": 35.9,
+    "pitch": 0.5,
+    "horizonte": 93,
+    "lajotaMaisPerto": 0,
+    "lajotasAte8": 37,
+    "largura3": 5.37,
+    "largura6": 7.08
+   }
+  },
+  "dentroAntes": {
+   "pitch02": {
+    "fovV": 70,
+    "fovH": 35.9,
+    "pitch": 0.2,
+    "horizonte": 300,
+    "lajotaMaisPerto": 4,
+    "lajotasAte8": 10,
+    "largura3": 1.84,
+    "largura6": 3.74
+   },
+   "pitch05": {
+    "fovV": 70,
+    "fovH": 35.9,
+    "pitch": 0.5,
+    "horizonte": 93,
+    "lajotaMaisPerto": 4,
+    "lajotasAte8": 10,
+    "largura3": 1.89,
+    "largura6": 3.59
+   }
+  },
+  "dentroDepois": {
+   "fovV": 90.5,
+   "fovH": 50,
+   "pitch": 0.324,
+   "horizonte": 282,
+   "lajotaMaisPerto": 3,
+   "lajotasAte8": 18,
+   "largura3": 2.71,
+   "largura6": 5.36
+  },
+  "tabelaDeDentro": [
+   {
+    "fovV": 70,
+    "fovH": 35.9,
+    "pitch": 0.25,
+    "horizonte": 268,
+    "lajotaMaisPerto": 4,
+    "lajotasAte8": 10,
+    "largura3": 1.86,
+    "largura6": 3.74
+   },
+   {
+    "fovV": 80,
+    "fovH": 42.4,
+    "pitch": 0.275,
+    "horizonte": 280,
+    "lajotaMaisPerto": 3,
+    "lajotasAte8": 14,
+    "largura3": 2.24,
+    "largura6": 4.48
+   },
+   {
+    "fovV": 90.5,
+    "fovH": 50,
+    "pitch": 0.325,
+    "horizonte": 281,
+    "lajotaMaisPerto": 3,
+    "lajotasAte8": 18,
+    "largura3": 2.71,
+    "largura6": 5.36
+   },
+   {
+    "fovV": 100,
+    "fovH": 57.7,
+    "pitch": 0.4,
+    "horizonte": 272,
+    "lajotaMaisPerto": 2,
+    "lajotasAte8": 24,
+    "largura3": 3.22,
+    "largura6": 6.26
+   }
+  ]
+ },
+ "toquesEmPe": {
+  "toques": 20,
+  "certos": 20,
+  "porFace": {
+   "chão": 6,
+   "parede": 9,
+   "pilha": 5
+  },
+  "lista": [
+   {
+    "ponto": [
+     117,
+     464
+    ],
+    "cel": [
+     54,
+     76,
+     251
+    ],
+    "face": "chão",
+    "certo": true
+   },
+   {
+    "ponto": [
+     273,
+     506
+    ],
+    "cel": [
+     55,
+     76,
+     250
+    ],
+    "face": "chão",
+    "certo": true
+   },
+   {
+    "ponto": [
+     195,
+     380
+    ],
+    "cel": [
+     54,
+     76,
+     250
+    ],
+    "face": "parede",
+    "certo": true
+   },
+   {
+    "ponto": [
+     98,
+     574
+    ],
+    "cel": [
+     54,
+     76,
+     249
+    ],
+    "face": "parede",
+    "certo": true
+   },
+   {
+    "ponto": [
+     242,
+     422
+    ],
+    "cel": [
+     54,
+     77,
+     249
+    ],
+    "face": "pilha",
+    "certo": true
+   },
+   {
+    "ponto": [
+     117,
+     464
+    ],
+    "cel": [
+     54,
+     77,
+     248
+    ],
+    "face": "parede",
+    "certo": true
+   },
+   {
+    "ponto": [
+     98,
+     574
+    ],
+    "cel": [
+     53,
+     76,
+     249
+    ],
+    "face": "parede",
+    "certo": true
+   },
+   {
+    "ponto": [
+     117,
+     464
+    ],
+    "cel": [
+     53,
+     77,
+     249
+    ],
+    "face": "pilha",
+    "certo": true
+   },
+   {
+    "ponto": [
+     117,
+     464
+    ],
+    "cel": [
+     57,
+     76,
+     249
+    ],
+    "face": "chão",
+    "certo": true
+   },
+   {
+    "ponto": [
+     273,
+     506
+    ],
+    "cel": [
+     57,
+     76,
+     248
+    ],
+    "face": "chão",
+    "certo": true
+   },
+   {
+    "ponto": [
+     195,
+     380
+    ],
+    "cel": [
+     56,
+     76,
+     248
+    ],
+    "face": "parede",
+    "certo": true
+   },
+   {
+    "ponto": [
+     117,
+     464
+    ],
+    "cel": [
+     57,
+     76,
+     247
+    ],
+    "face": "parede",
+    "certo": true
+   },
+   {
+    "ponto": [
+     195,
+     380
+    ],
+    "cel": [
+     56,
+     77,
+     248
+    ],
+    "face": "pilha",
+    "certo": true
+   },
+   {
+    "ponto": [
+     117,
+     464
+    ],
+    "cel": [
+     59,
+     76,
+     247
+    ],
+    "face": "chão",
+    "certo": true
+   },
+   {
+    "ponto": [
+     273,
+     506
+    ],
+    "cel": [
+     60,
+     76,
+     246
+    ],
+    "face": "chão",
+    "certo": true
+   },
+   {
+    "ponto": [
+     195,
+     380
+    ],
+    "cel": [
+     59,
+     76,
+     246
+    ],
+    "face": "parede",
+    "certo": true
+   },
+   {
+    "ponto": [
+     98,
+     574
+    ],
+    "cel": [
+     58,
+     76,
+     246
+    ],
+    "face": "parede",
+    "certo": true
+   },
+   {
+    "ponto": [
+     242,
+     422
+    ],
+    "cel": [
+     59,
+     76,
+     245
+    ],
+    "face": "parede",
+    "certo": true
+   },
+   {
+    "ponto": [
+     117,
+     464
+    ],
+    "cel": [
+     59,
+     77,
+     245
+    ],
+    "face": "pilha",
+    "certo": true
+   },
+   {
+    "ponto": [
+     195,
+     380
+    ],
+    "cel": [
+     58,
+     77,
+     246
+    ],
+    "face": "pilha",
+    "certo": true
+   }
+  ]
+ },
+ "cliquesComputador": {
+  "cliques": 10,
+  "certos": 10,
+  "mouseTravado": false,
+  "lista": [
+   {
+    "ponto": [
+     384,
+     432
+    ],
+    "cel": [
+     55,
+     76,
+     251
+    ],
+    "certo": true
+   },
+   {
+    "ponto": [
+     768,
+     396
+    ],
+    "cel": [
+     57,
+     76,
+     249
+    ],
+    "certo": true
+   },
+   {
+    "ponto": [
+     576,
+     504
+    ],
+    "cel": [
+     55,
+     76,
+     249
+    ],
+    "certo": true
+   },
+   {
+    "ponto": [
+     896,
+     468
+    ],
+    "cel": [
+     56,
+     76,
+     248
+    ],
+    "certo": true
+   },
+   {
+    "ponto": [
+     448,
+     360
+    ],
+    "cel": [
+     54,
+     76,
+     249
+    ],
+    "certo": true
+   },
+   {
+    "ponto": [
+     384,
+     432
+    ],
+    "cel": [
+     54,
+     76,
+     248
+    ],
+    "certo": true
+   },
+   {
+    "ponto": [
+     768,
+     396
+    ],
+    "cel": [
+     54,
+     77,
+     248
+    ],
+    "certo": true
+   },
+   {
+    "ponto": [
+     896,
+     468
+    ],
+    "cel": [
+     55,
+     76,
+     245
+    ],
+    "certo": true
+   },
+   {
+    "ponto": [
+     768,
+     396
+    ],
+    "cel": [
+     54,
+     76,
+     244
+    ],
+    "certo": true
+   },
+   {
+    "ponto": [
+     576,
+     504
+    ],
+    "cel": [
+     55,
+     76,
+     246
+    ],
+    "certo": true
+   }
+  ]
+ },
+ "ritmo": {
+  "segurandoParaQuebrar": {
+   "golpes": 3,
+   "balancos": 3,
+   "colocacoes": 0,
+   "empurroes": 0
+  },
+  "colocandoCincoToques": {
+   "golpes": 0,
+   "balancos": 0,
+   "colocacoes": 5,
+   "empurroes": 5
+  }
+ }
+}
