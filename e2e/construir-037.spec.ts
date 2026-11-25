@@ -153,19 +153,23 @@ test('no aparelho: só encostado, e nunca em cima do bicho nem do peixe', async 
   await p.waitForTimeout(800);
   expect(await blocoEm(p, D)).toBe(0);
 
-  // 4. o peixe num buraco de água no chão da plataforma: o bloco não entra e ele não morre
+  // 4. o peixe numa piscininha de 3 × 3 no chão da plataforma (o fundo de pedra à vista pela
+  // água): o bloco não entra em cima dele e ele não morre
   const E = { x: cx - 1, y: Y, z: cz + 4 };
   await p.evaluate(
     ({ e, agua, pedra }) => {
-      window.__brumaluz!.editarLote!([
-        { x: e.x, y: e.y - 1, z: e.z, v: pedra },
-        { x: e.x, y: e.y, z: e.z, v: agua },
-      ]);
+      const lote: { x: number; y: number; z: number; v: number }[] = [];
+      for (let dx = -1; dx <= 1; dx++)
+        for (let dz = -1; dz <= 1; dz++) {
+          lote.push({ x: e.x + dx, y: e.y - 1, z: e.z + dz, v: pedra });
+          lote.push({ x: e.x + dx, y: e.y, z: e.z + dz, v: agua });
+        }
+      window.__brumaluz!.editarLote!(lote);
     },
     { e: E, agua: Bloco.AGUA, pedra: Bloco.PEDRA_LISA },
   );
   await expect.poll(() => blocoEm(p, E)).toBe(Bloco.AGUA);
-  await p.evaluate((e) => window.__brumaluz!.invocar!('peixe', e.x + 0.5, e.y + 0.3, e.z + 0.5), E);
+  await mirarAte(p, { ...E, y: E.y - 1 }, CIMA);
   const peixe = () =>
     p.evaluate(
       (e) =>
@@ -174,12 +178,34 @@ test('no aparelho: só encostado, e nunca em cima do bicho nem do peixe', async 
         ) ?? null,
       E,
     );
-  await expect.poll(peixe).not.toBeNull();
-  await mirarAte(p, { ...E, y: E.y - 1 }, CIMA);
-  expect(await colocar(p), 'a tela vê o peixe').toBe(false);
+  // o peixe nada: o toque vale com ele na célula (conferido no mesmo instante do toque)
+  let resultado: boolean | 'saiu' = 'saiu';
+  for (let tentativa = 0; tentativa < 5 && resultado === 'saiu'; tentativa++) {
+    await p.evaluate(
+      (e) => window.__brumaluz!.invocar!('peixe', e.x + 0.5, e.y + 0.3, e.z + 0.5),
+      E,
+    );
+    await expect.poll(peixe).not.toBeNull();
+    await mirar(p, { ...E, y: E.y - 1 }, CIMA);
+    resultado = await p.evaluate((e) => {
+      const b = window.__brumaluz!;
+      const ali = b.criaturas!().some(
+        (c) => c.tipo === 'peixe' && Math.floor(c.x) === e.x && Math.floor(c.z) === e.z,
+      );
+      return ali ? b.interagir!('colocar') : 'saiu';
+    }, E);
+  }
+  expect(resultado, 'a tela vê o peixe').toBe(false);
   await p.waitForTimeout(3000);
   expect(await blocoEm(p, E)).toBe(Bloco.AGUA);
-  expect((await peixe())?.estado).not.toBe('morrendo');
+  const vivos = await p.evaluate(() =>
+    window.__brumaluz!.criaturas!().filter((c) => c.tipo === 'peixe' && c.estado !== 'morrendo'),
+  );
+  const todos = await p.evaluate(
+    () => window.__brumaluz!.criaturas!().filter((c) => c.tipo === 'peixe').length,
+  );
+  expect(vivos.length).toBeGreaterThanOrEqual(1);
+  expect(vivos.length, 'nenhum peixe morreu').toBe(todos);
 });
 
 test('na nuvem: a amiga andando, correndo e pulando nunca fica presa no bloco', async ({
