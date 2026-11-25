@@ -457,8 +457,32 @@ const ALCANCE_VER_LONGE = 48;
 /** No computador, quanto tempo o cadeado fica depois do clique no que não quebra (ms). */
 const CADEADO_DEPOIS_DO_CLIQUE_MS = 1500;
 
+/**
+ * Esboço 037 (só com `?esboco=primeira-pessoa`): as peças de verdade que o esboço da primeira
+ * pessoa usa. O jogo nunca liga o `quadro`; sem o esboço, nada disto existe.
+ */
+export interface GanchoPrimeiraPessoa {
+  scene: Scene;
+  /** Os olhos (a câmera do controle) e a câmera que desenha a tela. */
+  olhos: UniversalCamera;
+  visao: UniversalCamera;
+  personagem: Personagem;
+  jogador: () => { x: number; y: number; z: number; noChao: boolean; voando?: boolean };
+  vista: () => import('../player/animacao').Vista;
+  velocidade: () => number;
+  /** O corpo travado num rumo (null solta). */
+  travarYaw: (y: number | null) => void;
+  aparencia: () => Aparencia;
+  naMao: () => { bloco: number | null; item: string | null; qtd?: number };
+  gesto: () => string | null;
+  /** O esboço desenha a câmera e a mão depois do boneco, a cada quadro. */
+  quadro: ((dt: number) => void) | null;
+}
+
 export interface EstadoDepuracao {
   ready: boolean;
+  /** Esboço 037 (só com `?esboco=primeira-pessoa`). */
+  primeiraPessoa?: GanchoPrimeiraPessoa;
   /** Spec 035: quantas vezes a rede de segurança ressincronizou nesta página. */
   ressincronizacoes?: number;
   /** Tema visual ativo nesta página. */
@@ -4049,6 +4073,28 @@ export function criarCena(
     estado.travarYaw = (y) => {
       yawTravado = y;
     };
+  // esboço 037 (só com ?esboco=primeira-pessoa): as peças que o esboço usa
+  if (new URLSearchParams(location.search).get('esboco') === 'primeira-pessoa')
+    estado.primeiraPessoa = {
+      scene,
+      olhos: camera,
+      visao: cameraVisao,
+      personagem,
+      jogador: () => controle.jogador,
+      vista: () => animador.vista(),
+      velocidade: () => velocidadeHoriz,
+      travarYaw: (y) => {
+        yawPrimeiraPessoa = y;
+      },
+      aparencia: () => aparencia,
+      naMao: () => {
+        const bloco = hotbar.blocoAtivo() || null;
+        const pilha = hotbar.pilhaAtiva();
+        return { bloco, item: !bloco && pilha ? pilha.item : null, qtd: pilha?.qtd };
+      },
+      gesto: () => gestoDoAnimador(animador),
+      quadro: null,
+    };
   // spec 032 (só nos testes de tela): o ajuste da comida na boca (o braço e a comida na mão)
   if (ehTesteDeTela())
     estado.ajusteComer = { pose: AJUSTE_COMER, mao: NA_MAO_COMENDO, boca: NA_BOCA };
@@ -4199,6 +4245,11 @@ export function criarCena(
   let itemNaMaoAtual = '';
   /** Spec 032 (só fotos de teste): o corpo travado num rumo. */
   let yawTravado: number | null = null;
+  /**
+   * Esboço 037: em primeira pessoa o corpo fica debaixo dos olhos, no rumo do olhar (nem ao
+   * colocar nem ao comer ele vira, ou o ombro entrava na frente da câmera).
+   */
+  let yawPrimeiraPessoa: number | null = null;
   /** Spec 032: há quanto tempo (s) a câmera está espremida contra uma parede (na Vila). */
   let apertoCamera = 0;
   /**
@@ -4291,6 +4342,7 @@ export function criarCena(
       olhar: camera.rotation.x * 0.5,
       vista: animador.vista(),
     });
+    if (yawPrimeiraPessoa !== null) animador.definirYaw(yawPrimeiraPessoa);
     personagem.posicionar(j.x, j.y, j.z, animador.yaw() + giroCorpo);
     // parte 3: na curva da rampa o boneco deita junto com a prancha
     personagem.raiz.rotation.x = -(casaCena?.noTrilho()?.inclina ?? 0) * 0.85;
@@ -5856,6 +5908,8 @@ export function criarCena(
     atualizarEfeitos(Math.min(dtBruto, 0.25));
     atualizarProvisorios(Math.min(dtBruto, 0.25));
     atualizarPersonagem(dtQuadro);
+    // esboço 037 (só com ?esboco=primeira-pessoa): a câmera de dentro e a mão
+    estado.primeiraPessoa?.quadro?.(Math.min(dtBruto, 0.1));
     estado.fps = engine.getFps();
     estado.posicao = [camera.position.x, camera.position.y, camera.position.z];
     estado.rotacao = [camera.rotation.x, camera.rotation.y];
