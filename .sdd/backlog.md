@@ -3,7 +3,7 @@
 Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A ordem é combinada com o dono na hora; o número da spec não é a ordem. Atualizar ao fechar cada spec.
 
 ## Fila combinada (23 nov 2026; a 037 entrou em 24 nov)
-1. **Lojinha maior** (decisão do dono em 22 nov; spec nova, 036): o filho já comprou os 6 itens da lojinha premium.
+1. ~~**Lojinha maior**~~ **publicada em 24 nov** (ver "Feitas"). (decisão do dono em 22 nov; spec nova, 036): o filho já comprou os 6 itens da lojinha premium.
    - **12 itens novos**, com preço fixo, sem nada que some ou é sorteado;
    - a ideia do filho é um brinquedo de andar (patinete, carrinho), diferente da vassoura-patinete da festa;
    - primeiro vai um **esboço com uma foto de cada item candidato**, para o dono escolher com o filho;
@@ -105,6 +105,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 - **A dica "trocar" nos fãs da plateia da Vila** (achado na revisão da 027, 21 nov): o defeito da dica de trocar nos fãs da plateia, a conferir e consertar numa spec própria. Fora da 027.
 
 ## Feitas e publicadas (resumo)
+- **036, Lojinha maior (24 nov 2026):** 12 itens novos: os 4 brinquedos de andar (patinete-luz, carrinho de pedal, bicicletinha, nuvem fofa; só enfeite, comprar já monta, 2 toques na roda para montar e descer), o passarinho voando perto do ombro, o boné de hélice, o pijama de nuvem, as asas de borboleta, a mochila-foguete, a varinha de bolhas, o guarda-chuva e a pipa; a vitrine com abas só de desenho e a estrelinha de novo; o provador montado; os sons; o Unicórnio-pônei e o pinguim sem tremer. `VERSAO_REDE` 18. Conferência por área (79 min e a final de 38 min); dois portões visuais. Pendências pequenas na Situação da spec.
 - **007 a 017, 019, 021, 023, 026, 030 a 035:** ver cada spec.
 - **027 parte 1, Noite das Fantasias (22 nov 2026):** o sexto mundo, a vila da festa: os lugares, os moradores com fantasia, os bichos, comprar e comer as comidas de festa, a varinha, as missões n1 a n5, a música e os sons (aprovados pelo dono). `VERSAO_REDE` 18. Também valem em todo mundo: a dica "Toque para comer" some depois de 8 s; os moradores e os bichos de longe com menos peças. Conferida no ar; fotos e vídeo em `capturas-027/parte1/no-ar/`.
 - **035, Entrada na nuvem (21 nov 2026):** quem leva o mundo para a nuvem vê o amigo na hora; quem cai volta vendo os blocos e as obras que mudaram; a sala fechada deixa voltar quem caiu (até 30 s); sair da nuvem abre o outro mundo, e o da sala mostra "Continuar". Conferida no ar; fotos em `capturas-035/no-ar/`.
