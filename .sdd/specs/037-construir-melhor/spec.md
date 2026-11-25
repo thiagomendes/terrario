@@ -46,6 +46,7 @@ A investigação completa está em `referencia/investigacao-colocar.md` (engenhe
 | 24 nov | A mão vazia não aparece andando: entra só para agir (tocar, colocar, acenar, comer) e sai. Com item, uma mão só, como na terceira pessoa (nada de duas mãos) |
 | 24 nov | A câmera solta de hoje fica igual na primeira pessoa (arrastar para olhar, girar) |
 | 24 nov | A mira de colocar é importante e tem que ficar clara e certeira na primeira pessoa |
+| 25 nov | Na primeira pessoa, a mira segue o toque, não a câmera: no celular age onde o dedo tocou e no computador onde o mouse clicou, dentro do alcance de hoje, como na terceira pessoa. O pontinho do meio sai. Cada golpe tem um movimento de braço no ritmo do som. Todos os itens ficam de frente na mão, como a criança seguraria. A visão mostra à frente pelo menos o mesmo tanto que a terceira pessoa |
 | 24 nov | O braço não pode parecer "de madeira" nem balançar de lado, o que não acontece num braço de verdade |
 | 25 nov | Braço sem articulação, como na terceira pessoa (a opção 2 do esboço). Ele não pode parecer levantado nem solto do corpo, com a ponta do ombro à mostra. A forma final sai do estudo geométrico (`referencia/estudo-braco-primeira-pessoa.md`), feito a pedido do dono para parar de ajustar no chute |
 | 24 nov | Bloco nunca em cima de corpo (é defeito); quem já ficou preso é solto |
@@ -84,7 +85,7 @@ O detalhe vem do estudo do braço, a pedido do dono. Já está decidido:
   - o braço não tem articulação, segue a geometria do corpo e nunca mostra a ponta do ombro;
   - sem balanço de lado; no passo, no máximo um sobe e desce leve, e uma mola discreta no pulo.
 - **Olhando para baixo:** o próprio corpo, a roupa, a fantasia e o brinquedo de andar ficam acima do joystick.
-- **A mira:** um pontinho no meio e o contorno fino da célula onde o bloco vai entrar, sem borrar de perto. Tocar põe exatamente ali.
+- **A mira:** segue o toque ou o clique, como na terceira pessoa. O contorno fino aparece embaixo do dedo ou do ponteiro, sem borrar de perto.
 - **Guardar e voltar:** a escolha fica no aparelho. Ao comprar ou vestir na lojinha, volta para a terceira pessoa.
 - **A sombra:** a do boneco aparece no chão na primeira pessoa.
 
