@@ -8,14 +8,17 @@ import { Bloco } from '../src/world/blocks';
 /**
  * Spec 037 (T08): as fotos do portão visual da primeira pessoa, com a câmera de verdade (T03) e
  * o braço (T04). Fora da suíte: só com CAPTURAS_037 (t08 = as fotos nas três telas; extras = a
- * roda, a volta, as recusas e a parede; video = o vídeo em pé). Fotos em capturas-037/t08/.
+ * roda, a volta, as recusas e a parede; video = o vídeo em pé; interface = os retângulos da
+ * interface nas três telas). Fotos em capturas-037/t08b/ (os consertos do portão; as da primeira
+ * rodada ficam em t08/, e CAPTURAS_037_PASTA escolhe outra pasta).
  *
  *   E2E_ENV="-u 1000:1000 -e HOME=/tmp -e CAPTURAS_037=t08,extras,video" \
  *     scripts/e2e-gpu.sh e2e/capturas-037.spec.ts --workers 1 --trace off
  */
 declare const process: { env: Record<string, string | undefined> };
 const QUAL = (process.env.CAPTURAS_037 ?? '').split(',').filter(Boolean);
-const PASTA = 'capturas-037/t08';
+// (o portão barrou a t08: os consertos saem em t08b; CAPTURAS_037_PASTA escolhe outra)
+const PASTA = process.env.CAPTURAS_037_PASTA ?? 'capturas-037/t08b';
 test.skip(!QUAL.length, 'fotos da 037 só com CAPTURAS_037');
 test.describe.configure({ mode: 'serial' });
 test.setTimeout(1_500_000);
@@ -122,6 +125,30 @@ test('T08: a primeira pessoa nas três telas, de dia e de noite', async ({ brows
         nota(`${pre}-obra`, { naMira, mao: await pecasNaMao(page), colher: i >= 0 });
         await foto(page, `${pre}-bloco-na-obra`);
       });
+      // 1b. colada num fantasma da obra (na altura dos olhos), olhando por ele
+      await tentar(`${pre}-fantasma-colado`, async () => {
+        const g = await page.evaluate(() => {
+          const e = window.__brumaluz!;
+          const [, py] = e.jogadorPes!();
+          const fs = e.fantasmasPerto?.() ?? [];
+          // um fantasma na altura dos olhos, com chão livre na frente dele (do lado de -z)
+          return fs.find((f) => f.y === Math.floor(py) + 1 && !e.bloco!(f.x, f.y - 1, f.z - 1) && !e.bloco!(f.x, f.y, f.z - 1)) ?? null;
+        });
+        if (!g) throw new Error('sem fantasma na altura dos olhos');
+        await page.evaluate((g) => window.__brumaluz!.teleportar!(g.x + 0.5, g.z - 0.32), g);
+        await page.waitForTimeout(900);
+        await page.evaluate((g) => window.__brumaluz!.mirarPonto!(g.x + 0.5, g.y + 0.62, g.z + 4), g);
+        await page.waitForTimeout(900);
+        const cam = await page.evaluate(() => window.__brumaluz!.primeiraPessoa!.camera());
+        nota(`${pre}-fantasma-colado`, { g, cam, naMira: await page.evaluate(() => window.__brumaluz!.fantasmaNaMira?.() ?? null) });
+        await foto(page, `${pre}-fantasma-colado`);
+        // e um passo para trás: os fantasmas da frente voltam inteiros
+        await page.evaluate((g) => window.__brumaluz!.teleportar!(g.x + 0.5, g.z - 1.6), g);
+        await page.waitForTimeout(900);
+        await page.evaluate((g) => window.__brumaluz!.mirarPonto!(g.x + 0.5, g.y + 0.5, g.z + 0.5), g);
+        await page.waitForTimeout(700);
+        await foto(page, `${pre}-fantasma-um-passo-atras`);
+      });
       // 2. a mão vazia, olhando para a frente
       await tentar(`${pre}-mao-vazia`, async () => {
         await naMao(page, null);
@@ -147,11 +174,20 @@ test('T08: a primeira pessoa nas três telas, de dia e de noite', async ({ brows
           c.soltarMira();
         });
       });
-      // 4. comendo a pipoca
+      // 4. comendo a pipoca (de noite, antes, a mesma cena de fora: a luz do boneco perto do poste)
       await tentar(`${pre}-pipoca`, async () => {
         await naMao(page, 'pipoca', 3);
         await olhar(page, 0.6, 0.1);
         await page.waitForTimeout(900);
+        if (quando === 'noite') {
+          await ligar(page, false);
+          await fora(page);
+          await page.waitForTimeout(600);
+          await foto(page, `${pre}-de-fora-pipoca-referencia`);
+          await ligar(page, true);
+          await dentro(page);
+          await page.waitForTimeout(600);
+        }
         const antes = await pecasNaMao(page);
         await page.evaluate(() => window.__brumaluz!.comer!());
         await page.waitForTimeout(700);
@@ -159,9 +195,9 @@ test('T08: a primeira pessoa nas três telas, de dia e de noite', async ({ brows
         await foto(page, `${pre}-pipoca-comendo`);
         nota(`${pre}-pipoca`, { antes, comendo });
       });
-      // 5. o tesouro da mão (a varinha; no computador e deitado, o guarda-chuva e a pipa)
-      await tentar(`${pre}-tesouro`, async () => {
-        const id = nome === 'em-pe' ? 'varinha-bolhas' : nome === 'deitado' ? 'guarda-chuva-gotinhas' : 'pipa-lacinhos';
+      // 5. os tesouros da mão (a varinha, o guarda-chuva e a pipa), um de cada vez, sem item na barra
+      for (const id of ['varinha-bolhas', 'guarda-chuva-gotinhas', 'pipa-lacinhos'])
+        await tentar(`${pre}-tesouro-${id}`, async () => {
         await naMao(page, null);
         const vestiu = await page.evaluate((id) => {
           const a = (window as unknown as {
@@ -182,9 +218,19 @@ test('T08: a primeira pessoa nas três telas, de dia e de noite', async ({ brows
         // (para o lado da rua, longe dos moradores da calçada)
         await olhar(page, 0.6 + Math.PI / 2, 0.1);
         await page.waitForTimeout(1500);
-        nota(`${pre}-tesouro`, { id, vestiu, mao: await pecasNaMao(page) });
+        nota(`${pre}-tesouro-${id}`, {
+          vestiu,
+          mao: await pecasNaMao(page),
+          tesouro: await page.evaluate(() => {
+            const s = window.__brumaluz!.cenaBabylon!();
+            const n = s.getTransformNodeByName('pp-tesouro');
+            const p = s.getTransformNodeByName('pp-pipa');
+            const on = (x: typeof n) => (x ? x.getChildMeshes(false).filter((m) => m.isEnabled()).length : -1);
+            return { naMao: on(n), pipa: on(p), fio: !!s.getMeshByName('pp-pipa-fio')?.isEnabled() };
+          }),
+        });
         await foto(page, `${pre}-tesouro-${id}`);
-      });
+        });
       await page.context().close();
     }
 });
@@ -266,10 +312,16 @@ test('T08: a roda, a volta, as recusas e a parede (em pé, de dia)', async ({ br
         if (!ok) await page.waitForTimeout(300);
       }
       await page.waitForTimeout(400);
+      await foto(page, `${nomeFoto}-antes`);
+      const t0 = Date.now();
       const r = await page.evaluate(() => window.__brumaluz!.interagir!('colocar'));
-      await page.waitForTimeout(120);
-      await foto(page, nomeFoto);
-      return { mirou: ok, colocou: r };
+      // o "não" dura 0,6 s: uma rajada de fotos pega os balanços (o tempo de cada uma vai nas notas)
+      const tempos: number[] = [];
+      for (let k = 1; k <= 5; k++) {
+        tempos.push(Date.now() - t0);
+        await foto(page, `${nomeFoto}-${k}`);
+      }
+      return { mirou: ok, colocou: r, tempos };
     };
     // o cervo anda: mira a célula onde ele está no mesmo instante do toque (até 10 tentativas)
     let emCimaDoAmigo: unknown = { achou: false };
@@ -319,6 +371,16 @@ test('T08: a roda, a volta, as recusas e a parede (em pé, de dia)', async ({ br
     await page.waitForTimeout(800);
     const noAr = await naoEm('em-pe-dia-recusa-no-ar', T);
     nota('recusas', { emCimaDoAmigo, noAr });
+    // o "não" em vídeo: dois toques na tocha, com uma pausa entre eles
+    await page.waitForTimeout(800);
+    await comecarGravacao(page);
+    await page.waitForTimeout(500);
+    for (let k = 0; k < 2; k++) {
+      await page.evaluate((b) => window.__brumaluz!.mirarBloco!(b.x, b.y, b.z, { x: 0, y: 1, z: 0 }), T);
+      await page.evaluate(() => window.__brumaluz!.interagir!('colocar'));
+      await page.waitForTimeout(1400);
+    }
+    await pararGravacao(page, `${PASTA}/em-pe-dia-recusa-no-ar.webm`);
   });
   // encostada na parede, de dentro, olhando para ela e de lado
   await tentar('parede', async () => {
@@ -338,6 +400,39 @@ test('T08: a roda, a volta, as recusas e a parede (em pé, de dia)', async ({ br
     nota('parede', { camera: await page.evaluate(() => window.__brumaluz!.primeiraPessoa!.camera()) });
   });
   await page.context().close();
+});
+
+test('T08b: a interface de verdade nas três telas (os retângulos que a conta do ombro usa)', async ({ browser }) => {
+  test.skip(!QUAL.includes('interface'));
+  mkdirSync(PASTA, { recursive: true });
+  for (const [tam, nome] of TELAS) {
+    const page = await abrirMundo(browser, { id: `t08b-interface-${nome}`, tema: 'cidade-grande', tamanho: tam });
+    await assentar(page, 12);
+    await naMao(page, `bloco:${Bloco.TABUAS}`, 16);
+    await ligar(page, true);
+    await dentro(page);
+    await page.waitForTimeout(2500);
+    const r = await page.evaluate(() => {
+      const w = innerWidth;
+      const h = innerHeight;
+      const els = [...document.querySelectorAll<HTMLElement>('button, .barra, .minimapa, .area-mapa, .joystick')];
+      return {
+        w,
+        h,
+        els: els
+          .map((el) => {
+            const q = el.getBoundingClientRect();
+            return { c: `${el.tagName}.${el.className}`, q: [q.left, q.top, q.right, q.bottom].map(Math.round) };
+          })
+          .filter((x) => x.q[2] > x.q[0] && x.q[3] > x.q[1] && x.q[0] < w && x.q[1] < h),
+        braco: window.__brumaluz!.primeiraPessoa!.tela(),
+        maos: window.__brumaluz!.primeiraPessoa!.maos(),
+      };
+    });
+    nota(`interface-${nome}`, r);
+    await foto(page, `${nome}-interface`);
+    await page.context().close();
+  }
 });
 
 test('T08: o vídeo em pé (entrar pelo olhinho, andar, pôr 3, quebrar 1 e sair)', async ({ browser }) => {
