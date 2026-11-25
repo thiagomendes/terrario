@@ -4141,6 +4141,8 @@ export function criarCena(
       colocacoes: () => contasAcao.colocacoes,
       bloco: (x, y, z) => blocoEm(x, y, z),
     });
+    // (spec 037: de dentro, as bolhas da varinha saem do aro da mão da frente)
+    personagem.maoDeDentro?.(() => bracoPP?.varinhaDeDentro() ?? null);
     return bracoPP;
   }
   const naoNaMao = criarNaoNaMao(() => personagem.noDaMao());
@@ -6367,7 +6369,20 @@ export function criarCena(
     );
   // parte 3: lá dentro da Casa anos 80, o morador colado na câmera (a vovó no sofá, atrás de
   // quem assiste à TV no tapete) ou entre ela e a criança vira um vulto
-  if (casaCena) renderCriaturas.definirOpacidadeDeMorador(casaCena.opacidadeDeMorador);
+  // spec 037 (o revisor: o cozinheiro cortado ao meio e o rosto enorme colado na câmera): de
+  // dentro, o morador muito perto dos olhos some com suavidade, pela distância dos olhos até a
+  // caixa dele (colado, 0,3, some; a 1,2, inteiro)
+  const opacidadeCasa = casaCena?.opacidadeDeMorador ?? null;
+  renderCriaturas.definirOpacidadeDeMorador((id, x, y, z) => {
+    const a = opacidadeCasa ? opacidadeCasa(id, x, y, z) : 1;
+    if (primeiraPessoa.fracao() <= 0.5) return a;
+    const v = cameraVisao.globalPosition;
+    const dx = Math.max(0, Math.abs(v.x - x) - 0.45);
+    const dy = Math.max(0, Math.abs(v.y - (y + 0.85)) - 0.85);
+    const dz = Math.max(0, Math.abs(v.z - z) - 0.45);
+    const t = Math.max(0, Math.min(1, (Math.hypot(dx, dy, dz) - 0.3) / 0.9));
+    return Math.min(a, t * t * (3 - 2 * t));
+  });
   // os pilotos ficam onde o carrinho deles está na tela (o mesmo lugar do desenho do carrinho);
   // a vovó, no assento dela do sofá (parte 3)
   if (planoVila && replicaBate) {
@@ -7508,9 +7523,12 @@ export function criarCena(
         window.dispatchEvent(new CustomEvent('brumaluz:progressoObra', { detail: fracao }));
       }
     }
-    const m = podeEncherObra() ? fantasmaNaMira() : null;
-    // spec 037: de dentro, os fantasmas colados nos olhos somem (o da mira fica à vista)
-    fantasmas.quadro(tempo, m, primeiraPessoa.fracao() > 0.5 ? cameraVisao.globalPosition : null);
+    // spec 037: de dentro, os fantasmas colados nos olhos somem (o da mira fica à vista), a obra
+    // fica mais leve e segue a luz do lugar; e, sem fantasma bem na mira (o celular, sem o dedo na
+    // tela), o próximo bloco é marcado: o da camada da vez mais perto do meio da vista, ao alcance
+    const deDentroObra = primeiraPessoa.fracao() > 0.5;
+    const m = podeEncherObra() ? (fantasmaNaMira() ?? (deDentroObra ? proximoBlocoDaObra() : null)) : null;
+    fantasmas.quadro(tempo, m, deDentroObra ? cameraVisao.globalPosition : null, luzJogador * (0.45 + 0.55 * luzDia));
     // o coreto feito toca a musiquinha quando alguém entra nele (uma vez a cada 20 s)
     if (cidadeObra && situacaoDoCanteiro(6) === 'feita') {
       const centro = centroDaObra(cidadeObra, 6);
@@ -7555,6 +7573,30 @@ export function criarCena(
       // spec 037: entre os que o ímã do dedo pega, o que já encosta num bloco
       apoiado: (c) => temApoio(c, blocoEm),
     });
+  }
+
+  /**
+   * Spec 037: de dentro, o próximo bloco da obra (só para mostrar, sem mudar o que o toque põe):
+   * entre os fantasmas da camada da vez ao alcance, o mais perto do meio da vista, a até 35° dele.
+   */
+  function proximoBlocoDaObra(): CelulaPlanejada | null {
+    const olhos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+    const v = cameraVisao.globalPosition;
+    const d = direcaoDoOlhar(camera.rotation.y, camera.rotation.x);
+    let melhor: CelulaPlanejada | null = null;
+    let menor = Math.cos((35 * Math.PI) / 180);
+    for (const c of listaFantasmas) {
+      if (!c.pulsa || colocacaoBloqueada(c, controle.jogador) || !clienteAlcanca(olhos, c.x, c.y, c.z)) continue;
+      const dx = c.x + 0.5 - v.x;
+      const dy = c.y + 0.5 - v.y;
+      const dz = c.z + 0.5 - v.z;
+      const cos = (dx * d.x + dy * d.y + dz * d.z) / (Math.hypot(dx, dy, dz) || 1);
+      if (cos > menor) {
+        menor = cos;
+        melhor = c;
+      }
+    }
+    return melhor;
   }
 
   /** Bloco errado: o fantasma treme, o balão mostra o certo e pisca a casinha dele. */

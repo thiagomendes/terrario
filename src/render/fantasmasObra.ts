@@ -56,6 +56,17 @@ const COR_BLOCO: Record<number, [number, number, number]> = {
 const PERTO_SOME = 0.2;
 const PERTO_INTEIRO = 1.5;
 const ALFA_MIRA_PERTO = 0.55;
+/**
+ * Spec 037 (o revisor: a obra de dentro, a um ou dois passos, vira uma grade branca que cobre a
+ * tela e, de noite, é a coisa mais clara dela). Só de dentro: o miolo da camada da vez fica a 0,45
+ * do de fora (0,17 a 0,3), o contorno dela a 0,7; as camadas de cima ficam só com o contorno, a
+ * 0,45 (0,25). O contorno fica fino (0,035 em vez de 0,07), e de noite tudo segue a luz do lugar,
+ * sem passar de metade abaixo dela.
+ */
+const MIOLO_DENTRO_DA_VEZ = 0.45;
+const CONTORNO_DENTRO_DA_VEZ = 0.7;
+const CONTORNO_DENTRO_CIMA = 0.45;
+const PISO_LUZ_DENTRO = 0.5;
 
 /** De dentro, quanto de um fantasma aparece pela distância dos olhos até o cubo (0 some, 1 inteiro). */
 function aparecePerto(
@@ -145,11 +156,19 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
     excluirDoGlow(m);
     return m;
   };
+  /** Spec 037: de dentro, o contorno mais fino (o de fora, 0,07, a um passo vira uma grade branca). */
+  const finas: Mesh[] = [];
   for (const [k, c] of camadas.entries()) {
     c.malha = preparar(MeshBuilder.CreateBox(`fantasmas-obra-${k}`, { size: 0.94 }, scene), c.mat);
     c.moldura = preparar(malhaDaMoldura(scene, `fantasmas-moldura-${k}`), c.matMoldura);
     c.moldura.name = `fantasmas-moldura-${k}`;
+    const fina = preparar(malhaDaMoldura(scene, `fantasmas-moldura-fina-${k}`, 0.95, 0.035), c.matMoldura);
+    fina.name = `fantasmas-moldura-fina-${k}`;
+    finas.push(fina);
   }
+  /** De dentro agora (o contorno fino, o miolo mais leve, a luz do lugar). */
+  let deDentro = false;
+  const corBase = camadas.map((c) => ({ mat: c.mat.emissiveColor.clone(), mo: c.matMoldura.emissiveColor.clone() }));
   /** O que está desenhado agora (para refazer só quando muda). */
   let chave = '';
   let lista: FantasmaVisto[] = [];
@@ -166,8 +185,9 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
       porCamada[k] = deles;
       const m = c.malha!;
       const mo = c.moldura!;
+      const fina = finas[k];
       if (!deles.length) {
-        for (const x of [m, mo]) {
+        for (const x of [m, mo, fina]) {
           x.setEnabled(false);
           x.thinInstanceCount = 0;
         }
@@ -187,7 +207,10 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
       m.setEnabled(true);
       mo.thinInstanceSetBuffer('matrix', mats.slice(), 16, false);
       mo.thinInstanceSetBuffer('color', coresMo, 4, false);
-      mo.setEnabled(true);
+      mo.setEnabled(!deDentro);
+      fina.thinInstanceSetBuffer('matrix', mats.slice(), 16, false);
+      fina.thinInstanceSetBuffer('color', coresMo, 4, false);
+      fina.setEnabled(deDentro);
       coresCamada[k] = cores;
       coresMoldura[k] = coresMo;
     }
@@ -213,12 +236,17 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
       const coresMo = coresMoldura[k];
       if (!cores || !coresMo) continue;
       let mudou = false;
+      // de dentro, a obra fica mais leve: a camada da vez com o miolo a menos da metade, as de
+      // cima só com o contorno, fraquinho (a um passo, a grade inteira cobria a tela)
+      const miolo = olho ? (k === 0 ? MIOLO_DENTRO_DA_VEZ : 0) : 1;
+      const traco = olho ? (k === 0 ? CONTORNO_DENTRO_DA_VEZ : CONTORNO_DENTRO_CIMA) : 1;
       porCamada[k].forEach((f, i) => {
-        const a = olho ? aparecePerto(olho, f) : 1;
-        // o contorno fino some mais devagar que o miolo e, no da mira, fica sempre: mostra onde
-        // o bloco vai sem a névoa do miolo colado nos olhos
+        const perto = olho ? aparecePerto(olho, f) : 1;
+        const a = perto * miolo;
+        // o contorno some mais devagar que o miolo e, no da mira, fica aceso: mostra onde o
+        // bloco vai sem a névoa do miolo colado nos olhos
         const naMira = !!mira && mira.x === f.x && mira.y === f.y && mira.z === f.z;
-        const contorno = naMira ? Math.max(Math.min(1, a * 1.6), ALFA_MIRA_PERTO) : Math.min(1, a * 1.6);
+        const contorno = naMira && olho ? Math.max(Math.min(1, perto * 1.6), ALFA_MIRA_PERTO) : Math.min(1, perto * 1.6) * traco;
         if (cores[i * 4 + 3] !== a || coresMo[i * 4 + 3] !== contorno) {
           cores[i * 4 + 3] = a;
           coresMo[i * 4 + 3] = contorno;
@@ -228,6 +256,7 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
       if (mudou) {
         camadas[k].malha!.thinInstanceBufferUpdated('color');
         camadas[k].moldura!.thinInstanceBufferUpdated('color');
+        finas[k].thinInstanceBufferUpdated('color');
       }
     }
   }
@@ -316,7 +345,24 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
       tempo: number,
       mira: { x: number; y: number; z: number; bloco: number } | null,
       olho: { x: number; y: number; z: number } | null = null,
+      /** A luz do lugar (1 de dia, menos de noite e na caverna): de dentro, a obra segue ela. */
+      luz = 1,
     ): void {
+      // de dentro: o contorno fino no lugar do grosso, e a cor na luz do lugar
+      const dentro = !!olho;
+      if (dentro !== deDentro) {
+        deDentro = dentro;
+        for (let k = 0; k < camadas.length; k++) {
+          const tem = !!coresCamada[k];
+          camadas[k].moldura!.setEnabled(tem && !dentro);
+          finas[k].setEnabled(tem && dentro);
+        }
+      }
+      const f = dentro ? Math.max(PISO_LUZ_DENTRO, Math.min(1, luz)) : 1;
+      camadas.forEach((c, k) => {
+        c.mat.emissiveColor.copyFrom(corBase[k].mat).scaleInPlace(f);
+        c.matMoldura.emissiveColor.copyFrom(corBase[k].mo).scaleInPlace(f);
+      });
       apagarPerto(olho, mira);
       const pulso = 0.5 + 0.5 * Math.sin(tempo * 3.2);
       camadas[0].mat.alpha = 0.38 + 0.3 * pulso;
@@ -339,6 +385,7 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
             const mt = Matrix.Translation(f.x + 0.5 + dx, f.y + 0.5, f.z + 0.5);
             m[k].thinInstanceSetMatrixAt(i, mt, i === deles.length - 1);
             mo[k].thinInstanceSetMatrixAt(i, mt, i === deles.length - 1);
+            finas[k].thinInstanceSetMatrixAt(i, mt, i === deles.length - 1);
           });
         }
       }
