@@ -250,6 +250,29 @@ describe.each<Modo>(['local', 'nuvem'])('regra 1: o que o mundo construiu (%s)',
     },
   );
 
+  it('spec 037: com um morador na passagem, a recusa é a da passagem (o cadeado vem antes do corpo)', () => {
+    const n0 = abrir(modo, 'criativo', { x: 0, y: 70, z: 0 });
+    const L = acharLugares(n0);
+    const n = abrir(modo, 'criativo', L.passagem);
+    const quem = todos[todos.length - 1];
+    n.estado.populacao.adicionar('morador', L.passagem.x + 0.5, L.passagem.y, L.passagem.z + 0.5);
+    const i = colocar(n, quem, L.passagem);
+    expect(bloco(n, L.passagem)).toBe(Bloco.AR);
+    expect(recusaDe(n, quem, i).recusa).toMatchObject({
+      motivo: 'colocar',
+      protecao: { motivo: 'passagem', lugar: 'vila' },
+    });
+    // fora da proteção, o mesmo morador segura o bloco pelo corpo (a recusa sem cadeado)
+    const livre = L.enfeite;
+    expect(n.protecao.em(livre.x, livre.y, livre.z)).not.toBe(Protecao.PASSAGEM);
+    n.estado.populacao.adicionar('morador', livre.x + 0.5, livre.y, livre.z + 0.5);
+    const k = colocar(n, quem, livre);
+    expect(bloco(n, livre)).toBe(Bloco.AR);
+    const r = recusaDe(n, quem, k).recusa;
+    expect(r).toMatchObject({ motivo: 'colocar' });
+    expect(r?.protecao).toBeUndefined();
+  });
+
   it('a passagem fica livre (recusa com o motivo); enfeitar encostado na casa pode', () => {
     const n0 = abrir(modo, 'criativo', { x: 0, y: 70, z: 0 });
     const L = acharLugares(n0);

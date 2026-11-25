@@ -281,11 +281,34 @@ describe('encher a obra (nuvem: tudo pelo saneamento)', () => {
     colocar(n, 'ana', c);
     eventos(n);
     expect(n.estado.mundo.bloco(c.x, c.y, c.z)).toBe(c.bloco);
-    // o bloco certo fora da planta, no ar, não entra (só a planta tem a exceção)
-    const fora = { ...c, y: c.y + 3 };
-    colocar(n, 'ana', fora);
+    // o mesmo bloco fora da planta, no ar, livre de proteção e ao alcance, não entra: só a
+    // planta tem a exceção (com uma pedra embaixo, a mesma célula aceita, então a recusa foi a
+    // do apoio)
+    let fora: { x: number; y: number; z: number } | null = null;
+    for (let dy = 1; dy <= 4 && !fora; dy++)
+      for (let dx = -3; dx <= 3 && !fora; dx++)
+        for (let dz = -3; dz <= 3 && !fora; dz++) {
+          const q = { x: c.x + dx, y: c.y + dy, z: c.z + dz };
+          if (
+            ler(q.x, q.y, q.z) === Bloco.AR &&
+            n.protecao.em(q.x, q.y, q.z) === Protecao.LIVRE &&
+            !n.protecao.planejado(q.x, q.y, q.z) &&
+            !temApoio(q, ler)
+          )
+            fora = q;
+        }
+    expect(fora, 'uma célula livre no ar perto do canteiro').not.toBeNull();
+    const f = fora!;
+    const j = colocar(n, 'ana', { ...c, ...f });
+    const recusaFora = eventos(n)
+      .get('ana')!
+      .find((e) => e.e === 'recusa' && e.comando === j);
+    expect(recusaFora).toMatchObject({ motivo: 'colocar' });
+    expect(n.estado.mundo.bloco(f.x, f.y, f.z)).toBe(Bloco.AR);
+    n.estado.edicoes.definir(f.x, f.y - 1, f.z, Bloco.PEDRA_LISA);
+    colocar(n, 'ana', { ...c, ...f });
     eventos(n);
-    expect(n.estado.mundo.bloco(fora.x, fora.y, fora.z)).toBe(Bloco.AR);
+    expect(n.estado.mundo.bloco(f.x, f.y, f.z)).toBe(c.bloco);
   });
 
   it('o canteiro que espera a vez não aceita nada', () => {

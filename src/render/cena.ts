@@ -3244,14 +3244,29 @@ export function criarCena(
     // nem vai (o núcleo recusaria e ela piscaria)
     let primeira: RecusaProtecao | null = null;
     const vai: { x: number; y: number; z: number; v: number; manterDono: boolean }[] = [];
+    // spec 037: o lote não prende amigo nem bicho (o núcleo pula a célula; o corpo de quem
+    // manda o lote, não)
+    let corpos: ReturnType<typeof corposAgora> | null = null;
+    let prendia = false;
     for (const e of lote) {
       // a igual não vai (nem carimba o dono); a lavoura do mundo só se colhe
       const d = celulaDoLote(regra, voce, e.x, e.y, e.z, e.v, valorEm(e.x, e.y, e.z));
       if ('pula' in d) continue;
-      if ('recusa' in d) primeira ??= d.recusa;
-      else vai.push({ x: e.x, y: e.y, z: e.z, v: d.v, manterDono: d.manterDono });
+      if ('recusa' in d) {
+        primeira ??= d.recusa;
+        continue;
+      }
+      if (
+        blocoOcupa(d.v & 255) &&
+        (corpos ??= corposAgora(true)).some((k) => corpoNaCelula(e, k))
+      ) {
+        prendia = true;
+        continue;
+      }
+      vai.push({ x: e.x, y: e.y, z: e.z, v: d.v, manterDono: d.manterDono });
     }
     if (primeira) avisarProtecao(primeira);
+    else if (prendia) barramento.emitir('recusa', { motivo: 'colocar' });
     if (!vai.length) return;
     lote = vai.map(({ x, y, z, v }) => ({ x, y, z, v }));
     const id = proximoId();
@@ -3281,6 +3296,9 @@ export function criarCena(
           null,
         ));
     if (protegido) return recusarProtegido(protegido);
+    // spec 037: depois da proteção (o cadeado e o motivo vêm antes, como no núcleo), nunca em
+    // cima de um corpo e só encostado num bloco
+    if (!quebra && naoEntraAqui(b, [{ x, y, z }, ...extras])) return false;
     // o dono do mundo desfaz a construção de um amigo: um aviso discreto
     const doAmigo = quebra ? regra.dono(x, y, z) : null;
     // a lavoura do mundo se replanta na hora (o estágio 0 da mesma planta, como o núcleo)
@@ -3632,9 +3650,9 @@ export function criarCena(
    * peixes). Os bichos que seguem a criança (premium) e os da festa ficam de fora, como no
    * núcleo.
    */
-  function corposAgora() {
+  function corposAgora(semMim = false) {
     const amigos = amigosDoRetrato.filter((o) => o.id !== voce);
-    return corposDoRetrato(controle.jogador, amigos, cliente.criaturas.vistas);
+    return corposDoRetrato(semMim ? null : controle.jogador, amigos, cliente.criaturas.vistas);
   }
   /** Spec 037: o bloco não entra (a mesma conta do núcleo, antes de prever: nada pisca). */
   function naoEntraAqui(
@@ -3675,11 +3693,8 @@ export function criarCena(
             toast('A porta precisa de 2 blocos de altura');
             return false;
           }
-          if (naoEntraAqui(b, [{ x, y, z }, { x, y: y + 1, z }])) return false;
           return editarRegistrando(x, y, z, b, meta, [{ x, y: y + 1, z }]);
         }
-        // spec 037: nunca em cima de um corpo, e encostado num bloco (a mesma regra do núcleo)
-        if (naoEntraAqui(b, [{ x, y, z }])) return false;
         return editarRegistrando(x, y, z, b, meta);
       },
       posicao: posicaoDeColocar,
