@@ -49,30 +49,37 @@ export const GANHO_COMER_X = 0.37;
 export const GANHO_COMER_Z = 0.3;
 export const GANHO_GOLPE = 0.22;
 
-/** As poses que a mão percorre (todas têm de caber na tela com o mesmo ombro). */
-export const ACOES: readonly [number, number][] = [
-  SEGURAR,
-  // o passo (o balanço do boneco em escala)
-  [SEGURAR[0] - 0.06, SEGURAR[1]],
-  [SEGURAR[0] + 0.06, SEGURAR[1]],
-  // o pulo
-  [SEGURAR[0], SEGURAR[1] + 0.12],
-  // o empurrão de colocar
-  [SEGURAR[0] + EMPURRAO_COLOCAR, SEGURAR[1]],
-  // o aceno, nos dois lados do abano
-  [ACENAR[0], ACENAR[1] + 0.35],
-  [ACENAR[0], ACENAR[1] - 0.35],
-  // o comer
-  [SEGURAR[0] - 1.5 * GANHO_COMER_X, SEGURAR[1] - 0.78 * GANHO_COMER_Z],
-  // o golpe: o preparo (a mão sobe) e a batida (a mão desce)
-  [SEGURAR[0] - 1.1 * GANHO_GOLPE, SEGURAR[1]],
-  [SEGURAR[0] + 1.5 * GANHO_GOLPE, SEGURAR[1]],
-];
+/** As poses que a mão percorre a partir de um segurar (todas cabem na tela com o mesmo ombro). */
+export function acoesDe(s: readonly [number, number]): readonly [number, number][] {
+  return [
+    [s[0], s[1]],
+    // o passo (o balanço do boneco em escala)
+    [s[0] - 0.06, s[1]],
+    [s[0] + 0.06, s[1]],
+    // o pulo
+    [s[0], s[1] + 0.12],
+    // o empurrão de colocar
+    [s[0] + EMPURRAO_COLOCAR, s[1]],
+    // o aceno, nos dois lados do abano
+    [ACENAR[0], ACENAR[1] + 0.35],
+    [ACENAR[0], ACENAR[1] - 0.35],
+    // o comer
+    [s[0] - 1.5 * GANHO_COMER_X, s[1] - 0.78 * GANHO_COMER_Z],
+    // o golpe: o preparo (a mão sobe) e a batida (a mão desce)
+    [s[0] - 1.1 * GANHO_GOLPE, s[1]],
+    [s[0] + 1.5 * GANHO_GOLPE, s[1]],
+  ];
+}
+/** As poses do segurar do esboço aprovado. */
+export const ACOES: readonly [number, number][] = acoesDe(SEGURAR);
 
 /** A direção do braço (do ombro para a mão) pelos ângulos de junta, como no boneco. */
 export function direcaoDoBraco(x: number, z: number): Vec3 {
   return [Math.sin(z), -Math.cos(z) * Math.cos(x), -Math.cos(z) * Math.sin(x)];
 }
+
+/** Um retângulo da interface na tela (px CSS): esquerda, cima, direita, baixo. */
+export type Retangulo = readonly [number, number, number, number];
 
 export interface Tela {
   /** Largura e altura (px CSS). */
@@ -80,6 +87,30 @@ export interface Tela {
   h: number;
   /** O alto (px) dos botões e da barra na metade direita, embaixo. */
   botoes: number;
+  /**
+   * Os retângulos de verdade da interface (os botões, a barra, o mapinha). A mão e o item não
+   * ficam atrás deles em nenhuma ação, a não ser no aceno, que passa rápido.
+   */
+  obstaculos?: readonly Retangulo[];
+}
+
+/** A folga (px) entre a mão, ou o item, e um retângulo da interface. */
+export const FOLGA_INTERFACE_PX = 6;
+/**
+ * O item na mão, como um círculo acima dela (em raios da mão): o meio, acima do meio da mão, e o
+ * raio. O bloco, a comida e o cabo da ferramenta ficam por aí (medido nas fotos da T08).
+ */
+export const ITEM_ACIMA = 2.3;
+export const ITEM_RAIO = 1.5;
+/** As ações que podem passar por cima da interface: o aceno (índices em `ACOES`). */
+const PASSA_POR_CIMA = new Set([5, 6]);
+
+/** O círculo (x, y, r) encosta no retângulo, com a folga? */
+function encosta(x: number, y: number, r: number, q: Retangulo): boolean {
+  const cx = Math.max(q[0], Math.min(x, q[2]));
+  const cy = Math.max(q[1], Math.min(y, q[3]));
+  const d = r + FOLGA_INTERFACE_PX;
+  return (x - cx) ** 2 + (y - cy) ** 2 < d * d;
 }
 
 export interface ResultadoOmbro {
@@ -88,6 +119,8 @@ export interface ResultadoOmbro {
   maoPx: number;
   /** A folga (px) do ombro, com a manga, além da beira da tela. */
   folgaPx: number;
+  /** O segurar desta tela (o do esboço, ou o da faixa larga). */
+  segurar: readonly [number, number];
 }
 
 /** Quanto (px) a bola de raio `r` em `p` fica além da beira da tela (positivo: fora). */
@@ -100,13 +133,13 @@ export function foraDaTela(p: Vec3, r: number, tela: Tela, fovV = FOV_BRACO): nu
 }
 
 /** O ombro serve para esta tela (com todas as ações)? */
-export function ombroServe(ombro: Vec3, tela: Tela, fovV = FOV_BRACO): boolean {
+export function ombroServe(ombro: Vec3, tela: Tela, fovV = FOV_BRACO, acoes: readonly (readonly [number, number])[] = ACOES): boolean {
   const { w, h, botoes } = tela;
   const tanV = Math.tan(fovV / 2);
   const tanH = tanV * (w / h);
   if (ombro[2] < PERTO || foraDaTela(ombro, MEIA_MANGA, tela, fovV) < FOLGA_OMBRO_PX) return false;
-  for (let i = 0; i < ACOES.length; i++) {
-    const d = direcaoDoBraco(ACOES[i][0], ACOES[i][1]);
+  for (let i = 0; i < acoes.length; i++) {
+    const d = direcaoDoBraco(acoes[i][0], acoes[i][1]);
     const m: Vec3 = [ombro[0] + d[0] * BRACO, ombro[1] + d[1] * BRACO, ombro[2] + d[2] * BRACO];
     if (m[2] < PERTO) return false;
     const px = (w / 2) * (1 + m[0] / (m[2] * tanH));
@@ -115,6 +148,10 @@ export function ombroServe(ombro: Vec3, tela: Tela, fovV = FOV_BRACO): boolean {
     if (px - r < 0 || px + r > w || py - r < 0 || py + r > h) return false;
     // segurando, o bloco (uma mão abaixo dela) fica acima dos botões
     if (i === 0 && py + 2.2 * r > botoes - 8) return false;
+    // a mão e o item fora dos botões, da barra e do mapinha
+    if (tela.obstaculos && !PASSA_POR_CIMA.has(i))
+      for (const q of tela.obstaculos)
+        if (encosta(px, py, r, q) || encosta(px, py - ITEM_ACIMA * r, ITEM_RAIO * r, q)) return false;
   }
   return true;
 }
@@ -129,10 +166,37 @@ const PASSO_Z_GROSSO = 0.03;
  * e a mesma grade de distâncias), com uma fração das contas.
  */
 export function acharOmbro(tela: Tela, fovV = FOV_BRACO): ResultadoOmbro | null {
+  // primeiro, os pontos da tela do esboço aprovado; com a interface ocupando todos eles (o celular
+  // deitado: a barra embaixo, o mapinha e a mochila à direita), a faixa livre mais embaixo e
+  // mais à direita
+  return buscarOmbro(tela, fovV, GRADE_ESBOCO) ?? (tela.obstaculos?.length ? buscarOmbro(tela, fovV, GRADE_LARGA) : null);
+}
+
+/** Os pontos da tela onde a mão de segurar pode ficar (em metades da tela, a partir do meio). */
+interface Grade {
+  x: [number, number];
+  y: [number, number];
+  /** A mão procurada (diâmetro em frações da altura da tela); sem ela, a regra do esboço. */
+  alvoAltura?: number;
+  segurar: readonly [number, number];
+}
+/**
+ * Na faixa larga, a mão tem até 12% da altura da tela (em pé, 9%; no computador, 14%). No celular
+ * deitado, a interface ocupa os dois cantos da direita: a mão que cabe com o item, fora deles e com
+ * o ombro fora da tela, é a pequena, no vão entre a mochila e o botão de pular (a mão e o item
+ * maiores ficavam atrás do mapinha e da mochila; o braço é rígido, e com o ombro fora da tela a
+ * mão maior só cabe mais para o meio, num braço comprido).
+ */
+export const MAO_FAIXA_LARGA = 0.12;
+const GRADE_ESBOCO: Grade = { x: [0.2, 0.751], y: [-0.45, -0.149], segurar: SEGURAR };
+const GRADE_LARGA: Grade = { x: [0.2, 0.951], y: [-0.8, -0.149], alvoAltura: MAO_FAIXA_LARGA, segurar: SEGURAR };
+
+function buscarOmbro(tela: Tela, fovV: number, grade: Grade): ResultadoOmbro | null {
   const { w, h } = tela;
   const tanV = Math.tan(fovV / 2);
   const tanH = tanV * (w / h);
-  const d0 = direcaoDoBraco(SEGURAR[0], SEGURAR[1]);
+  const d0 = direcaoDoBraco(grade.segurar[0], grade.segurar[1]);
+  const acoes = grade.segurar === SEGURAR ? ACOES : acoesDe(grade.segurar);
   const px = (z: number) => (RAIO_MAO / (z * tanV)) * h;
   // a grade de distâncias do esboço: z = Z_MAX − k × PASSO_Z
   const kMax = Math.floor((Z_MAX - Z_MIN) / PASSO_Z + 1e-9);
@@ -145,9 +209,9 @@ export function acharOmbro(tela: Tela, fovV = FOV_BRACO): ResultadoOmbro | null 
   // para cada ponto da tela, o trecho de distâncias que serve (kIni: a mais longe; kFim: a mais perto)
   const trechos: { tx: number; ty: number; kIni: number; kFim: number }[] = [];
   const passoGrosso = Math.round(PASSO_Z_GROSSO / PASSO_Z);
-  for (let tx = 0.2; tx <= 0.751; tx += 0.025)
-    for (let ty = -0.45; ty <= -0.149; ty += 0.025) {
-      const serve = (k: number) => ombroServe(ombroEm(tx, ty, zDe(k)), tela, fovV);
+  for (let tx = grade.x[0]; tx <= grade.x[1]; tx += 0.025)
+    for (let ty = grade.y[0]; ty <= grade.y[1]; ty += 0.025) {
+      const serve = (k: number) => ombroServe(ombroEm(tx, ty, zDe(k)), tela, fovV, acoes);
       let kIni = -1;
       for (let k = 0; k <= kMax; k += passoGrosso)
         if (serve(k)) {
@@ -165,9 +229,13 @@ export function acharOmbro(tela: Tela, fovV = FOV_BRACO): ResultadoOmbro | null 
     }
   if (!trechos.length) return null;
   // a menor mão que serve; e, dela, a maior que não passa de FATOR_MAO vezes nem de
-  // MAO_MAX_LARGURA da largura (a primeira na ordem da busca, como no esboço)
+  // MAO_MAX_LARGURA da largura (a primeira na ordem da busca, como no esboço). Na faixa larga, a
+  // menor mão que serve é um pontinho longe, no fim de um braço comprido: lá vale a maior mão que
+  // serve até MAO_FAIXA_LARGA da altura
   const menor = Math.min(...trechos.map((t) => px(zDe(t.kIni))));
-  const alvo = Math.min(menor * FATOR_MAO, w * MAO_MAX_LARGURA);
+  const alvo = grade.alvoAltura
+    ? Math.min(h * grade.alvoAltura, w * MAO_MAX_LARGURA)
+    : Math.min(menor * FATOR_MAO, w * MAO_MAX_LARGURA);
   let melhor: { tx: number; ty: number; z: number; px: number } | null = null;
   for (const t of trechos) {
     // a distância mais perto (mão maior) do trecho com a mão ainda ≤ alvo
@@ -180,7 +248,12 @@ export function acharOmbro(tela: Tela, fovV = FOV_BRACO): ResultadoOmbro | null 
   }
   if (!melhor) return null;
   const ombro = ombroEm(melhor.tx, melhor.ty, melhor.z);
-  return { ombro, maoPx: Math.round(melhor.px), folgaPx: Math.round(foraDaTela(ombro, MEIA_MANGA, tela, fovV)) };
+  return {
+    ombro,
+    maoPx: Math.round(melhor.px),
+    folgaPx: Math.round(foraDaTela(ombro, MEIA_MANGA, tela, fovV)),
+    segurar: grade.segurar,
+  };
 }
 
 /**
@@ -191,7 +264,8 @@ export function acharOmbro(tela: Tela, fovV = FOV_BRACO): ResultadoOmbro | null 
 export function criarCacheOmbro(agendar: (f: () => void) => void, fovV = FOV_BRACO) {
   const guardados = new Map<string, ResultadoOmbro | null>();
   const pedidos = new Set<string>();
-  const chave = (t: Tela) => `${Math.round(t.w)}x${Math.round(t.h)}|${Math.round(t.botoes)}`;
+  const chave = (t: Tela) =>
+    `${Math.round(t.w)}x${Math.round(t.h)}|${Math.round(t.botoes)}|${(t.obstaculos ?? []).map((q) => q.map(Math.round).join(',')).join(';')}`;
   return {
     obter(tela: Tela): ResultadoOmbro | null | undefined {
       const k = chave(tela);

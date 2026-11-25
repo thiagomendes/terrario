@@ -3,7 +3,10 @@ import {
   ACOES,
   BRACO,
   FATOR_MAO,
+  FOLGA_INTERFACE_PX,
   FOV_BRACO,
+  ITEM_ACIMA,
+  ITEM_RAIO,
   MAO_MAX_LARGURA,
   MEIA_MANGA,
   RAIO_MAO,
@@ -109,6 +112,65 @@ describe('a conta do ombro da primeira pessoa (spec 037)', () => {
     // os celulares (em pé e deitados), os tablets e os computadores têm solução
     expect(comSolucao).toBeGreaterThan(70);
     expect(semSolucao).toBeLessThan(10);
+  });
+
+  // os retângulos de verdade da interface (medidos nas fotos da T08: os botões, a barra, o
+  // mapinha, a mochila e o controle de andar)
+  const INTERFACE: Record<string, Tela> = {
+    empe: {
+      w: 390,
+      h: 844,
+      botoes: 652,
+      obstaculos: [[266, 40, 380, 157], [328, 164, 376, 212], [230, 652, 298, 720], [308, 652, 376, 720], [18, 588, 146, 712], [8, 781, 382, 832], [8, 8, 52, 52], [60, 8, 104, 52], [112, 8, 230, 52]],
+    },
+    deitado: {
+      w: 844,
+      h: 390,
+      botoes: 312,
+      obstaculos: [[740, 58, 834, 155], [782, 162, 830, 210], [157, 312, 687, 378], [714, 325, 770, 380], [778, 325, 834, 380], [14, 268, 126, 380], [8, 8, 52, 52], [60, 8, 104, 52], [112, 8, 230, 52]],
+    },
+    pc: {
+      w: 1280,
+      h: 720,
+      botoes: 640,
+      obstaculos: [[1105, 45, 1268, 210], [1218, 222, 1266, 268], [375, 640, 905, 707], [8, 8, 52, 52], [60, 8, 104, 52], [112, 8, 156, 52]],
+    },
+  };
+
+  it('em pé e no computador, a interface não muda o ombro aprovado pelo dono', () => {
+    for (const k of ['empe', 'pc']) {
+      const t = INTERFACE[k];
+      const sem = acharOmbro({ w: t.w, h: t.h, botoes: t.botoes })!;
+      const com = acharOmbro(t)!;
+      expect(com.maoPx).toBe(sem.maoPx);
+      for (let i = 0; i < 3; i++) expect(com.ombro[i]).toBeCloseTo(sem.ombro[i], 6);
+    }
+  });
+
+  it('deitado, a mão e o item ficam fora dos botões, da barra e do mapinha (o aceno passa)', () => {
+    const t = INTERFACE.deitado;
+    // sem a interface, o item ia para trás do mapinha (o portão da 037)
+    const sem = acharOmbro({ w: t.w, h: t.h, botoes: t.botoes })!;
+    const s = maos(sem.ombro, t);
+    const encosta = (x: number, y: number, r: number) =>
+      t.obstaculos!.some((q) => {
+        const cx = Math.max(q[0], Math.min(x, q[2]));
+        const cy = Math.max(q[1], Math.min(y, q[3]));
+        return Math.hypot(x - cx, y - cy) < r + FOLGA_INTERFACE_PX;
+      });
+    expect(s.some((q, i) => i !== 5 && i !== 6 && encosta(q.x, q.y - ITEM_ACIMA * q.r, ITEM_RAIO * q.r))).toBe(true);
+    const r = acharOmbro(t)!;
+    expect(r).not.toBeNull();
+    expect(foraDaTela(r.ombro, MEIA_MANGA, t)).toBeGreaterThanOrEqual(4);
+    const m = maos(r.ombro, t);
+    m.forEach((q, i) => {
+      if (i === 5 || i === 6) return;
+      expect(encosta(q.x, q.y, q.r)).toBe(false);
+      expect(encosta(q.x, q.y - ITEM_ACIMA * q.r, ITEM_RAIO * q.r)).toBe(false);
+    });
+    // a mão não fica alta (na metade de baixo da tela) nem maior que a de antes
+    expect(m[0].y).toBeGreaterThan(t.h * 0.6);
+    expect(r.maoPx).toBeLessThan(sem.maoPx);
   });
 
   it('sem solução (uma tela onde a mão não cabe acima dos botões), devolve null: a mão some', () => {
