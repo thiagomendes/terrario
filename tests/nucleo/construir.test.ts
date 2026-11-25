@@ -308,6 +308,64 @@ for (const modo of ['local', 'nuvem'] as const)
     });
   });
 
+for (const modo of ['local', 'nuvem'] as const)
+  describe(`fechar a porta e a porteira (${modo}, T02)`, () => {
+    /** Uma porta aberta posta no chão do lado (e as duas metades, abertas). */
+    function portaAberta(n: Nucleo, bloco: number = Bloco.PORTA) {
+      const y = chao(COL.x, COL.z);
+      const extras = bloco === Bloco.PORTA ? [{ x: COL.x, y: y + 1, z: COL.z }] : undefined;
+      mandar(n, 'ana', { t: 'colocar', x: COL.x, y, z: COL.z, bloco, meta: 0, slot: 0, extras });
+      mandar(n, 'ana', { t: 'usar', x: COL.x, y, z: COL.z });
+      expect(recusas(n)).toEqual([]);
+      return y;
+    }
+
+    it('fecha com a passagem livre; com um amigo ou um bicho na passagem, fica aberta', () => {
+      const n = abrir(modo);
+      const y = portaAberta(n);
+      expect(bloco(n, COL.x, y, COL.z)).toBe(Bloco.PORTA_ABERTA);
+      // a Bia parada na passagem
+      ir(n, 'bia', COL.x + 0.5, y, COL.z + 0.5);
+      n.passo();
+      const i = mandar(n, 'ana', { t: 'usar', x: COL.x, y: y + 1, z: COL.z });
+      expect(recusas(n).find((e) => e.comando === i)).toMatchObject({ motivo: 'usar' });
+      expect([bloco(n, COL.x, y, COL.z), bloco(n, COL.x, y + 1, COL.z)]).toEqual([
+        Bloco.PORTA_ABERTA,
+        Bloco.PORTA_ABERTA,
+      ]);
+      // ela sai; um coelho entra na passagem
+      ir(n, 'bia', COL.x + 0.5, chao(COL.x, COL.z + 6), COL.z + 6.5);
+      const coelho = n.estado.populacao.adicionar('coelho', COL.x + 0.5, y, COL.z + 0.5);
+      mandar(n, 'ana', { t: 'usar', x: COL.x, y, z: COL.z });
+      expect(recusas(n)).toHaveLength(1);
+      expect(bloco(n, COL.x, y, COL.z)).toBe(Bloco.PORTA_ABERTA);
+      // o coelho sai: fecha
+      coelho.x += 5;
+      mandar(n, 'ana', { t: 'usar', x: COL.x, y, z: COL.z });
+      expect(recusas(n)).toEqual([]);
+      expect([bloco(n, COL.x, y, COL.z), bloco(n, COL.x, y + 1, COL.z)]).toEqual([
+        Bloco.PORTA,
+        Bloco.PORTA,
+      ]);
+      // e abrir nunca é recusado (abre em cima de quem estiver ali)
+      ir(n, 'bia', COL.x + 0.5, y, COL.z + 0.5);
+      n.passo();
+      mandar(n, 'ana', { t: 'usar', x: COL.x, y, z: COL.z });
+      expect(recusas(n)).toEqual([]);
+      expect(bloco(n, COL.x, y, COL.z)).toBe(Bloco.PORTA_ABERTA);
+    });
+
+    it('a porteira do curral também: o bicho na passagem a deixa aberta', () => {
+      const n = abrir(modo);
+      const y = portaAberta(n, Bloco.PORTEIRA);
+      expect(bloco(n, COL.x, y, COL.z)).toBe(Bloco.PORTEIRA_ABERTA);
+      n.estado.populacao.adicionar('cervo', COL.x + 0.5, y, COL.z + 0.5);
+      mandar(n, 'ana', { t: 'usar', x: COL.x, y, z: COL.z });
+      expect(recusas(n)).toHaveLength(1);
+      expect(bloco(n, COL.x, y, COL.z)).toBe(Bloco.PORTEIRA_ABERTA);
+    });
+  });
+
 describe('quem entra num lugar já construído (nuvem)', () => {
   it('quem chega pela primeira vez no nascimento construído nasce em cima da construção', () => {
     const n = abrir('nuvem');

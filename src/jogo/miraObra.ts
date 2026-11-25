@@ -53,11 +53,16 @@ export interface OpcoesMiraObra {
   solido: number;
   /** O fantasma está ao alcance das mãos (a regra do núcleo, com a folga do cliente)? */
   alcanca(c: Ponto3): boolean;
+  /**
+   * Spec 037: o fantasma já encosta num bloco? Só desempata entre os que o ímã pega (o
+   * apoiado ganha do solto); nunca passa na frente do fantasma tocado em cheio.
+   */
+  apoiado?(c: Ponto3): boolean;
 }
 
 /**
  * O fantasma que o raio pega, ou null. Primeiro o que ele acerta em cheio (o mais perto);
- * senão, com o ímã, o de caixa crescida mais perto da reta do raio.
+ * senão, com o ímã, o de caixa crescida mais perto da reta do raio (o apoiado antes).
  */
 export function fantasmaNoRaio<T extends Ponto3>(
   origem: Ponto3,
@@ -69,6 +74,7 @@ export function fantasmaNoRaio<T extends Ponto3>(
   let melhorT = Infinity;
   let ima: T | null = null;
   let imaD = Infinity;
+  let imaApoiado = false;
   for (const f of fantasmas) {
     const t = entradaNaCaixa(origem, direcao, f, 0);
     if (t !== null && t <= op.limite && t <= op.solido + 1e-6 && t < melhorT && op.alcanca(f)) {
@@ -80,9 +86,11 @@ export function fantasmaNoRaio<T extends Ponto3>(
     const tf = entradaNaCaixa(origem, direcao, f, op.ima);
     if (tf === null || tf > op.limite || tf > op.solido + 1e-6 || !op.alcanca(f)) continue;
     const dr = distanciaAoRaio(origem, direcao, f);
-    if (dr < imaD) {
+    const apoiado = op.apoiado ? op.apoiado(f) : false;
+    if ((apoiado && !imaApoiado) || (apoiado === imaApoiado && dr < imaD)) {
       ima = f;
       imaD = dr;
+      imaApoiado = apoiado;
     }
   }
   return melhor ?? ima;

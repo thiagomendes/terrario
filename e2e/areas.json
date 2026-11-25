@@ -98,6 +98,7 @@
       "suites": [
         "ajustes-filho.spec.ts",
         "bloco-some.spec.ts",
+        "construir-037.spec.ts",
         "cristal.spec.ts",
         "dar-item.spec.ts",
         "interacao.spec.ts",

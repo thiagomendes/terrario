@@ -1,5 +1,6 @@
 import { ALTURA_JOGADOR, MEIA_LARGURA } from '../player/fisica';
 import { Bloco, obterBloco } from '../world/blocks';
+import { CRIATURAS, type TipoSer } from './criaturas';
 
 /**
  * Spec 037: a regra de construir, a mesma no núcleo (servidor local e nuvem) e na previsão do
@@ -126,6 +127,27 @@ export function recusaConstruir(p: PedidoConstruir): RecusaConstruir | null {
   if (p.bloco === Bloco.PORTA)
     return c.y <= 0 || blocoApoia(p.ler(c.x, c.y - 1, c.z)) ? null : 'apoio';
   return temApoio(c, p.ler) ? null : 'apoio';
+}
+
+/**
+ * Os corpos de um retrato: quem coloca (a caixa do corpo), os amigos (com a folga) e os bichos,
+ * moradores e peixes (o que está morrendo, não). O núcleo monta com as posições que ele tem; o
+ * cliente, com as do último retrato que o núcleo mandou (a mesma conta, para nada piscar).
+ */
+export function corposDoRetrato(
+  eu: { x: number; y: number; z: number } | null,
+  amigos: Iterable<{ x: number; y: number; z: number; vel?: number }>,
+  bichos: Iterable<{ tipo: TipoSer; x: number; y: number; z: number; estado: string }>,
+): Corpo[] {
+  const r: Corpo[] = [];
+  if (eu) r.push(corpoDeJogador(eu, false));
+  for (const o of amigos) r.push(corpoDeJogador(o, true));
+  for (const c of bichos) {
+    if (c.estado === 'morrendo') continue;
+    const d = CRIATURAS[c.tipo];
+    if (d) r.push({ x: c.x, y: c.y, z: c.z, mw: d.mw, alt: d.alt });
+  }
+  return r;
 }
 
 /** Os corpos perto da célula (para não passar por todos os bichos do mundo a cada bloco). */

@@ -140,13 +140,12 @@ import { DURACAO_DIA, HORA_INICIAL, noiteNaHora, normalizarHora } from '../jogo/
 import { criarGerador } from '../audio/variacao';
 import {
   blocoOcupa,
-  corpoDeJogador,
   corpoNaCelula,
+  corposDoRetrato,
   corposNaRegiao,
   recusaConstruir,
   type Corpo,
 } from '../jogo/construir';
-import { CRIATURAS } from '../jogo/criaturas';
 import { ALTURA_JOGADOR, MEIA_LARGURA, colideCorpo } from '../player/fisica';
 import { preencherKit, SLOTS, KIT_EXTRA } from '../player/hotbar';
 import { criarAcessoMundo } from './mundo';
@@ -1247,16 +1246,9 @@ export function criarNucleo(op: OpcoesNucleo) {
     quem: Jogador,
     semQuem = false,
   ): Corpo[] {
-    const todos: Corpo[] = [];
-    for (const o of jogadores.values()) {
-      if (o === quem && semQuem) continue;
-      todos.push(corpoDeJogador(o.tel, o !== quem));
-    }
-    for (const cr of populacao.lista) {
-      if (cr.estado === 'morrendo') continue;
-      const d = CRIATURAS[cr.tipo];
-      todos.push({ x: cr.x, y: cr.y, z: cr.z, mw: d.mw, alt: d.alt });
-    }
+    const amigos: Telemetria[] = [];
+    for (const o of jogadores.values()) if (o !== quem) amigos.push(o.tel);
+    const todos = corposDoRetrato(semQuem ? null : quem.tel, amigos, populacao.lista);
     return corposNaRegiao(todos, x0, y0, z0, x1, y1, z1);
   }
 
@@ -2051,6 +2043,21 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
   }
 
+  /**
+   * Spec 037: fechar a porta ou a porteira aberta em (x, y, z) prenderia um corpo (a criança,
+   * um amigo, um bicho)? As duas metades da porta contam.
+   */
+  function fechariaEmCima(j: Jogador, x: number, y: number, z: number): boolean {
+    const b = mundo.bloco(x, y, z);
+    if (!blocoOcupa(alternado(b))) return false;
+    const celulas = [{ x, y, z }];
+    if (ehPorta(b))
+      for (const dy of [-1, 1])
+        if (mundo.bloco(x, y + dy, z) === Bloco.PORTA_ABERTA) celulas.push({ x, y: y + dy, z });
+    const corpos = corposPerto(x, y - 1, z, x, y + 1, z, j);
+    return corpos.some((k) => celulas.some((c) => corpoNaCelula(c, k)));
+  }
+
   let aberturas = 0;
   function usar(j: Jogador, c: Extract<Comando, { t: 'usar' }>): void {
     const { x, y, z } = c;
@@ -2061,7 +2068,11 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
     const abertura = c.id ?? 1_000_000 + ++aberturas;
     const b = mundo.bloco(x, y, z);
-    if (abreEFecha(b)) {
+    if (abreEFecha(b) && fechariaEmCima(j, x, y, z)) {
+      // spec 037: fechar a porta (ou a porteira) em cima de alguém o prenderia: fica aberta
+      if (c.id !== undefined) recusar(j, c.id, 'usar', [c, { x, y: y - 1, z }, { x, y: y + 1, z }]);
+      else j.eventos.push({ e: 'recusa', comando: 0, motivo: 'usar' });
+    } else if (abreEFecha(b)) {
       alternarPorta(x, y, z);
       for (const o of jogadores.values()) o.eventos.push({ e: 'porta', x, y, z });
     } else if (

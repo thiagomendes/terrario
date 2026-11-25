@@ -150,6 +150,13 @@ import { velocidadeMineracao } from '../jogo/ferramentas';
 import { blocoDoItem, obterItem } from '../jogo/itens';
 import { COLHER_PEDREIRO, SACOLA_DOCES, itemNoMundo } from '../jogo/exclusivos';
 import { entradaNaCaixa, fantasmaNoRaio } from '../jogo/miraObra';
+import {
+  blocoOcupa,
+  corpoNaCelula,
+  corposDoRetrato,
+  recusaConstruir,
+  temApoio,
+} from '../jogo/construir';
 import { sanearObras } from '../nucleo/saneamento';
 import {
   canteirosAbertos,
@@ -413,6 +420,7 @@ import {
   VERSAO_PROTOCOLO,
   type Comando,
   type EventoNucleo,
+  type JogadorVisto,
   type SalvoNucleo,
 } from '../nucleo/protocolo';
 import type { EstadoClima } from '../jogo/clima';
@@ -1413,6 +1421,8 @@ export function criarCena(
    * cliente prevê a recusa (cadeado, rachadura que não começa e o aviso) e nada pisca.
    */
   const protecaoMundo = criarProtecaoMundo(semente);
+  /** Spec 037: os amigos do último retrato do núcleo (a conta do corpo usa onde ele os vê). */
+  let amigosDoRetrato: readonly JogadorVisto[] = [];
   const regra: MundoDaRegra = {
     protecao: protecaoMundo,
     bloco: (x, y, z) => blocoEm(x, y, z),
@@ -1511,6 +1521,7 @@ export function criarCena(
         for (const [id, p] of Object.entries(q.perfis)) apelidosVistos.set(id, p.apelido);
       if (q.perfis) outrosJogadores.definirPerfis(q.perfis);
       if (q.jogadores) {
+        amigosDoRetrato = q.jogadores;
         // quem aparece pela primeira vez chega com festa (brilho e som)
         const antes = new Set(outrosJogadores.lista.map((o) => o.id));
         outrosJogadores.receber(q.jogadores);
@@ -3615,6 +3626,33 @@ export function criarCena(
     return obterBlocoDef(bloco)?.tiles.frente ? (d + 2) & 3 : 0;
   }
 
+  /**
+   * Spec 037: os corpos que um bloco não pode prender, onde o último retrato do núcleo os
+   * mostra (a criança, onde ela está agora; os amigos com a folga; os bichos, moradores e
+   * peixes). Os bichos que seguem a criança (premium) e os da festa ficam de fora, como no
+   * núcleo.
+   */
+  function corposAgora() {
+    const amigos = amigosDoRetrato.filter((o) => o.id !== voce);
+    return corposDoRetrato(controle.jogador, amigos, cliente.criaturas.vistas);
+  }
+  /** Spec 037: o bloco não entra (a mesma conta do núcleo, antes de prever: nada pisca). */
+  function naoEntraAqui(
+    b: number,
+    celulas: { x: number; y: number; z: number }[],
+    /** O fantasma da obra ou do bolo (a planta segue a planta). */
+    daPlanta = false,
+  ): boolean {
+    const [c] = celulas;
+    return !!recusaConstruir({
+      bloco: b,
+      celulas,
+      planejada: daPlanta || protecaoMundo.planejado(c.x, c.y, c.z)?.bloco === b,
+      ler: blocoEm,
+      corpos: corposAgora(),
+    });
+  }
+
   function interagir(acao: AcaoInteracao): boolean {
     return executarInteracao(acao, {
       alvo: calcularAlvo(),
@@ -3637,8 +3675,11 @@ export function criarCena(
             toast('A porta precisa de 2 blocos de altura');
             return false;
           }
+          if (naoEntraAqui(b, [{ x, y, z }, { x, y: y + 1, z }])) return false;
           return editarRegistrando(x, y, z, b, meta, [{ x, y: y + 1, z }]);
         }
+        // spec 037: nunca em cima de um corpo, e encostado num bloco (a mesma regra do núcleo)
+        if (naoEntraAqui(b, [{ x, y, z }])) return false;
         return editarRegistrando(x, y, z, b, meta);
       },
       posicao: posicaoDeColocar,
@@ -3872,6 +3913,18 @@ export function criarCena(
     // prevê as duas metades na hora; o som vem com a confirmação do núcleo
     const b = blocoEm(x, y, z);
     const novo = alternado(b);
+    // spec 037: fechar em cima de alguém (a criança na passagem, um amigo, um bicho) o
+    // prenderia: a porta fica aberta (o núcleo confere igual)
+    if (blocoOcupa(novo)) {
+      const celulas = [{ x, y, z }];
+      if (ehPorta(b))
+        for (const dy of [-1, 1])
+          if (blocoEm(x, y + dy, z) === Bloco.PORTA_ABERTA) celulas.push({ x, y: y + dy, z });
+      if (corposAgora().some((k) => celulas.some((c) => corpoNaCelula(c, k)))) {
+        barramento.emitir('recusa', { motivo: 'colocar' });
+        return;
+      }
+    }
     const id = proximoId();
     // a porta continua de quem a colocou (sem previsão de dono)
     cliente.prever(id, x, y, z, novo, edicoes.obterMeta(x, y, z));
@@ -7432,6 +7485,8 @@ export function criarCena(
         (toque
           ? clienteAlcanca(olhos, c.x, c.y, c.z)
           : alcancaDosOlhos(olhos, c.x, c.y, c.z, ALCANCE_MIRA + MEIA_DIAGONAL)),
+      // spec 037: entre os que o ímã do dedo pega, o que já encosta num bloco
+      apoiado: (c) => temApoio(c, blocoEm),
     });
   }
 
@@ -7468,6 +7523,11 @@ export function criarCena(
     const doBolo = c.canteiro === CANTEIRO_BOLO && !!estado.boloLiberado;
     if (!colher && !doBolo && hotbar.blocoAtivo() !== c.bloco) {
       avisarObra(c.bloco, c);
+      barramento.emitir('recusa', { motivo: 'colocar' });
+      return true;
+    }
+    // spec 037: a planta segue a planta (sem apoio), mas nunca em cima de um amigo ou bicho
+    if (naoEntraAqui(c.bloco, [c], true)) {
       barramento.emitir('recusa', { motivo: 'colocar' });
       return true;
     }
