@@ -182,34 +182,62 @@ async function fazerObra1(page: Page) {
       (window.__brumaluz!.fantasmasPerto?.() ?? []).filter((f) => f.canteiro === 1),
     );
     if (!lista.length) break;
+    // spec 037 (o mesmo conserto do canteiro, c55fc51): o soltar tira o boneco de dentro do
+    // tapume e dos blocos da obra; a mira é feita depois que ele assenta, de onde ele ficou, no
+    // meio do fantasma ou perto de uma face, e primeiro só vale o fantasma visado (de baixo para
+    // cima), para nenhum de baixo ficar fechado entre os de cima já cheios
     let encheu = false;
-    for (const f of lista.slice(0, 6)) {
-      for (const [dx, dz, dy] of [
-        [0, -2.6, 1.2],
-        [0, 2.6, 1.2],
-        [-2.6, 0, 1.2],
-        [2.6, 0, 1.2],
-        [0, -1.8, 2.8],
-        [0, 1.8, 2.8],
-      ]) {
-        const ok = await page.evaluate(
-          ([f, dx, dz, dy]) => {
-            const e = window.__brumaluz!;
-            e.voar?.(true);
-            e.teleportar!(f.x + 0.5 + dx, f.z + 0.5 + dz, f.y + dy);
-            e.mirarPonto!(f.x + 0.5, f.y + 0.5, f.z + 0.5);
-            return !!e.fantasmaNaMira?.();
-          },
-          [f, dx, dz, dy] as const,
-        );
-        if (!ok) continue;
-        const antes = await page.evaluate(() => window.__brumaluz!.obraColocados ?? 0);
-        await page.evaluate(() => window.__brumaluz!.usarOuColocar!());
-        await page.waitForTimeout(140);
-        if ((await page.evaluate(() => window.__brumaluz!.obraColocados ?? 0)) > antes) {
-          encheu = true;
-          break;
+    for (const soOVisado of [true, false]) {
+      for (const f of lista.slice(0, 6)) {
+        for (const [dx, dz, dy] of [
+          [0, -2.6, 1.2],
+          [0, 2.6, 1.2],
+          [-2.6, 0, 1.2],
+          [2.6, 0, 1.2],
+          [0, -1.8, 2.8],
+          [0, 1.8, 2.8],
+          [-1.8, 0, 2.8],
+          [1.8, 0, 2.8],
+        ]) {
+          await page.evaluate(
+            ([f, dx, dz, dy]) => {
+              const e = window.__brumaluz!;
+              e.voar?.(true);
+              e.teleportar!(f.x + 0.5 + dx, f.z + 0.5 + dz, f.y + dy);
+            },
+            [f, dx, dz, dy] as const,
+          );
+          await page.waitForTimeout(60);
+          const ok = await page.evaluate(
+            ([f, so]) => {
+              const e = window.__brumaluz!;
+              const pontos = [
+                [0, 0, 0],
+                [-0.45, -0.3, 0],
+                [0.45, -0.3, 0],
+                [0, -0.3, -0.45],
+                [0, -0.3, 0.45],
+                [0, 0.45, 0],
+              ];
+              for (const [px, py, pz] of pontos) {
+                e.mirarPonto!(f.x + 0.5 + px, f.y + 0.5 + py, f.z + 0.5 + pz);
+                const m = e.fantasmaNaMira?.() as { x: number; y: number; z: number } | null;
+                if (m && (!so || (m.x === f.x && m.y === f.y && m.z === f.z))) return true;
+              }
+              return false;
+            },
+            [f, soOVisado] as const,
+          );
+          if (!ok) continue;
+          const antes = await page.evaluate(() => window.__brumaluz!.obraColocados ?? 0);
+          await page.evaluate(() => window.__brumaluz!.usarOuColocar!());
+          await page.waitForTimeout(140);
+          if ((await page.evaluate(() => window.__brumaluz!.obraColocados ?? 0)) > antes) {
+            encheu = true;
+            break;
+          }
         }
+        if (encheu) break;
       }
       if (encheu) break;
     }

@@ -521,10 +521,13 @@ test('na obra (Cidade Grande), 20 toques de dentro: cada um enche o fantasma emb
           const e = window.__brumaluz!;
           e.voar?.(true);
           e.teleportar!(f.x + 0.5 + dx, f.z + 0.5 + dz, f.y + dy);
-          e.mirarPonto!(f.x + 0.5, f.y + 0.5, f.z + 0.5);
         },
         [f, dx, dz, dy] as const,
       );
+      // spec 037 (como no canteiro, c55fc51): o soltar tira o boneco de dentro do tapume e dos
+      // blocos da obra; a mira é feita depois que ele assenta, de onde ele ficou
+      await page.waitForTimeout(60);
+      await page.evaluate((f) => window.__brumaluz!.mirarPonto!(f.x + 0.5, f.y + 0.5, f.z + 0.5), f);
       await page.waitForTimeout(350);
       const t = await telaLivre(page, [f.x + 0.5, f.y + 0.5, f.z + 0.5]);
       if (!t) {
