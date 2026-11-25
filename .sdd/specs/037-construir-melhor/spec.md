@@ -46,6 +46,7 @@ A investigação completa está em `referencia/investigacao-colocar.md` (engenhe
 | 24 nov | A mão vazia não aparece andando: entra só para agir (tocar, colocar, acenar, comer) e sai. Com item, uma mão só, como na terceira pessoa (nada de duas mãos) |
 | 24 nov | A câmera solta de hoje fica igual na primeira pessoa (arrastar para olhar, girar) |
 | 24 nov | A mira de colocar é importante e tem que ficar clara e certeira na primeira pessoa |
+| 25 nov | O olhinho de trocar a câmera vai para a roda (o menu em carrossel), e não fica um botão solto na tela: tela limpa |
 | 25 nov | Na primeira pessoa, a mira segue o toque, não a câmera: no celular age onde o dedo tocou e no computador onde o mouse clicou, dentro do alcance de hoje, como na terceira pessoa. O pontinho do meio sai. Cada golpe tem um movimento de braço no ritmo do som. Todos os itens ficam de frente na mão, como a criança seguraria. A visão mostra à frente pelo menos o mesmo tanto que a terceira pessoa |
 | 24 nov | O braço não pode parecer "de madeira" nem balançar de lado, o que não acontece num braço de verdade |
 | 25 nov | Braço sem articulação, como na terceira pessoa (a opção 2 do esboço). Ele não pode parecer levantado nem solto do corpo, com a ponta do ombro à mostra. A forma final sai do estudo geométrico (`referencia/estudo-braco-primeira-pessoa.md`), feito a pedido do dono para parar de ajustar no chute |
@@ -78,7 +79,7 @@ A investigação completa está em `referencia/investigacao-colocar.md` (engenhe
 
 ### 2. A primeira pessoa
 O detalhe vem do estudo do braço, a pedido do dono. Já está decidido:
-- **O olhinho:** fica na beira direita. A câmera entra pela cabeça em uns 0,7 s e sai do mesmo jeito.
+- **O olhinho:** fica na roda, como um item com o desenho do olho, e não na tela. A câmera entra pela cabeça em uns 0,7 s e sai do mesmo jeito.
 - **A mão:**
   - vazia, aparece só para agir;
   - com item, segura numa mão só;
