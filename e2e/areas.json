@@ -410,6 +410,7 @@
       ],
       "suites": [
         "camera.spec.ts",
+        "capturas-037.spec.ts",
         "capturas-camera.spec.ts",
         "medidas-033-camera.spec.ts",
         "medidas-033-roleta.spec.ts",

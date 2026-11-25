@@ -1,0 +1,34 @@
+{
+ "volta": {
+  "mao": {
+   "pega": [],
+   "braco": 0
+  }
+ },
+ "recusaEmCimaDelaMesma": {
+  "mirou": true,
+  "colocou": false
+ },
+ "recusas": {
+  "emCimaDoAmigo": {
+   "achou": true,
+   "mirou": false,
+   "ali": true,
+   "deFora": true
+  },
+  "noAr": {
+   "mirou": true,
+   "colocou": false
+  }
+ },
+ "parede": {
+  "camera": {
+   "frente": 0.2,
+   "cima": 1.62,
+   "lado": 0,
+   "pitch": 0.05,
+   "fovV": 80,
+   "dentroDeBloco": false
+  }
+ }
+}
