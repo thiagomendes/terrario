@@ -4518,7 +4518,8 @@ export function criarCena(
     const alvoLuz = coberto ? (ey < 55 ? 0.22 : 0.55) : 1;
     luzJogador += (alvoLuz - luzJogador) * Math.min(1, dt * 3);
     personagem.definirLuz(luzJogador * (0.45 + 0.55 * luzDia));
-    bracoPP?.definirLuz(luzJogador * (0.45 + 0.55 * luzDia));
+    // (spec 037: a mão da frente, no canto da tela, ganha um tico de luz de noite)
+    bracoPP?.definirLuz(luzJogador * (0.45 + 0.55 * luzDia), Math.min(1, (1 - luzDia) / 0.62));
   }
   let tetoX = NaN;
   let tetoY = NaN;
@@ -7508,7 +7509,8 @@ export function criarCena(
       }
     }
     const m = podeEncherObra() ? fantasmaNaMira() : null;
-    fantasmas.quadro(tempo, m);
+    // spec 037: de dentro, os fantasmas colados nos olhos somem (o da mira fica à vista)
+    fantasmas.quadro(tempo, m, primeiraPessoa.fracao() > 0.5 ? cameraVisao.globalPosition : null);
     // o coreto feito toca a musiquinha quando alguém entra nele (uma vez a cada 20 s)
     if (cidadeObra && situacaoDoCanteiro(6) === 'feita') {
       const centro = centroDaObra(cidadeObra, 6);

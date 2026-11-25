@@ -19,6 +19,7 @@ import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
+import { Mesh as MeshClass } from '@babylonjs/core/Meshes/mesh';
 import type { Mesh } from '@babylonjs/core/Meshes/mesh';
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
@@ -43,9 +44,9 @@ import {
   GANHO_PASSO,
   GANHO_PULO,
   MEIA_MANGA,
-  SEGURAR,
   criarCacheOmbro,
   direcaoDoBraco,
+  type Retangulo,
   type ResultadoOmbro,
 } from './contaOmbro';
 
@@ -64,8 +65,11 @@ export interface EntradaBraco {
 
 export interface BracoPrimeiraPessoa {
   quadro(dt: number, entrada: EntradaBraco): void;
-  /** A luz do jogador (de noite, na caverna): a mesma do boneco. */
-  definirLuz(f: number): void;
+  /**
+   * A luz do jogador (de noite, na caverna): a mesma do boneco; `noite` (0 de dia, 1 de noite)
+   * acende um tico a mão do canto da tela.
+   */
+  definirLuz(f: number, noite?: number): void;
   /** O "não" curtinho do item na mão (a recusa de colocar). */
   nao(): void;
   /** Peso da mão na tela (0 fora, 1 inteira). */
@@ -107,6 +111,36 @@ const FORA_X = 0.2;
 /** O "não" curtinho: um balanço rápido do item (s, rad). */
 const DURACAO_NAO = 0.32;
 const AMPLITUDE_NAO = 0.32;
+/**
+ * O "não" de dentro (portão da 037: o de 0,32 s quase não se via): a mão e o item balançam de
+ * lado a lado três vezes, como quem diz "não" com o dedo, e o item gira junto; some no fim.
+ */
+const DURACAO_NAO_DENTRO = 0.9;
+const BALANCOS_NAO_DENTRO = 3;
+/** O braço abre e fecha (rad, na junta do ombro) e o item gira na mão (rad). */
+const LADO_NAO_DENTRO = 0.5;
+const GIRO_NAO_DENTRO = 0.75;
+/**
+ * De noite, a mão da frente fica no canto da tela, onde a vinheta e a curva das sombras pesam
+ * mais que no boneco visto de fora (no meio): ela recebe um tico mais de luz, para a pele ficar
+ * na cor do boneco e a comida parecer comida (portão da 037).
+ */
+const LUZ_NOITE_MAO = 0.55;
+
+/**
+ * Os tesouros da mão, de dentro (portão da 037): a direção do cabo na mão (no espaço da mão; o
+ * desenho do tesouro sai da mão para -y) e a escala. A varinha sobe da mão, um tico para a frente e
+ * para o meio; o guarda-chuva sobe para a direita e para a frente, menor, com o pano aberto por cima
+ * da mão; a pipa fica no céu, na frente, com o fio subindo da mão até ela.
+ */
+const TESOURO_DENTRO: Record<string, { dir: [number, number, number]; escala: number; sai: 1 | -1 }> = {
+  // (a varinha sai da mão para -y; o guarda-chuva, para +y)
+  'varinha-bolhas': { dir: [-0.28, 0.9, 0.34], escala: 1, sai: -1 },
+  'guarda-chuva-gotinhas': { dir: [0.1, 0.92, 0.3], escala: 0.38, sai: 1 },
+};
+/** A pipa de dentro: onde ela fica na tela (em metades da tela, do meio) e a distância. */
+const PIPA_TELA: [number, number] = [-0.15, 0.36];
+const PIPA_DISTANCIA = 3.4;
 /** O raio da mão no espaço dela (sem a escala do boneco): o item encosta nele. */
 const RAIO_MAO_LOCAL = 0.085;
 
@@ -142,15 +176,64 @@ const suave = (t: number) => {
 const aproximar = (a: number, b: number, taxa: number, dt: number) =>
   a + (b - a) * (1 - Math.exp(-taxa * dt));
 
-/** O alto dos botões e da barra na metade direita, embaixo (a mão e o bloco ficam acima). */
-function altoDosBotoes(w: number, h: number): number {
-  let alto = h;
-  for (const el of document.querySelectorAll<HTMLElement>('button, .barra')) {
+/**
+ * A interface de verdade na tela: o alto dos botões e da barra na metade direita, embaixo (a mão e
+ * o bloco ficam acima), e os retângulos dos botões, da barra, do mapinha e do controle de andar
+ * (a mão e o item ficam fora deles). Pela área visível, sem olhar o aparelho.
+ */
+function medirInterface(w: number, h: number): { botoes: number; obstaculos: Retangulo[] } {
+  let botoes = h;
+  const obstaculos: Retangulo[] = [];
+  for (const el of document.querySelectorAll<HTMLElement>('button, .barra, .minimapa, .area-mapa, .joystick')) {
     const r = el.getBoundingClientRect();
-    if (!r.width || !r.height || r.top < h * 0.55 || r.right < w * 0.5) continue;
-    alto = Math.min(alto, r.top);
+    if (!r.width || !r.height || r.right <= 0 || r.bottom <= 0 || r.left >= w || r.top >= h) continue;
+    // (uma tela por cima do jogo não é um botão: a mão já não aparece com ela aberta)
+    if (r.width * r.height > w * h * 0.2) continue;
+    if (getComputedStyle(el).visibility === 'hidden' || el.closest('[hidden]')) continue;
+    // (a roleta fechada guarda os botões dela invisíveis por cima da barra; aberta, ela é
+    // passageira: a mão não muda de lugar por causa dela)
+    if (el.closest('.roleta')) continue;
+    obstaculos.push([r.left, r.top, r.right, r.bottom]);
+    if (el.matches('button, .barra') && r.top >= h * 0.55 && r.right >= w * 0.5) botoes = Math.min(botoes, r.top);
   }
-  return alto;
+  return { botoes, obstaculos };
+}
+
+/**
+ * As peças filhas diretas de um nó, juntadas por material numa malha só cada (o tesouro do
+ * segundo boneco vem peça por peça: a pipa eram 23 chamadas de desenho). O desenho é o mesmo,
+ * no espaço do nó.
+ */
+function fundirPorMaterial(no: TransformNode): void {
+  const grupos = new Map<number, Mesh[]>();
+  for (const m of no.getChildMeshes(true)) {
+    const malha = m as Mesh;
+    if (!malha.material || !malha.getTotalVertices?.()) continue;
+    const g = grupos.get(malha.material.uniqueId) ?? [];
+    g.push(malha);
+    grupos.set(malha.material.uniqueId, g);
+  }
+  no.computeWorldMatrix(true);
+  const inversa = no.getWorldMatrix().clone().invert();
+  for (const g of grupos.values()) {
+    if (g.length < 2) continue;
+    for (const m of g) m.computeWorldMatrix(true);
+    const nome = g[0].name;
+    const junta = MeshClass.MergeMeshes(g, true, true);
+    if (!junta) continue;
+    junta.name = nome;
+    junta.bakeTransformIntoVertices(inversa);
+    junta.parent = no;
+  }
+}
+
+/** O giro que leva o eixo y (para `sai`) para a direção `d` (normalizada aqui). */
+function cabo(d: readonly [number, number, number], sai: 1 | -1): Quaternion {
+  const para = new Vector3(d[0], d[1], d[2]).normalize();
+  const de = new Vector3(0, sai, 0);
+  const eixo = Vector3.Cross(de, para);
+  const ang = Math.acos(Math.max(-1, Math.min(1, Vector3.Dot(de, para))));
+  return eixo.length() < 1e-6 ? Quaternion.Identity() : Quaternion.RotationAxis(eixo.normalize(), ang);
 }
 
 export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
@@ -170,6 +253,73 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
   let aparenciaDaVista: Aparencia | null = null;
   let juntaMao: TransformNode | null = null;
   let luz = 1;
+  // o tesouro da mão de dentro: as peças do segundo boneco, na mão da frente (a varinha e o
+  // guarda-chuva) ou no céu da frente, com o fio (a pipa)
+  const noTesouro = new TransformNode('pp-tesouro', scene);
+  noTesouro.rotationQuaternion = Quaternion.Identity();
+  const noPipa = new TransformNode('pp-pipa', scene);
+  noPipa.parent = camera;
+  noPipa.setEnabled(false);
+  let tesouroId: string | null = null;
+  let pipaNo: TransformNode | null = null;
+  let raboNo: TransformNode | null = null;
+  let tempoPipa = 0;
+  const matFio = new StandardMaterial('pp-pipa-fio', scene);
+  matFio.diffuseColor = new Color3(0.95, 0.94, 0.9);
+  matFio.emissiveColor = new Color3(0.55, 0.55, 0.52);
+  matFio.specularColor = Color3.Black();
+  // (mais grosso na ponta da pipa, longe: na tela, o fio fica da mesma grossura de ponta a ponta,
+  // sem virar um pontilhado lá no alto)
+  const fio = MeshBuilder.CreateCylinder('pp-pipa-fio', { height: 1, diameterTop: 1, diameterBottom: 0.25, tessellation: 5 }, scene);
+  fio.material = matFio;
+  fio.isPickable = false;
+  // (o fio e a pipa vão por cima do mundo, como a mão: a mão de dentro pode estar dentro de uma
+  // parede encostada, e o fio sumia nela, cortado longe da mão)
+  fio.renderingGroupId = GRUPO;
+  fio.alwaysSelectAsActiveMesh = true;
+  fio.rotationQuaternion = Quaternion.Identity();
+  fio.setEnabled(false);
+  semBrilho(fio);
+  const montarTesouro = (a: Aparencia) => {
+    tesouroId = a.premium?.mao ?? null;
+    pipaNo = raboNo = null;
+    noTesouro.parent = juntaMao;
+    noTesouro.position.setAll(0);
+    const def = tesouroId ? TESOURO_DENTRO[tesouroId] : undefined;
+    noTesouro.rotationQuaternion = def ? cabo(def.dir, def.sai) : Quaternion.Identity();
+    noTesouro.scaling.setAll(def?.escala ?? 1);
+    if (!tesouroId) return;
+    const maoE = scene.getTransformNodeByName('pp-braco-junta-maoE');
+    if (tesouroId === 'varinha-bolhas' && maoE) {
+      for (const m of maoE.getChildMeshes(true)) if (m.name.includes('varinha')) m.parent = noTesouro;
+      fundirPorMaterial(noTesouro);
+    }
+    const guarda = scene.getTransformNodeByName('pp-braco-junta-guarda');
+    if (tesouroId === 'guarda-chuva-gotinhas' && guarda) {
+      guarda.parent = noTesouro;
+      guarda.position.setAll(0);
+      guarda.rotationQuaternion = null;
+      guarda.rotation.setAll(0);
+      fundirPorMaterial(guarda);
+    }
+    if (tesouroId === 'pipa-lacinhos') {
+      pipaNo = scene.getTransformNodeByName('pp-braco-junta-pipa');
+      raboNo = scene.getTransformNodeByName('pp-braco-junta-rabopipa');
+      for (const n of [pipaNo, raboNo]) {
+        if (!n) continue;
+        n.parent = noPipa;
+        n.position.setAll(0);
+        fundirPorMaterial(n);
+        for (const m of n.getChildMeshes(false)) {
+          m.renderingGroupId = GRUPO;
+          m.isPickable = false;
+          m.alwaysSelectAsActiveMesh = true;
+          m.setEnabled(true);
+          semBrilho(m);
+        }
+      }
+    }
+  };
   const marcarGrupo = () => {
     for (const m of osso.getChildMeshes(false)) {
       m.renderingGroupId = GRUPO;
@@ -179,6 +329,10 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     }
   };
   const montarVista = (a: Aparencia) => {
+    // (o nó do tesouro é daqui: sai da mão antes de o boneco velho ir embora, e as peças
+    // juntadas dele, que o boneco não conhece, vão embora junto)
+    noTesouro.parent = null;
+    for (const m of noTesouro.getChildMeshes(false)) m.dispose();
     vista?.descartar();
     aparenciaDaVista = a;
     // o mesmo boneco do jogador (sem o brinquedo de andar: só o braço aparece)
@@ -195,6 +349,7 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     // o braço no tamanho de verdade, a mesma escala nas três direções: nada estica
     osso.scaling.setAll(ESCALA_BONECO);
     juntaMao = scene.getTransformNodeByName('pp-braco-junta-maoD');
+    montarTesouro(a);
     // só o braço direito aparece (o resto do segundo boneco fica desligado)
     for (const m of vista.raiz.getChildMeshes(false)) if (!braco || !m.isDescendantOf(braco)) m.setEnabled(false);
     vista.raiz.setEnabled(false);
@@ -206,17 +361,17 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
   // ---------------------------------------------------------------- o ombro desta tela
   const cache = criarCacheOmbro((f) => setTimeout(f, 0));
   let achado: ResultadoOmbro | null | undefined;
-  let botoes = 0;
+  let interfaceMedida: { botoes: number; obstaculos: Retangulo[] } = { botoes: 0, obstaculos: [] };
   let botoesEm = -Infinity;
   const ombroDaTela = (agora: number): ResultadoOmbro | null | undefined => {
     if (!canvas) return null;
     const r = canvas.getBoundingClientRect();
     // os botões só são medidos de vez em quando (a tela gira, a barra muda): nunca a cada quadro
     if (agora - botoesEm > 1) {
-      botoes = altoDosBotoes(r.width, r.height);
+      interfaceMedida = medirInterface(r.width, r.height);
       botoesEm = agora;
     }
-    return cache.obter({ w: r.width, h: r.height, botoes });
+    return cache.obter({ w: r.width, h: r.height, ...interfaceMedida });
   };
   addEventListener('resize', () => {
     botoesEm = -Infinity;
@@ -262,11 +417,15 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
   // nela); o boneco continua inteiro para os amigos
   const junta = (n: string) => scene.getTransformNodeByName(`personagem-junta-${n}`);
   let corpoMexido = false;
-  const mostrarCorpo = (cabeca: boolean, bracos: boolean, tesouro: boolean) => {
+  const mostrarCorpo = (cabeca: boolean, bracos: boolean) => {
     junta('cabeca')?.setEnabled(cabeca);
     junta('bracoD')?.setEnabled(bracos);
-    // o tesouro da mão (a varinha, o guarda-chuva, a pipa) fica na mão esquerda de verdade
-    junta('bracoE')?.setEnabled(bracos || tesouro);
+    // o tesouro da mão (a varinha, o guarda-chuva) vai com o braço esquerdo de verdade; de dentro,
+    // ele aparece na mão da frente (portão da 037: o pano do guarda-chuva de verdade ficava solto
+    // no céu, por cima da câmera). A pipa de verdade, atrás, também some (a de dentro fica na frente)
+    junta('bracoE')?.setEnabled(bracos);
+    junta('pipa')?.setEnabled(cabeca);
+    junta('rabopipa')?.setEnabled(cabeca);
   };
 
   // ---------------------------------------------------------------- o item na mão
@@ -309,7 +468,10 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     // o item fica em cima da mão, centrado nela, um tico para o lado da câmera (aparece inteiro)
     encosto = [-(minX + maxX) / 2, RAIO_MAO_LOCAL * 0.85 - minY, -(minZ + maxZ) / 2 - 0.02];
   };
+  /** A mão da frente mostra um item da barra (sem ele, o tesouro da mão, se houver). */
+  let itemMostrado = false;
   const trocarItem = (m: EntradaBraco['naMao']) => {
+    itemMostrado = m.bloco !== null || m.item !== null;
     vista!.definirNaMao(m.bloco, m.item, m.qtd);
     marcarGrupo();
     medirEncosto();
@@ -351,16 +513,60 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     const tanH = tanV * (r.width / r.height);
     return [Math.round((r.width / 2) * (1 + p.x / (p.z * tanH))), Math.round((r.height / 2) * (1 - p.y / (p.z * tanV)))];
   };
+  const apagarPipa = () => {
+    noPipa.setEnabled(false);
+    fio.setEnabled(false);
+  };
   const apagar = () => {
     osso.setEnabled(false);
     sombra.setEnabled(false);
+    apagarPipa();
     peso = 0;
+  };
+  /**
+   * A pipa de dentro: no céu da frente (presa à câmera, num ponto fixo da tela, balançando no
+   * vento como a de fora), e o fio da mão até a ponta de baixo dela.
+   */
+  const fioA = new Vector3();
+  const fioB = new Vector3();
+  const pipaNoCeu = (dt: number) => {
+    if (!pipaNo) return apagarPipa();
+    tempoPipa += dt;
+    const t = tempoPipa;
+    const tanV = Math.tan(camera.fov / 2);
+    const r = canvas!.getBoundingClientRect();
+    const tanH = tanV * (r.width / r.height);
+    noPipa.setEnabled(true);
+    noPipa.position.set(
+      PIPA_TELA[0] * PIPA_DISTANCIA * tanH + Math.sin(t * 0.7) * 0.08,
+      PIPA_TELA[1] * PIPA_DISTANCIA * tanV + Math.sin(t * 1.1) * 0.06,
+      PIPA_DISTANCIA,
+    );
+    pipaNo.rotation.z = Math.sin(t * 1.3) * 0.12;
+    pipaNo.rotation.x = Math.sin(t * 0.9) * 0.06;
+    if (raboNo) {
+      raboNo.rotation.z = Math.sin(t * 1.3 - 0.8) * 0.3;
+      raboNo.rotation.x = Math.sin(t * 2.1) * 0.12 - 0.15;
+    }
+    // o fio: da mão (um tico acima do meio dela) até a ponta de baixo da pipa
+    juntaMao!.computeWorldMatrix(true);
+    noPipa.computeWorldMatrix(true);
+    Vector3.TransformCoordinatesToRef(new Vector3(0, RAIO_MAO_LOCAL * 0.6, 0), juntaMao!.getWorldMatrix(), fioA);
+    fioB.copyFrom(noPipa.getAbsolutePosition());
+    const d = fioB.subtract(fioA);
+    const l = d.length();
+    fio.setEnabled(l > 0.05);
+    fio.position.copyFrom(fioA).addInPlace(fioB).scaleInPlace(0.5);
+    fio.scaling.set(0.03, l, 0.03);
+    const eixo = Vector3.Cross(Vector3.Up(), d.normalize());
+    const ang = Math.acos(Math.max(-1, Math.min(1, d.y)));
+    if (eixo.length() > 1e-6) Quaternion.RotationAxisToRef(eixo.normalize(), ang, fio.rotationQuaternion!);
   };
 
   const quadro = (dt: number, en: EntradaBraco) => {
     const e = suave(en.fracao);
     if (e <= 0) {
-      if (corpoMexido) mostrarCorpo(true, true, false);
+      if (corpoMexido) mostrarCorpo(true, true);
       corpoMexido = false;
       apagar();
       return;
@@ -370,7 +576,7 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     // ---------------- o corpo de verdade: a cabeça some quando a câmera passa por ela; os braços
     // do corpo só aparecem olhando para baixo, quando a mão da frente já saiu (nunca dois braços)
     const sumir = suave((en.pitch - PITCH_SEM_MAO) / 0.25);
-    mostrarCorpo(en.fracao <= 0.55, sumir > 0.5 || en.fracao < 0.55, !!en.aparencia.premium?.mao && !en.aparencia.montado);
+    mostrarCorpo(en.fracao <= 0.55, sumir > 0.5 || en.fracao < 0.55);
     corpoMexido = true;
     personagem.definirOpacidade(1);
     // ---------------- a sombra, debaixo dos pés
@@ -423,24 +629,29 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     }
     if (golpeT >= 0 && (golpeT += dt / DURACAO_GOLPE) >= 1) golpeT = -1;
     if (empurraoT >= 0 && (empurraoT += dt / DURACAO_EMPURRAO) >= 1) empurraoT = -1;
-    if (naoT >= 0 && (naoT += dt / DURACAO_NAO) >= 1) naoT = -1;
+    if (naoT >= 0 && (naoT += dt / DURACAO_NAO_DENTRO) >= 1) naoT = -1;
     const agindo = golpeT >= 0 || empurraoT >= 0;
     const comendo = en.vista.comer !== null;
+    // sem item da barra, o tesouro da mão vestido aparece na mão da frente
+    const comTesouro = !temItem && !!tesouroId && !en.aparencia.montado;
     // (a mão vazia só entra para agir: tocar, colocar, acenar, comer)
-    const aparece = (temItem || !!en.gesto || comendo || agindo) && !!achado;
+    const aparece = (temItem || comTesouro || !!en.gesto || comendo || agindo) && !!achado;
     const quer = aparece ? (1 - sumir) * (troca >= 0 ? Math.abs(Math.cos(Math.PI * troca)) : 1) : 0;
     peso = aproximar(peso, quer * e, troca >= 0 ? 40 : 9, dt);
     if (!achado || peso <= 0.02) {
       // (o osso leva o braço e o item juntos: nada fica preso na tela)
       osso.setEnabled(false);
+      apagarPipa();
       return;
     }
+    const tesouroNaMao = !!tesouroId && !itemMostrado;
+    noTesouro.setEnabled(tesouroNaMao);
     // ---------------- os ângulos de junta: os da terceira pessoa, em escala
     const real = junta('bracoD');
     const rx = real?.rotation.x ?? 0;
     const rz = real?.rotation.z ?? 0.09;
     const descansoX = temItem ? -0.32 : 0;
-    let [x, z] = SEGURAR;
+    let [x, z] = achado.segurar;
     const wAceno = en.gesto ? suave((rz - 0.09) / 2.3) : 0;
     const leva = comendo ? Math.max(0, Math.min(1, (descansoX - rx) / 1.5)) : 0;
     if (wAceno > 0) {
@@ -468,6 +679,11 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     molaVel += ((alvoMola - mola) * 70 - molaVel * 11) * dt;
     mola += molaVel * dt;
     x += mola;
+    // o "não": a mão e o item vão de lado a lado, três vezes, e param (o balanço some no fim)
+    // (começa depressa e vai parando; para dentro da tela, a mão nunca sai pela beira)
+    const envNao = naoT >= 0 ? Math.min(1, naoT * 6) * (1 - naoT) : 0;
+    const balancoNao = naoT >= 0 ? Math.sin(naoT * Math.PI * 2 * BALANCOS_NAO_DENTRO) * envNao : 0;
+    z -= (0.5 + 0.5 * Math.sin(naoT * Math.PI * 2 * BALANCOS_NAO_DENTRO)) * envNao * LADO_NAO_DENTRO;
     // entrando e saindo: o braço gira no ombro para baixo (a mão some pela beira de baixo)
     x += (FORA_X - x) * (1 - peso);
     // ---------------- o braço no ombro, como no campo de 70° em qualquer campo de dentro
@@ -479,8 +695,8 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     Quaternion.RotationYawPitchRollToRef(0, x, z, osso.rotationQuaternion!);
     // ---------------- a mão e o item como a criança seguraria olhando para a frente
     const p = postura(mao, batida);
-    // o "não" curtinho: um balanço rápido de lado a lado, que some
-    const nao = naoT >= 0 ? Math.sin(naoT * Math.PI * 4) * AMPLITUDE_NAO * (1 - naoT) : 0;
+    // o "não": o item gira na mão junto com o balanço (como um dedo dizendo "não")
+    const nao = -balancoNao * GIRO_NAO_DENTRO;
     if (juntaMao) {
       Quaternion.RotationYawPitchRoll(p.giro[0], p.giro[1], p.giro[2] + nao).toRotationMatrix(matrizDesejada);
       osso.rotationQuaternion!.toRotationMatrix(matrizOsso);
@@ -501,6 +717,9 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
           Vector3.Distance(n.getAbsolutePosition(), camera.position) < 1.2
         )
           n.setEnabled(false);
+    // ---------------- a pipa no céu da frente, com o fio até a mão
+    if (tesouroId === 'pipa-lacinhos' && tesouroNaMao) pipaNoCeu(dt);
+    else apagarPipa();
     // ---------------- a conferência: o ombro, com a grossura da manga, fora da tela
     maoNaTela = projetar(ombro.add(new Vector3(...direcaoDoBraco(x, z)).scale(BRACO)));
     ombroNaTela = projetar(ombro);
@@ -513,9 +732,9 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
 
   return {
     quadro,
-    definirLuz(f) {
-      luz = f;
-      vista?.definirLuz(f);
+    definirLuz(f, noite = 0) {
+      luz = f * (1 + LUZ_NOITE_MAO * Math.max(0, Math.min(1, noite)));
+      vista?.definirLuz(luz);
     },
     nao() {
       naoT = 0;
@@ -537,14 +756,19 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
       ritmo.golpes = ritmo.balancos = ritmo.colocacoes = ritmo.empurroes = 0;
     },
     custo() {
-      const malhas = [...osso.getChildMeshes(false), sombra].filter((m) => m.isEnabled());
+      const malhas = [...osso.getChildMeshes(false), ...noPipa.getChildMeshes(false), fio, sombra].filter((m) => m.isEnabled());
       let tri = 0;
       for (const m of malhas) tri += (m.getTotalIndices?.() ?? 0) / 3;
       return { malhas: malhas.length, triangulos: Math.round(tri) };
     },
     descartar() {
-      if (corpoMexido) mostrarCorpo(true, true, false);
+      if (corpoMexido) mostrarCorpo(true, true);
+      noTesouro.parent = null;
       vista?.descartar();
+      noTesouro.dispose();
+      noPipa.dispose();
+      fio.dispose();
+      matFio.dispose();
       sombra.dispose();
       matSombra.dispose();
       texSombra.dispose();
