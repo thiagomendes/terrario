@@ -5,6 +5,7 @@
  */
 import { criarGerenciador, type Canal } from '../../servidor/src/salas';
 import { armazemMemoria } from '../../servidor/src/armazem';
+import { criarLimitador } from '../../servidor/src/limitador';
 import '../../src/temas/todos';
 import { obterTema } from '../../src/temas';
 import { conexaoNuvem, type ConexaoNuvem, type OpcoesNuvem } from '../../src/cliente/conexaoNuvem';
@@ -52,32 +53,57 @@ export function criarNuvem(ip: string) {
   function ponte(quem: string): WsDeMentira {
     abertas.set(quem, (abertas.get(quem) ?? 0) + 1);
     let caiuNoServidor = false;
+    /**
+     * A conexão morta que parece de pé (o wi-fi que trocou de antena, o roteador que travou):
+     * nada passa em nenhum dos lados, o navegador continua vendo `OPEN` e o servidor não fica
+     * sabendo (no ar, ele só percebe 30 s depois de tentar fechar).
+     */
+    let muda = false;
+    /** Só a volta morreu: o servidor recebe tudo, o navegador não recebe nada. */
+    let surda = false;
     const desligar = () => {
       if (caiuNoServidor) return;
       caiuNoServidor = true;
       g.caiu(canal);
     };
+    // o limite de mensagens por segundo do servidor de verdade (`servidor/src/index.ts`)
+    const limite = criarLimitador();
     const ws: WsDeMentira = {
       readyState: 0,
       onopen: null,
       onmessage: null,
       onclose: null,
       send: (t: string) => {
-        if (ws.readyState === 1) void g.receber(canal, t);
+        if (muda || ws.readyState !== 1) return;
+        const v = limite();
+        if (v === 'fechar') {
+          // o servidor fecha com 4008 ("devagar"): os dois lados veem a conexão cair
+          fechadasPeloLimite.set(quem, (fechadasPeloLimite.get(quem) ?? 0) + 1);
+          ws.readyState = 3;
+          desligar();
+          setTimeout(() => ws.onclose?.({ code: 4008 }), 0);
+        }
+        if (v !== 'passa') return;
+        void g.receber(canal, t);
       },
       close: (code = 1005) => {
         if (ws.readyState === 3) return;
         ws.readyState = 3;
         fechamentos.push(code);
-        desligar();
+        // morta: o aviso de fechar não chega ao servidor
+        if (!muda) desligar();
         setTimeout(() => ws.onclose?.({ code }), 0);
       },
     };
+    emudecer.set(quem, (soAVolta: boolean) => {
+      if (soAVolta) surda = true;
+      else muda = true;
+    });
     const canal: Canal = {
       ip,
       enviar: (t: string) =>
         setTimeout(() => {
-          if (ws.readyState === 1) ws.onmessage?.({ data: t });
+          if (ws.readyState === 1 && !muda && !surda) ws.onmessage?.({ data: t });
         }, 0),
       fechar: () => {
         if (ws.readyState === 3) return;
@@ -107,6 +133,9 @@ export function criarNuvem(ip: string) {
     return ws;
   }
   const quedas = new Map<string, () => void>();
+  const emudecer = new Map<string, (soAVolta: boolean) => void>();
+  /** Conexões de cada um que o servidor fechou por mandar mensagens demais num segundo. */
+  const fechadasPeloLimite = new Map<string, number>();
 
   function conectar(quem: string, extra: Omit<OpcoesNuvem, 'url' | 'jogador' | 'abrir'>) {
     return conexaoNuvem({
@@ -123,16 +152,21 @@ export function criarNuvem(ip: string) {
     abertas,
     estilo: obterTema('vila-neon').mundo,
     conectar,
+    fechadasPeloLimite,
     /** O dono cria a sala (a ida para a nuvem) e fecha essa conexão; devolve o código. */
-    async criarSala(quem: string): Promise<string> {
+    async criarSala(
+      quem: string,
+      tema = 'vila-neon',
+      modo: 'criativo' | 'sobrevivencia' = 'criativo',
+    ): Promise<string> {
       const c = conectar(quem, {
         criar: {
           nome: 'Vila',
           semente: 7,
-          tema: 'vila-neon',
-          modo: 'criativo',
+          tema,
+          modo,
           versaoMundo: 2,
-          estilo: obterTema('vila-neon').mundo,
+          estilo: obterTema(tema).mundo,
         },
       });
       const bv = await c.pronta;
@@ -142,6 +176,14 @@ export function criarNuvem(ip: string) {
     /** A internet de `quem` cai (a conexão de agora). */
     derrubar(quem: string): void {
       quedas.get(quem)?.();
+    },
+    /**
+     * A conexão de agora de `quem` morre sem ninguém saber: continua `OPEN` no navegador, nada
+     * passa e o servidor não é avisado. As conexões novas de `quem` nascem boas. `soAVolta`: o
+     * servidor continua recebendo o que o navegador manda (só o caminho de volta morreu).
+     */
+    emudecer(quem: string, soAVolta = false): void {
+      emudecer.get(quem)?.(soAVolta);
     },
     /** As conexões novas de `quem` esperam para abrir até `soltar`. */
     segurar(quem: string): void {

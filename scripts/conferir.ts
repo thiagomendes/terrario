@@ -7,7 +7,8 @@
  *   node scripts/conferir.ts --seco          # só mostra o plano, não roda nada
  *
  * Outras opções: --base <ref> (padrão origin/main), --lote <n> (arquivos por rodada do e2e,
- * padrão 12), --sem-quarentena, --sem-vitest, --so-fumaca, --mudados a,b (no lugar do diff,
+ * padrão 12), --workers 1 (um trabalhador por rodada, com a placa dividida; padrão 2),
+ * --sem-quarentena, --sem-vitest, --so-fumaca, --mudados a,b (no lugar do diff,
  * para simular uma mudança).
  *
  * Roda, nesta ordem: o Vitest inteiro e o build (sempre); a fumaça (sempre); as áreas que o
@@ -41,6 +42,8 @@ if (tem('--ajuda') || tem('-h')) {
 }
 const BASE = valor('--base') ?? 'origin/main';
 const LOTE = Number(valor('--lote') ?? 12);
+/** Trabalhadores por rodada do e2e (no máximo 2; 1 quando outro agente também usa a placa). */
+const TRABALHADORES = String(Math.min(2, Math.max(1, Number(valor('--workers') ?? 2) || 2)));
 const TUDO = tem('--tudo');
 const SECO = tem('--seco');
 const forcadas = (valor('--areas') ?? '').split(',').filter(Boolean);
@@ -181,7 +184,7 @@ async function e2e(
   const a = [
     ...arquivos.map((f) => `e2e/${f}`),
     '--workers',
-    '2',
+    TRABALHADORES,
     '--trace',
     'off',
     '--reporter=list,json',

@@ -25,6 +25,8 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
 | 5 | T11 **Portão visual e publicação** | `revisor-visual` novo, depois o orquestrador | o revisor só com as fotos; o esboço sai do código; o servidor antes do site; conferir no ar; vídeo ao dono | publicado e conferido no ar | P |
 
 ## Situação (24 nov 2026)
+**Publicada em 24 nov 2026, 21h05** (main 531cab4): o servidor primeiro (ninguém jogando) e depois o site; conferido no ar (o servidor responde e o site traz os 12 itens). Falta a rodada em família, e o filho do dono já começou a jogar em 24 nov à noite.
+
 | Parte | Estado |
 |---|---|
 | Esboço | o dono escolheu 10 em 23 nov e mais 2 em 24 nov (os 12 da spec) |

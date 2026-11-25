@@ -3,7 +3,7 @@
 Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A ordem é combinada com o dono na hora; o número da spec não é a ordem. Atualizar ao fechar cada spec.
 
 ## Fila combinada (23 nov 2026; a 037 entrou em 24 nov)
-1. **Lojinha maior** (decisão do dono em 22 nov; spec nova, 036): o filho já comprou os 6 itens da lojinha premium.
+1. ~~**Lojinha maior**~~ **publicada em 24 nov** (ver "Feitas"). (decisão do dono em 22 nov; spec nova, 036): o filho já comprou os 6 itens da lojinha premium.
    - **12 itens novos**, com preço fixo, sem nada que some ou é sorteado;
    - a ideia do filho é um brinquedo de andar (patinete, carrinho), diferente da vassoura-patinete da festa;
    - primeiro vai um **esboço com uma foto de cada item candidato**, para o dono escolher com o filho;
@@ -64,6 +64,9 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 ## Testes instáveis e defeitos achados nos testes (24 nov 2026)
 - **A quarentena** fica em `e2e/areas.json`, com o motivo de cada teste (9 em 24 nov). Ela roda à parte e não segura a entrega. Instável novo entra lá com o motivo e só sai consertado.
 - **Defeitos do jogo achados pelos testes, ainda abertos:**
+  - **Nuvem, tirar e pôr na mesma célula com a conexão morrendo** (25 nov, do conserto dos blocos que somem): se os dois já entraram e a confirmação se perdeu, o reenvio pode deixar a célula vazia, calada. Precisa do núcleo ignorar o comando repetido (mexe no servidor).
+  - **Nuvem, a página recarregada em menos de 30 s não confere nada** (25 nov): os ids dos comandos recomeçam do 1. Começar o id de `Date.now()` ou zerar o `ack` em página nova.
+  - **Instável:** `amigos-sem-atrito.spec.ts:41` mostrou o nome sugerido em vez do digitado (1 vez; passou 4 de 4 sozinho).
   - **A tela trava ao ver um premium pela primeira vez:** quando a amiga veste um premium (capa de estrelas, pinguim, camiseta), a tela de quem vê para de 730 a 870 ms, provavelmente compilando os materiais. A amiga aparece em 1,1 a 3,5 s, e o limite é 1 s. Pesa na 036 (itens novos): conferir na T08.
   - **c6 no celular em pé:** a mãozinha da obra não aparece; a criança chega pela trilha de lado e os blocos azuis de baixo ficam fora da tela ou atrás do boneco.
   - **c3, a conferir:** às vezes a criança para na porta da padaria, o cliente diz que chegou, o ✓ do núcleo não vem e ela fica sem pegadas.
@@ -105,6 +108,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 - **A dica "trocar" nos fãs da plateia da Vila** (achado na revisão da 027, 21 nov): o defeito da dica de trocar nos fãs da plateia, a conferir e consertar numa spec própria. Fora da 027.
 
 ## Feitas e publicadas (resumo)
+- **036, Lojinha maior (24 nov 2026):** 12 itens novos: os 4 brinquedos de andar (patinete-luz, carrinho de pedal, bicicletinha, nuvem fofa; só enfeite, comprar já monta, 2 toques na roda para montar e descer), o passarinho voando perto do ombro, o boné de hélice, o pijama de nuvem, as asas de borboleta, a mochila-foguete, a varinha de bolhas, o guarda-chuva e a pipa; a vitrine com abas só de desenho e a estrelinha de novo; o provador montado; os sons; o Unicórnio-pônei e o pinguim sem tremer. `VERSAO_REDE` 18. Conferência por área (79 min e a final de 38 min); dois portões visuais. Pendências pequenas na Situação da spec.
 - **007 a 017, 019, 021, 023, 026, 030 a 035:** ver cada spec.
 - **027 parte 1, Noite das Fantasias (22 nov 2026):** o sexto mundo, a vila da festa: os lugares, os moradores com fantasia, os bichos, comprar e comer as comidas de festa, a varinha, as missões n1 a n5, a música e os sons (aprovados pelo dono). `VERSAO_REDE` 18. Também valem em todo mundo: a dica "Toque para comer" some depois de 8 s; os moradores e os bichos de longe com menos peças. Conferida no ar; fotos e vídeo em `capturas-027/parte1/no-ar/`.
 - **035, Entrada na nuvem (21 nov 2026):** quem leva o mundo para a nuvem vê o amigo na hora; quem cai volta vendo os blocos e as obras que mudaram; a sala fechada deixa voltar quem caiu (até 30 s); sair da nuvem abre o outro mundo, e o da sala mostra "Continuar". Conferida no ar; fotos em `capturas-035/no-ar/`.
