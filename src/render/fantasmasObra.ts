@@ -48,6 +48,23 @@ const COR_BLOCO: Record<number, [number, number, number]> = {
   [Bloco.TERRA_NEVADA]: [1, 0.88, 0.92],
   [Bloco.TOCHA]: [1, 0.55, 0.7],
 };
+/**
+ * Spec 037: de dentro, o fantasma a menos que isto dos olhos (até o cubo, em blocos) some, e a
+ * partir daquilo fica inteiro; no meio, vai clareando. O contorno do da mira não fica mais
+ * apagado que ALFA_MIRA_PERTO.
+ */
+const PERTO_SOME = 0.2;
+const PERTO_INTEIRO = 1.2;
+const ALFA_MIRA_PERTO = 0.55;
+
+/** De dentro, quanto de um fantasma aparece pela distância dos olhos até o cubo (0 some, 1 inteiro). */
+function aparecePerto(olho: { x: number; y: number; z: number }, f: { x: number; y: number; z: number }): number {
+  const dx = Math.max(0, Math.abs(olho.x - (f.x + 0.5)) - 0.47);
+  const dy = Math.max(0, Math.abs(olho.y - (f.y + 0.5)) - 0.47);
+  const dz = Math.max(0, Math.abs(olho.z - (f.z + 0.5)) - 0.47);
+  const t = Math.max(0, Math.min(1, (Math.hypot(dx, dy, dz) - PERTO_SOME) / (PERTO_INTEIRO - PERTO_SOME)));
+  return t * t * (3 - 2 * t);
+}
 /** A base é branca: o azul vem da textura, e a cor do bloco tinge por cima. */
 const AZUL: [number, number, number] = [1, 1, 1];
 /** Quanto da cor do bloco vai por cima do azul. */
@@ -132,10 +149,16 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
   let chave = '';
   let lista: FantasmaVisto[] = [];
   const tremendo = new Map<string, number>();
+  /** Spec 037: os fantasmas de cada camada e o alfa de cada um (o de perto dos olhos some). */
+  const porCamada: FantasmaVisto[][] = [[], []];
+  const coresCamada: (Float32Array | null)[] = [null, null];
+  const coresMoldura: (Float32Array | null)[] = [null, null];
+  let olhoVisto = '';
 
   function montar(): void {
     for (const [k, c] of camadas.entries()) {
       const deles = lista.filter((f) => (k === 0) === f.pulsa);
+      porCamada[k] = deles;
       const m = c.malha!;
       const mo = c.moldura!;
       if (!deles.length) {
@@ -143,20 +166,64 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
           x.setEnabled(false);
           x.thinInstanceCount = 0;
         }
+        coresCamada[k] = coresMoldura[k] = null;
         continue;
       }
       const mats = new Float32Array(16 * deles.length);
       const cores = new Float32Array(4 * deles.length);
+      const coresMo = new Float32Array(4 * deles.length).fill(1);
       deles.forEach((f, i) => {
         Matrix.Translation(f.x + 0.5, f.y + 0.5, f.z + 0.5).copyToArray(mats, i * 16);
         const [r, g, b] = corDoFantasma(f.bloco);
         cores.set([r, g, b, 1], i * 4);
       });
       m.thinInstanceSetBuffer('matrix', mats, 16, false);
-      m.thinInstanceSetBuffer('color', cores, 4, true);
+      m.thinInstanceSetBuffer('color', cores, 4, false);
       m.setEnabled(true);
       mo.thinInstanceSetBuffer('matrix', mats.slice(), 16, false);
+      mo.thinInstanceSetBuffer('color', coresMo, 4, false);
       mo.setEnabled(true);
+      coresCamada[k] = cores;
+      coresMoldura[k] = coresMo;
+    }
+    olhoVisto = '';
+  }
+
+  /**
+   * Spec 037 (portão): de dentro, o fantasma encostado na câmera virava uma névoa branca que
+   * cobria até 40% da tela. Pela distância dos olhos até o cubo, o de perto fica transparente e,
+   * colado, some; o da mira (o que o dedo ou a mira vai preencher) fica sempre à vista.
+   */
+  function apagarPerto(
+    olho: { x: number; y: number; z: number } | null,
+    mira: { x: number; y: number; z: number } | null,
+  ): void {
+    const k0 = olho
+      ? `${olho.x.toFixed(2)},${olho.y.toFixed(2)},${olho.z.toFixed(2)}|${mira ? `${mira.x},${mira.y},${mira.z}` : ''}`
+      : '-';
+    if (k0 === olhoVisto) return;
+    olhoVisto = k0;
+    for (let k = 0; k < camadas.length; k++) {
+      const cores = coresCamada[k];
+      const coresMo = coresMoldura[k];
+      if (!cores || !coresMo) continue;
+      let mudou = false;
+      porCamada[k].forEach((f, i) => {
+        const a = olho ? aparecePerto(olho, f) : 1;
+        // o contorno fino some mais devagar que o miolo e, no da mira, fica sempre: mostra onde
+        // o bloco vai sem a névoa do miolo colado nos olhos
+        const naMira = !!mira && mira.x === f.x && mira.y === f.y && mira.z === f.z;
+        const contorno = naMira ? Math.max(Math.min(1, a * 1.6), ALFA_MIRA_PERTO) : Math.min(1, a * 1.6);
+        if (cores[i * 4 + 3] !== a || coresMo[i * 4 + 3] !== contorno) {
+          cores[i * 4 + 3] = a;
+          coresMo[i * 4 + 3] = contorno;
+          mudou = true;
+        }
+      });
+      if (mudou) {
+        camadas[k].malha!.thinInstanceBufferUpdated('color');
+        camadas[k].moldura!.thinInstanceBufferUpdated('color');
+      }
     }
   }
 
@@ -236,8 +303,16 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
     get quantos(): number {
       return lista.length;
     },
-    /** A cada quadro: o pulso, o tremidinho, o bloco da mira e o balão. */
-    quadro(tempo: number, mira: { x: number; y: number; z: number; bloco: number } | null): void {
+    /**
+     * A cada quadro: o pulso, o tremidinho, o bloco da mira e o balão. `olho`: a câmera de
+     * dentro (a primeira pessoa), onde os fantasmas colados nela somem.
+     */
+    quadro(
+      tempo: number,
+      mira: { x: number; y: number; z: number; bloco: number } | null,
+      olho: { x: number; y: number; z: number } | null = null,
+    ): void {
+      apagarPerto(olho, mira);
       const pulso = 0.5 + 0.5 * Math.sin(tempo * 3.2);
       camadas[0].mat.alpha = 0.38 + 0.3 * pulso;
       camadas[0].matMoldura.alpha = 0.7 + 0.3 * pulso;
@@ -266,14 +341,17 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
       if (naMira && naMira !== alvo) naMira.no.setEnabled(false);
       naMira = alvo;
       if (alvo && mira) {
-        alvo.no.setEnabled(true);
+        // spec 037: de dentro, colado nos olhos, o bloquinho girando encolhe até sumir (de perto
+        // ele tapava meia tela); o contorno do fantasma continua mostrando onde o bloco vai
+        const perto = olho ? aparecePerto(olho, mira) : 1;
+        alvo.no.setEnabled(perto > 0.05);
         alvo.no.position.set(
           mira.x + 0.5,
           mira.y + 0.45 + Math.sin(tempo * 2.4) * 0.05,
           mira.z + 0.5,
         );
         alvo.no.rotation.y = tempo * 1.8;
-        alvo.no.scaling.setAll(0.75);
+        alvo.no.scaling.setAll(0.75 * perto);
       }
       if (balao.isEnabled() && tempo > balaoAte) {
         balao.setEnabled(false);
