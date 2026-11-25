@@ -401,9 +401,16 @@ interface Usuario {
   comemorando: number;
   /** Vitrine (lojinha, provador, capturas): o bicho fica no lugar da raiz, virado como ela. */
   vitrine?: boolean;
+  /** Spec 037: a mão da frente, de dentro (as bolhas da varinha saem do aro dela). */
+  maoDeDentro?: () => TransformNode | null;
 }
 
 export interface RegistroPremium {
+  /**
+   * Spec 037: de dentro (a primeira pessoa), a mão que segura o tesouro é a da frente: as bolhas
+   * da varinha saem do aro dela (null: a mão do boneco).
+   */
+  maoDeDentro(f: (() => TransformNode | null) | null): void;
   vestir(p: PremiumVestido | undefined): void;
   definirLuz(f: number): void;
   definirVisivel(v: boolean): void;
@@ -653,8 +660,12 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
         p.mao === 'guarda-chuva-gotinhas' ||
         p.mao === 'pipa-lacinhos' ||
         p.andar === 'nuvem-fofa')
-    )
-      (lojinha ??= efeitosLojinha(scene)).doBoneco(u.fx036, p, u.nos, r, yaw, Math.min(1, u.vel / 4.3), dt);
+    ) {
+      // (spec 037: de dentro, a varinha da mão da frente faz as bolhas; a do boneco está escondida)
+      const dentro = u.maoDeDentro?.() ?? null;
+      const nos = dentro ? { ...u.nos, maoE: dentro } : u.nos;
+      (lojinha ??= efeitosLojinha(scene)).doBoneco(u.fx036, p, nos, r, yaw, Math.min(1, u.vel / 4.3), dt);
+    }
 
     if (u.bicho) quadroBicho(u, u.bicho, dt, perto);
   }
@@ -1062,6 +1073,9 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
       usuarios.add(u);
       arrumarBicho(u);
       return {
+        maoDeDentro(f) {
+          u.maoDeDentro = f ?? undefined;
+        },
         vestir(p) {
           u.premium = { ...(p ?? {}) };
           u.nos = {};

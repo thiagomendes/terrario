@@ -83,6 +83,11 @@ export interface BracoPrimeiraPessoa {
   ritmo(): { golpes: number; balancos: number; colocacoes: number; empurroes: number };
   zerarRitmo(): void;
   custo(): { malhas: number; triangulos: number };
+  /**
+   * A varinha de bolhas na mão da frente, à vista (o nó dela tem o mesmo desenho da mão esquerda
+   * do boneco: o aro fica no mesmo lugar); null sem ela.
+   */
+  varinhaDeDentro(): TransformNode | null;
   descartar(): void;
 }
 
@@ -130,14 +135,18 @@ const LUZ_NOITE_MAO = 0.55;
 /**
  * Os tesouros da mão, de dentro (portão da 037): a direção do cabo na mão (no espaço da mão; o
  * desenho do tesouro sai da mão para -y) e a escala. A varinha sobe da mão, um tico para a frente e
- * para o meio; o guarda-chuva sobe para a direita e para a frente, menor, com o pano aberto por cima
- * da mão; a pipa fica no céu, na frente, com o fio subindo da mão até ela.
+ * para o meio; a pipa fica no céu, na frente, com o fio subindo da mão até ela.
  */
 const TESOURO_DENTRO: Record<string, { dir: [number, number, number]; escala: number; sai: 1 | -1 }> = {
-  // (a varinha sai da mão para -y; o guarda-chuva, para +y)
   'varinha-bolhas': { dir: [-0.28, 0.9, 0.34], escala: 1, sai: -1 },
-  'guarda-chuva-gotinhas': { dir: [0.1, 0.92, 0.3], escala: 0.38, sai: 1 },
 };
+/**
+ * O guarda-chuva de dentro (estudo dos tesouros, decisão do dono: a opção A): no tamanho de
+ * verdade, preso na mão, com o cabo em pé no mundo, 8° para a frente e 8° para fora. O pano fica
+ * por cima da cabeça: de dentro, vê-se o cabo subindo da mão e a beira do pano no alto da tela.
+ */
+const GUARDA_FRENTE = (8 * Math.PI) / 180;
+const GUARDA_FORA = (8 * Math.PI) / 180;
 /** A pipa de dentro: onde ela fica na tela (em metades da tela, do meio) e a distância. */
 const PIPA_TELA: [number, number] = [-0.15, 0.36];
 const PIPA_DISTANCIA = 3.4;
@@ -280,6 +289,11 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
   fio.rotationQuaternion = Quaternion.Identity();
   fio.setEnabled(false);
   semBrilho(fio);
+  // o guarda-chuva de dentro: no mundo, na escala do boneco, preso na mão a cada quadro
+  const noMundo = new TransformNode('pp-tesouro-mundo', scene);
+  noMundo.rotationQuaternion = Quaternion.Identity();
+  noMundo.scaling.setAll(ESCALA_BONECO);
+  noMundo.setEnabled(false);
   const montarTesouro = (a: Aparencia) => {
     tesouroId = a.premium?.mao ?? null;
     pipaNo = raboNo = null;
@@ -296,11 +310,18 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     }
     const guarda = scene.getTransformNodeByName('pp-braco-junta-guarda');
     if (tesouroId === 'guarda-chuva-gotinhas' && guarda) {
-      guarda.parent = noTesouro;
+      // (no mundo, em pé, no tamanho de verdade: o nó segue a mão a cada quadro)
+      guarda.parent = noMundo;
       guarda.position.setAll(0);
       guarda.rotationQuaternion = null;
       guarda.rotation.setAll(0);
       fundirPorMaterial(guarda);
+      for (const m of guarda.getChildMeshes(false)) {
+        m.renderingGroupId = GRUPO;
+        m.isPickable = false;
+        m.alwaysSelectAsActiveMesh = true;
+        semBrilho(m);
+      }
     }
     if (tesouroId === 'pipa-lacinhos') {
       pipaNo = scene.getTransformNodeByName('pp-braco-junta-pipa');
@@ -518,6 +539,7 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     fio.setEnabled(false);
   };
   const apagar = () => {
+    noMundo.setEnabled(false);
     osso.setEnabled(false);
     sombra.setEnabled(false);
     apagarPipa();
@@ -641,6 +663,7 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     if (!achado || peso <= 0.02) {
       // (o osso leva o braço e o item juntos: nada fica preso na tela)
       osso.setEnabled(false);
+      noMundo.setEnabled(false);
       apagarPipa();
       return;
     }
@@ -720,6 +743,20 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     // ---------------- a pipa no céu da frente, com o fio até a mão
     if (tesouroId === 'pipa-lacinhos' && tesouroNaMao) pipaNoCeu(dt);
     else apagarPipa();
+    // ---------------- o guarda-chuva em pé na mão, com o pano por cima da cabeça
+    if (tesouroId === 'guarda-chuva-gotinhas' && tesouroNaMao && juntaMao) {
+      noMundo.setEnabled(true);
+      juntaMao.computeWorldMatrix(true);
+      noMundo.position.copyFrom(juntaMao.getAbsolutePosition());
+      const f = camera.getDirection(Vector3.Forward());
+      const fh = new Vector3(f.x, 0, f.z).normalize();
+      const lado = new Vector3(fh.z, 0, -fh.x);
+      const eixo = lado
+        .scale(Math.sin(GUARDA_FORA))
+        .add(new Vector3(0, Math.cos(GUARDA_FRENTE) * Math.cos(GUARDA_FORA), 0))
+        .add(fh.scale(Math.sin(GUARDA_FRENTE)));
+      noMundo.rotationQuaternion = cabo([eixo.x, eixo.y, eixo.z], 1);
+    } else noMundo.setEnabled(false);
     // ---------------- a conferência: o ombro, com a grossura da manga, fora da tela
     maoNaTela = projetar(ombro.add(new Vector3(...direcaoDoBraco(x, z)).scale(BRACO)));
     ombroNaTela = projetar(ombro);
@@ -755,8 +792,10 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     zerarRitmo() {
       ritmo.golpes = ritmo.balancos = ritmo.colocacoes = ritmo.empurroes = 0;
     },
+    varinhaDeDentro: () =>
+      tesouroId === 'varinha-bolhas' && peso > 0.5 && osso.isEnabled() && noTesouro.isEnabled() ? noTesouro : null,
     custo() {
-      const malhas = [...osso.getChildMeshes(false), ...noPipa.getChildMeshes(false), fio, sombra].filter((m) => m.isEnabled());
+      const malhas = [...osso.getChildMeshes(false), ...noPipa.getChildMeshes(false), ...noMundo.getChildMeshes(false), fio, sombra].filter((m) => m.isEnabled());
       let tri = 0;
       for (const m of malhas) tri += (m.getTotalIndices?.() ?? 0) / 3;
       return { malhas: malhas.length, triangulos: Math.round(tri) };
@@ -766,6 +805,7 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
       noTesouro.parent = null;
       vista?.descartar();
       noTesouro.dispose();
+      noMundo.dispose();
       noPipa.dispose();
       fio.dispose();
       matFio.dispose();
