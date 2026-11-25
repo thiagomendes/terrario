@@ -5,6 +5,7 @@
  */
 import { criarGerenciador, type Canal } from '../../servidor/src/salas';
 import { armazemMemoria } from '../../servidor/src/armazem';
+import { criarLimitador } from '../../servidor/src/limitador';
 import '../../src/temas/todos';
 import { obterTema } from '../../src/temas';
 import { conexaoNuvem, type ConexaoNuvem, type OpcoesNuvem } from '../../src/cliente/conexaoNuvem';
@@ -65,17 +66,25 @@ export function criarNuvem(ip: string) {
       caiuNoServidor = true;
       g.caiu(canal);
     };
+    // o limite de mensagens por segundo do servidor de verdade (`servidor/src/index.ts`)
+    const limite = criarLimitador();
     const ws: WsDeMentira = {
       readyState: 0,
       onopen: null,
       onmessage: null,
       onclose: null,
       send: (t: string) => {
-        if (muda) {
-          perdidas.set(quem, (perdidas.get(quem) ?? 0) + 1);
-          return;
+        if (muda || ws.readyState !== 1) return;
+        const v = limite();
+        if (v === 'fechar') {
+          // o servidor fecha com 4008 ("devagar"): os dois lados veem a conexão cair
+          fechadasPeloLimite.set(quem, (fechadasPeloLimite.get(quem) ?? 0) + 1);
+          ws.readyState = 3;
+          desligar();
+          setTimeout(() => ws.onclose?.({ code: 4008 }), 0);
         }
-        if (ws.readyState === 1) void g.receber(canal, t);
+        if (v !== 'passa') return;
+        void g.receber(canal, t);
       },
       close: (code = 1005) => {
         if (ws.readyState === 3) return;
@@ -125,8 +134,8 @@ export function criarNuvem(ip: string) {
   }
   const quedas = new Map<string, () => void>();
   const emudecer = new Map<string, (soAVolta: boolean) => void>();
-  /** Mensagens que o navegador de cada um mandou para uma conexão morta (sumiram). */
-  const perdidas = new Map<string, number>();
+  /** Conexões de cada um que o servidor fechou por mandar mensagens demais num segundo. */
+  const fechadasPeloLimite = new Map<string, number>();
 
   function conectar(quem: string, extra: Omit<OpcoesNuvem, 'url' | 'jogador' | 'abrir'>) {
     return conexaoNuvem({
@@ -143,15 +152,19 @@ export function criarNuvem(ip: string) {
     abertas,
     estilo: obterTema('vila-neon').mundo,
     conectar,
-    perdidas,
+    fechadasPeloLimite,
     /** O dono cria a sala (a ida para a nuvem) e fecha essa conexão; devolve o código. */
-    async criarSala(quem: string, tema = 'vila-neon'): Promise<string> {
+    async criarSala(
+      quem: string,
+      tema = 'vila-neon',
+      modo: 'criativo' | 'sobrevivencia' = 'criativo',
+    ): Promise<string> {
       const c = conectar(quem, {
         criar: {
           nome: 'Vila',
           semente: 7,
           tema,
-          modo: 'criativo',
+          modo,
           versaoMundo: 2,
           estilo: obterTema(tema).mundo,
         },

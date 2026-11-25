@@ -2,8 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { blocoDe, criarEdicoes, indiceDonoDe, metaDe } from '../../src/world/edicoes';
 import { diferencaDasEdicoes } from '../../src/cliente/diferencaEdicoes';
 import { Bloco } from '../../src/world/blocks';
+import { idDoBloco } from '../../src/jogo/itens';
 import type { BemVindo, ConexaoNuvem } from '../../src/cliente/conexaoNuvem';
-import type { EventoNucleo } from '../../src/nucleo/protocolo';
+import type { Comando, EventoNucleo } from '../../src/nucleo/protocolo';
 import { criarNuvem, espera, ligarEstado } from './nuvemDeVerdade';
 
 /**
@@ -12,11 +13,13 @@ import { criarNuvem, espera, ligarEstado } from './nuvemDeVerdade';
  * sumiu. No registro do servidor, as duas conexões trocaram por uma nova no meio da partida, e a
  * velha só caiu 30 s depois (código 1006): estava morta sem ninguém saber.
  *
- * Aqui, com o servidor, a conexão e o estado de verdade, o "mundo na tela" de cada um é um
- * `Edicoes` feito como a cena faz (as previsões, os blocos dos quadros e a diferença do
- * bem-vindo da volta), ligado como `src/nuvem.ts` liga (o `reconferir` no "Voltamos!").
+ * Aqui, com o servidor, a conexão e o estado de verdade (e o limite de mensagens por segundo do
+ * servidor), o "mundo na tela" de cada um é um `Edicoes` feito como a cena faz (as previsões, os
+ * blocos dos quadros e a diferença do bem-vindo da volta), ligado como `src/nuvem.ts` liga (o
+ * `reconferir` no "Voltamos!").
  */
 const BLOCO = Bloco.TABUAS;
+type P = { x: number; y: number; z: number };
 
 async function ate(cond: () => boolean, ms: number, oQue: string): Promise<void> {
   const fim = Date.now() + ms;
@@ -59,53 +62,96 @@ function ligarTela(c: ConexaoNuvem, bv: BemVindo) {
       est.reconferir();
     }
   });
-  return { tela, est, recusas };
+  return { tela, est, recusas, bloco: (p: P) => tela.obter(p.x, p.y, p.z) ?? Bloco.AR };
 }
+
+/** O filho cria o mundo (a ida para a nuvem), o pai entra pelo código: os dois na sala. */
+async function montar(
+  ip: string,
+  modo: 'criativo' | 'sobrevivencia' = 'criativo',
+  relogioDoPai?: () => number,
+) {
+  const nuvem = criarNuvem(ip);
+  const codigo = await nuvem.criarSala('filho', 'doce-reino', modo);
+  const c2 = nuvem.conectar('filho', { codigo });
+  const filho = ligarTela(c2, await c2.pronta);
+  const c3 = nuvem.conectar('pai', { codigo, ...(relogioDoPai ? { agora: relogioDoPai } : {}) });
+  const bv3 = await c3.pronta;
+  const pai = ligarTela(c3, bv3);
+  await ate(() => pai.est.quadrosRecebidos > 5, 3000, 'o pai receber quadros');
+  const sala = nuvem.g.ativas.get(codigo)!;
+  // o que o núcleo recebe do pai (o que foi de novo conta outra vez)
+  const recebidos: Record<string, number> = {};
+  const posicoes: Comando[] = [];
+  const comando = sala.nucleo.comando.bind(sala.nucleo);
+  sala.nucleo.comando = (id, c) => {
+    if (id === 'pai') recebidos[c.t] = (recebidos[c.t] ?? 0) + 1;
+    if (id === 'pai' && c.t === 'jogador') posicoes.push(c);
+    comando(id, c);
+  };
+  const noServidor = (p: P) => sala.nucleo.estado.mundo.bloco(p.x, p.y, p.z);
+  const o = { x: Math.floor(bv3.pos.x), y: Math.floor(bv3.pos.y), z: Math.floor(bv3.pos.z) };
+  /** Como a cena põe um bloco: a previsão na tela e o comando com o mesmo id. */
+  const por = (p: P, bloco: number = BLOCO) => {
+    const id = pai.est.proximoId();
+    pai.est.prever(id, p.x, p.y, p.z, bloco);
+    pai.est.enviar({ t: 'colocar', id, ...p, bloco, meta: 0, slot: 0 });
+  };
+  const tirar = (p: P) => {
+    const id = pai.est.proximoId();
+    pai.est.prever(id, p.x, p.y, p.z, Bloco.AR);
+    pai.est.enviar({ t: 'quebrar', id, ...p, slot: 0 });
+  };
+  return {
+    nuvem,
+    c2,
+    c3,
+    pai,
+    filho,
+    sala,
+    o,
+    bv3,
+    recebidos,
+    posicoes,
+    noServidor,
+    por,
+    tirar,
+    /** A mochila do pai no servidor (o teste põe o que precisa). */
+    mochila: () => sala.nucleo.estado.jogadores.get('pai')!,
+    /** O núcleo respondeu a todas as previsões do pai nestas células. */
+    respondido: (ps: P[]) =>
+      ate(() => ps.every((p) => !pai.est.pendente(p.x, p.y, p.z)), 15_000, 'o núcleo responder'),
+    /** A conexão do pai foi trocada (pelo vigia do silêncio) e voltou. */
+    async voltou() {
+      await ate(() => pai.est.ressincronizacoes >= 1, 8000, 'a rede de segurança ressincronizar');
+      await ate(() => c3.estado === 'conectado', 12_000, 'o pai voltar');
+    },
+    fim() {
+      c2.encerrar();
+      c3.encerrar();
+      nuvem.parar();
+    },
+  };
+}
+
+/** Uma fileira de 6 em cima da cabeça (dentro do alcance, longe do corpo). */
+const fileira = (o: P, dz: number) =>
+  Array.from({ length: 6 }, (_, i) => ({ x: o.x - 3 + i, y: o.y + 3, z: o.z + dz }));
 
 type Como = 'conexão morta' | 'só a volta morta' | 'queda';
 
 async function cenario(como: Como, ip: string) {
-  const nuvem = criarNuvem(ip);
+  const m = await montar(ip);
   try {
-    const codigo = await nuvem.criarSala('filho', 'doce-reino');
-    const c2 = nuvem.conectar('filho', { codigo });
-    const filho = ligarTela(c2, await c2.pronta);
-    const c3 = nuvem.conectar('pai', { codigo });
-    const bv3 = await c3.pronta;
-    const pai = ligarTela(c3, bv3);
-    await ate(() => pai.est.quadrosRecebidos > 5, 3000, 'o pai receber quadros');
-
-    const sala = nuvem.g.ativas.get(codigo)!;
-    // o que o núcleo recebe do pai (o que foi de novo conta outra vez)
-    const recebidos: Record<string, number> = {};
-    const comando = sala.nucleo.comando.bind(sala.nucleo);
-    sala.nucleo.comando = (id, c) => {
-      if (id === 'pai') recebidos[c.t] = (recebidos[c.t] ?? 0) + 1;
-      comando(id, c);
-    };
-    const noServidor = (p: { x: number; y: number; z: number }) =>
-      sala.nucleo.estado.mundo.bloco(p.x, p.y, p.z);
-    const x0 = Math.floor(bv3.pos.x);
-    const y0 = Math.floor(bv3.pos.y) + 3;
-    const z0 = Math.floor(bv3.pos.z);
-    // duas fileiras de 6, em cima da cabeça (dentro do alcance, longe do corpo)
-    const fileira = (dz: number) =>
-      Array.from({ length: 6 }, (_, i) => ({ x: x0 - 3 + i, y: y0, z: z0 + dz }));
-    const antes = fileira(2);
-    const depois = fileira(3);
+    const { pai, filho, noServidor, por, tirar } = m;
+    const antes = fileira(m.o, 2);
+    const depois = fileira(m.o, 3);
     for (const p of [...antes, ...depois]) expect(noServidor(p), 'a célula começa vazia').toBe(0);
-
-    /** Como a cena põe um bloco: a previsão na tela e o comando com o mesmo id. */
-    const por = (p: { x: number; y: number; z: number }) => {
-      const id = pai.est.proximoId();
-      pai.est.prever(id, p.x, p.y, p.z, BLOCO);
-      pai.est.enviar({ t: 'colocar', id, ...p, bloco: BLOCO, meta: 0, slot: 0 });
-    };
 
     // a primeira fileira, com a conexão boa: chega ao servidor e ao filho
     for (const p of antes) por(p);
     await ate(
-      () => antes.every((p) => noServidor(p) === BLOCO && filho.tela.obter(p.x, p.y, p.z) === BLOCO),
+      () => antes.every((p) => noServidor(p) === BLOCO && filho.bloco(p) === BLOCO),
       3000,
       'a primeira fileira chegar ao servidor e ao filho',
     );
@@ -114,53 +160,40 @@ async function cenario(como: Como, ip: string) {
     if (como !== 'queda') {
       // a conexão do pai morre sem ninguém saber, e ele continua construindo (com a volta
       // morta, o servidor recebe tudo e o pai não fica sabendo: ele também tira um bloco)
-      nuvem.emudecer('pai', como === 'só a volta morta');
+      m.nuvem.emudecer('pai', como === 'só a volta morta');
       await espera(300);
       for (const p of depois) por(p);
-      if (como === 'só a volta morta') {
-        const p = antes[0];
-        const id = pai.est.proximoId();
-        pai.est.prever(id, p.x, p.y, p.z, Bloco.AR);
-        pai.est.enviar({ t: 'quebrar', id, ...p, slot: 0 });
-      }
+      if (como === 'só a volta morta') tirar(antes[0]);
       // o vigia do silêncio (4 s sem quadro) troca a conexão por outra
-      await ate(() => pai.est.ressincronizacoes >= 1, 8000, 'a rede de segurança ressincronizar');
+      await m.voltou();
     } else {
       // a internet do pai cai de vez; enquanto a conexão volta, ele continua construindo
-      nuvem.segurar('pai');
-      nuvem.derrubar('pai');
-      await ate(() => c3.estado === 'reconectando', 2000, 'a conexão do pai cair');
+      m.nuvem.segurar('pai');
+      m.nuvem.derrubar('pai');
+      await ate(() => m.c3.estado === 'reconectando', 2000, 'a conexão do pai cair');
       for (const p of depois) por(p);
       await espera(200);
-      nuvem.soltar('pai');
+      m.nuvem.soltar('pai');
+      await ate(() => m.c3.estado === 'conectado', 12_000, 'o pai voltar');
     }
-    await ate(() => c3.estado === 'conectado', 12_000, 'o pai voltar');
-    await ate(
-      () => [...antes, ...depois].every((p) => !pai.est.pendente(p.x, p.y, p.z)),
-      5000,
-      'o núcleo responder às previsões do pai',
-    );
+    await m.respondido([...antes, ...depois]);
     await espera(500);
 
-    const conta = (f: (p: { x: number; y: number; z: number }) => boolean) =>
-      [...antes, ...depois].filter(f).length;
-    const r = {
+    const conta = (f: (p: P) => boolean) => [...antes, ...depois].filter(f).length;
+    return {
       servidor: conta((p) => noServidor(p) === BLOCO),
-      telaDoPai: conta((p) => pai.tela.obter(p.x, p.y, p.z) === BLOCO),
-      telaDoFilho: conta((p) => filho.tela.obter(p.x, p.y, p.z) === BLOCO),
+      telaDoPai: conta((p) => pai.bloco(p) === BLOCO),
+      telaDoFilho: conta((p) => filho.bloco(p) === BLOCO),
       recusasDoPai: pai.recusas.length,
-      recebidos,
+      recebidos: m.recebidos,
       tirado: {
         servidor: noServidor(antes[0]),
-        telaDoPai: pai.tela.obter(antes[0].x, antes[0].y, antes[0].z),
-        telaDoFilho: filho.tela.obter(antes[0].x, antes[0].y, antes[0].z),
+        telaDoPai: pai.bloco(antes[0]),
+        telaDoFilho: filho.bloco(antes[0]),
       },
     };
-    c2.encerrar();
-    c3.encerrar();
-    return r;
   } finally {
-    nuvem.parar();
+    m.fim();
   }
 }
 
@@ -186,8 +219,8 @@ describe('os blocos que o pai pôs não somem quando a conexão dele morre ou ca
     expect(r.telaDoPai, 'os 11 blocos na tela do pai').toBe(11);
     expect(r.telaDoFilho, 'os 11 blocos na tela do filho').toBe(11);
     expect(r.tirado.servidor, 'o tirado, no servidor').toBe(Bloco.AR);
-    expect(r.tirado.telaDoPai ?? Bloco.AR, 'o tirado, na tela do pai').toBe(Bloco.AR);
-    expect(r.tirado.telaDoFilho ?? Bloco.AR, 'o tirado, na tela do filho').toBe(Bloco.AR);
+    expect(r.tirado.telaDoPai, 'o tirado, na tela do pai').toBe(Bloco.AR);
+    expect(r.tirado.telaDoFilho, 'o tirado, na tela do filho').toBe(Bloco.AR);
     // os 6 da conexão morta chegaram e foram de novo (o núcleo recusou: já estavam lá)
     expect(r.recebidos.colocar, '6 + 6 e os 6 que foram de novo').toBe(18);
     expect(r.recebidos.quebrar, 'o tirar, e ele de novo').toBe(2);
@@ -201,5 +234,170 @@ describe('os blocos que o pai pôs não somem quando a conexão dele morre ou ca
     expect(r.telaDoPai, 'os 12 blocos na tela do pai').toBe(12);
     expect(r.telaDoFilho, 'os 12 blocos na tela do filho').toBe(12);
     expect(r.recusasDoPai, 'nenhuma recusa para o pai').toBe(0);
+  }, 30_000);
+
+  it('a volta com muito a mandar sai em fatias: o servidor não fecha a conexão por pressa', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const m = await montar('10.8.0.4');
+    try {
+      // 168 células em volta da cabeça (dos dois lados, quatro andares), todas no alcance
+      const celulas: P[] = [];
+      for (const dz of [-4, -3, -2, 2, 3, 4])
+        for (let dy = 3; dy <= 6; dy++)
+          for (let dx = -3; dx <= 3; dx++)
+            celulas.push({ x: m.o.x + dx, y: m.o.y + dy, z: m.o.z + dz });
+      for (const p of celulas) expect(m.noServidor(p), 'a célula começa vazia').toBe(0);
+      // a internet cai e ele constrói tudo enquanto ela volta: tudo fica guardado
+      m.nuvem.segurar('pai');
+      m.nuvem.derrubar('pai');
+      await ate(() => m.c3.estado === 'reconectando', 2000, 'a conexão do pai cair');
+      for (const p of celulas) m.por(p);
+      m.nuvem.soltar('pai');
+      await ate(() => m.c3.estado === 'conectado', 12_000, 'o pai voltar');
+      await m.respondido(celulas);
+      await espera(300);
+      expect(m.nuvem.fechadasPeloLimite.get('pai') ?? 0, 'o servidor fechou por pressa').toBe(0);
+      expect(m.c3.estado).toBe('conectado');
+      expect(celulas.filter((p) => m.noServidor(p) === BLOCO).length, 'no servidor').toBe(168);
+      expect(celulas.filter((p) => m.pai.bloco(p) === BLOCO).length, 'na tela do pai').toBe(168);
+      expect(celulas.filter((p) => m.filho.bloco(p) === BLOCO).length, 'na tela do filho').toBe(
+        168,
+      );
+    } finally {
+      m.fim();
+    }
+  }, 40_000);
+
+  it('na volta: a posição vai sem a queda e o pulo, e o que tem mais de 30 s não vai de novo', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let relogio = 0;
+    const m = await montar('10.8.0.7', 'criativo', () => relogio);
+    try {
+      const velhos = fileira(m.o, 2);
+      const novo = { x: m.o.x, y: m.o.y + 3, z: m.o.z + 3 };
+      for (const p of [...velhos, novo]) expect(m.noServidor(p), 'a célula começa vazia').toBe(0);
+      // uma posição com queda, pulo e golpe, que o servidor recebe e conta
+      const pos = m.bv3.pos;
+      m.pai.est.enviar({
+        t: 'jogador',
+        x: pos.x,
+        y: pos.y,
+        z: pos.z,
+        yaw: 0,
+        pitch: 0,
+        olhos: pos.y + 1.62,
+        noChao: true,
+        voando: false,
+        vel: 0,
+        correndo: false,
+        submerso: false,
+        quedas: [8],
+        pulos: 1,
+        golpes: 2,
+        slot: 0,
+      });
+      await ate(() => m.posicoes.length === 1, 2000, 'o servidor receber a posição');
+      // a conexão morre; ele põe 6 agora e, 31 s depois, mais 1
+      m.nuvem.emudecer('pai');
+      await espera(300);
+      for (const p of velhos) m.por(p);
+      relogio = 31_000;
+      m.por(novo);
+      await m.voltou();
+      await m.respondido([...velhos, novo]);
+      await espera(500);
+      expect(m.recebidos.colocar, 'só o novo foi de novo').toBe(1);
+      expect(m.noServidor(novo), 'o novo no servidor').toBe(BLOCO);
+      expect(velhos.filter((p) => m.noServidor(p) === BLOCO).length, 'os velhos').toBe(0);
+      // a posição de antes foi de novo (o alcance é conferido nela), sem contar de novo nada
+      expect(m.posicoes.length, 'a posição foi de novo').toBe(2);
+      expect(m.posicoes[1]).toMatchObject({ x: pos.x, quedas: [], pulos: 0, golpes: 0 });
+    } finally {
+      m.fim();
+    }
+  }, 30_000);
+});
+
+describe('o que não vai de novo, ou vai sabendo o que acontece (sobrevivência)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('a flor posta com a volta morta não vai de novo: a mochila não perde outra', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const m = await montar('10.8.0.5', 'sobrevivencia');
+    try {
+      const flor = idDoBloco(Bloco.FLOR);
+      const j = m.mochila();
+      j.inventario.definir(0, { item: flor, qtd: 3 });
+      j.inventarioSujo = true;
+      const c = { x: m.o.x + 1, y: m.o.y + 3, z: m.o.z + 3 };
+      expect(m.noServidor(c), 'a célula começa vazia').toBe(0);
+      await espera(300);
+      // a volta do pai morre; ele põe uma flor (o servidor recebe e põe)
+      m.nuvem.emudecer('pai', true);
+      await espera(300);
+      m.por(c, Bloco.FLOR);
+      await m.voltou();
+      await m.respondido([c]);
+      await espera(500);
+      expect(m.noServidor(c), 'a flor no servidor').toBe(Bloco.FLOR);
+      expect(m.pai.bloco(c), 'a flor na tela do pai').toBe(Bloco.FLOR);
+      // repetida, a flor no lugar da flor entraria de novo e gastaria outra
+      expect(m.recebidos.colocar, 'a flor foi uma vez só').toBe(1);
+      expect(j.inventario.obter(0), 'gastou uma flor').toEqual({ item: flor, qtd: 2 });
+    } finally {
+      m.fim();
+    }
+  }, 30_000);
+
+  /**
+   * Risco conhecido (revisão do conserto, item 3): tirar e pôr na mesma célula, os dois já
+   * feitos no servidor e sem a confirmação ter chegado. Na volta, o tirar vai de novo e tira o
+   * bloco novo; o pôr de novo é recusado sem o bloco na mochila, e a célula fica vazia, calada.
+   * Nada sai em dobro: os dois blocos viram itens no chão. Para não acontecer, o núcleo precisa
+   * ignorar o comando repetido (fica para o backlog). Este teste registra o que acontece hoje.
+   */
+  it('tirar e pôr na mesma célula com a volta morta: o bloco vira item no chão (risco conhecido)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const m = await montar('10.8.0.6', 'sobrevivencia');
+    try {
+      const tabua = idDoBloco(BLOCO);
+      const j = m.mochila();
+      j.inventario.definir(0, { item: tabua, qtd: 1 });
+      j.inventarioSujo = true;
+      // longe do corpo (o item que cai não chega à mão de ninguém)
+      const c = { x: m.o.x + 3, y: m.o.y + 3, z: m.o.z + 4 };
+      expect(m.noServidor(c), 'a célula começa vazia').toBe(0);
+      await espera(300);
+      m.por(c);
+      await ate(() => m.noServidor(c) === BLOCO, 3000, 'a tábua entrar');
+      await m.respondido([c]);
+      j.inventario.definir(0, { item: tabua, qtd: 1 });
+      j.inventarioSujo = true;
+      await espera(300);
+      const noChao = () =>
+        m.sala.nucleo.estado.mundoItens.itens
+          .filter((i) => i.item === tabua)
+          .reduce((s, i) => s + i.qtd, 0);
+      const chaoAntes = noChao();
+      // a volta do pai morre; ele tira a tábua e põe outra no lugar (o servidor faz os dois)
+      m.nuvem.emudecer('pai', true);
+      await espera(300);
+      m.tirar(c);
+      m.por(c);
+      await m.voltou();
+      await m.respondido([c]);
+      await espera(500);
+      expect(m.recebidos.quebrar, 'o tirar foi de novo').toBe(2);
+      expect(m.recebidos.colocar, 'o pôr foi de novo').toBe(3);
+      // hoje: a célula fica vazia nos dois lados (a tela concorda com o servidor)
+      expect(m.noServidor(c), 'a célula, no servidor').toBe(Bloco.AR);
+      expect(m.pai.bloco(c), 'a célula, na tela do pai').toBe(Bloco.AR);
+      expect(m.pai.recusas.length, 'calado: sem o "não pode"').toBe(0);
+      // nada em dobro e nada perdido: as duas tábuas no chão, a mochila sem nenhuma
+      expect(noChao() - chaoAntes, 'as duas tábuas no chão').toBe(2);
+      expect(j.inventario.obter(0), 'a mochila').toBeNull();
+    } finally {
+      m.fim();
+    }
   }, 30_000);
 });

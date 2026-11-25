@@ -5,6 +5,7 @@ import type { DadosMundo } from '../jogo/mundos';
  * o jogador fez enquanto a internet caiu e reconecta sozinha, voltando ao mesmo lugar.
  */
 import type { Comando, Mensagem, Quadro } from '../nucleo/protocolo';
+import { substituivel } from '../jogo/plantio';
 import {
   VERSAO_REDE,
   type EstadoSala,
@@ -61,6 +62,8 @@ export interface OpcoesNuvem {
   criar?: Extract<PedidoCliente, { t: 'entrar' }>['criar'];
   /** Para testes: cria o WebSocket. */
   abrir?: (url: string) => WebSocket;
+  /** Para testes: o relógio do prazo do reenvio, em ms. */
+  agora?: () => number;
 }
 
 /** Espera entre tentativas de reconexão (cresce até 8 s). */
@@ -79,8 +82,18 @@ const FECHA_RESSINCRONIZAR = 4001;
  * cada um outra vez (repetir o que já entrou é recusado e não muda nada).
  */
 const REENVIAVEIS: ReadonlySet<string> = new Set(['colocar', 'quebrar', 'editar', 'arar']);
-/** Teto dos que esperam confirmação (uns 25 s de construção sem parar). */
-const MAX_SEM_CONFIRMACAO = 500;
+/** Teto dos que esperam confirmação (uns 5 s de construção sem parar). */
+const MAX_SEM_CONFIRMACAO = 100;
+/** Mais velho que isto não vai de novo (a criança já seguiu; o bloco de lá ficou para trás). */
+const VALIDADE_REENVIO = 30_000;
+/**
+ * A rajada da volta (o reenvio e os guardados) sai em fatias, uma por segundo: o servidor
+ * fecha a conexão de quem manda mais de 150 mensagens num segundo (`servidor/src/index.ts`),
+ * contando o `entrar` e as 20 posições. Duas fatias que cheguem juntas, com as posições, ainda
+ * ficam abaixo do limite.
+ */
+const FATIA = 50;
+const INTERVALO_FATIA = 1000;
 
 export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
   const ouvintes: ((m: Mensagem) => void)[] = [];
@@ -111,13 +124,17 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
    * antena): o navegador ainda vê `OPEN` e o que vai por ela some. Na volta, vão de novo, antes
    * dos guardados. Só os de bloco: o núcleo confere cada um outra vez (o que já entrou é
    * recusado sem mudar nada, e a recusa vem com o valor certo da célula), então repetir não dá
-   * nada em dobro.
+   * nada em dobro. `t`: quando saiu (o velho demais não vai de novo).
    */
-  const semConfirmacao: Comando[] = [];
+  const semConfirmacao: { c: Comando; t: number }[] = [];
   /** Ids que foram de novo: a recusa deles (o que já tinha entrado) não toca o "não pode". */
   const reenviados = new Set<number>();
   /** A última posição mandada: na volta vai antes dos blocos (o alcance é conferido nela). */
   let ultimaTelemetria: Comando | null = null;
+  /** A rajada da volta esperando a vez dela (em fatias); o que vem depois espera atrás. */
+  const naVez: Comando[] = [];
+  let proximaFatia: ReturnType<typeof setTimeout> | undefined;
+  const relogio = op.agora ?? (() => Date.now());
   let resolver!: (b: BemVindo) => void;
   let rejeitar!: (e: Error) => void;
   const pronta = new Promise<BemVindo>((res, rej) => {
@@ -161,25 +178,63 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
     for (const f of ouvintesEstado) f(e, motivo);
   };
 
+  const aberta = () => !!ws && ws.readyState === WebSocket.OPEN && estado === 'conectado';
+
+  function guardar(c: Comando | PedidoCliente): void {
+    if (
+      't' in c &&
+      c.t !== 'jogador' &&
+      c.t !== 'dono' &&
+      c.t !== 'guardar' &&
+      guardados.length < 500
+    )
+      guardados.push(c as Comando);
+  }
+
   function mandar(c: Comando | PedidoCliente): void {
     if ('t' in c && c.t === 'jogador') ultimaTelemetria = c;
-    if (!ws || ws.readyState !== WebSocket.OPEN || estado !== 'conectado') {
-      if (
-        't' in c &&
-        c.t !== 'jogador' &&
-        c.t !== 'dono' &&
-        c.t !== 'guardar' &&
-        guardados.length < 500
-      )
-        guardados.push(c as Comando);
+    if (!aberta()) return guardar(c);
+    // a rajada da volta ainda saindo: o comando novo espera atrás dela (a ordem vale; a posição
+    // e os pedidos ao servidor não esperam)
+    if (naVez.length && 'seq' in c && c.t !== 'jogador') {
+      naVez.push(c);
       return;
     }
+    enviarJa(c);
+  }
+
+  function enviarJa(c: Comando | PedidoCliente): void {
     const comSeq = 'seq' in (c as Comando) ? { ...(c as Comando), seq: ++seq } : c;
-    ws.send(JSON.stringify(comSeq));
-    if ('t' in c && REENVIAVEIS.has(c.t) && typeof (c as { id?: unknown }).id === 'number') {
-      semConfirmacao.push(c as Comando);
+    ws!.send(JSON.stringify(comSeq));
+    if (reenviavel(c)) {
+      semConfirmacao.push({ c, t: relogio() });
       if (semConfirmacao.length > MAX_SEM_CONFIRMACAO) semConfirmacao.shift();
     }
+  }
+
+  /**
+   * Vai de novo na volta? Os comandos de bloco com id, menos o `colocar` de um bloco que dá
+   * lugar a outro (a flor, a grama, a água): repetido, ele não é recusado (a célula da flor
+   * aceita outra flor) e gastaria outra da mochila. Esses se perdem com a conexão, como antes.
+   */
+  function reenviavel(c: Comando | PedidoCliente): c is Comando {
+    if (!('t' in c) || !REENVIAVEIS.has(c.t)) return false;
+    if (typeof (c as { id?: unknown }).id !== 'number') return false;
+    return !(c.t === 'colocar' && substituivel(c.bloco));
+  }
+
+  /** Uma fatia da rajada da volta; a seguinte daqui a um segundo. */
+  function escoar(): void {
+    clearTimeout(proximaFatia);
+    proximaFatia = undefined;
+    if (!aberta()) {
+      // caiu no meio: o que não saiu fica guardado, na frente, para a próxima volta
+      guardados.unshift(...naVez.splice(0));
+      if (guardados.length > 500) guardados.length = 500;
+      return;
+    }
+    for (const c of naVez.splice(0, FATIA)) enviarJa(c);
+    if (naVez.length) proximaFatia = setTimeout(escoar, INTERVALO_FATIA);
   }
 
   const idDe = (c: Comando) => (c as { id: number }).id;
@@ -195,25 +250,31 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
       if (!q.eventos.length) delete q.eventos;
     }
     for (let i = semConfirmacao.length - 1; i >= 0; i--)
-      if (idDe(semConfirmacao[i]) <= q.ack) semConfirmacao.splice(i, 1);
+      if (idDe(semConfirmacao[i].c) <= q.ack) semConfirmacao.splice(i, 1);
   }
 
   /**
-   * A volta: os blocos que saíram pela conexão que morreu e não foram confirmados vão de novo,
-   * em ordem, depois da última posição (o núcleo confere o alcance nela).
+   * A volta: os blocos que saíram pela conexão que morreu e não foram confirmados (e não são
+   * velhos demais) vão de novo, em ordem, depois da última posição (o núcleo confere o alcance
+   * nela). A posição vai sem as quedas, os pulos e os golpes: esses já contaram.
    */
-  function reenviarSemConfirmacao(): void {
-    if (!semConfirmacao.length) return;
-    if (ultimaTelemetria) mandar(ultimaTelemetria);
-    for (const c of semConfirmacao.splice(0)) {
+  function paraReenviar(): Comando[] {
+    const agora = relogio();
+    const vivos = semConfirmacao.splice(0).filter((s) => agora - s.t <= VALIDADE_REENVIO);
+    if (!vivos.length) return [];
+    const lote: Comando[] = [];
+    if (ultimaTelemetria)
+      lote.push({ ...ultimaTelemetria, quedas: [], pulos: 0, golpes: 0 } as Comando);
+    for (const { c } of vivos) {
       reenviados.add(idDe(c));
-      mandar(c);
+      lote.push(c);
     }
     // os ids não se repetem na página: os antigos só ocupam lugar
     for (const id of reenviados) {
       if (reenviados.size <= MAX_SEM_CONFIRMACAO) break;
       reenviados.delete(id);
     }
+    return lote;
   }
 
   function abrir(): void {
@@ -256,6 +317,8 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
         if (reaberta) {
           // o servidor recomeçou: a página abre o mundo de novo (nada vai de novo por aqui)
           semConfirmacao.length = 0;
+          naVez.length = 0;
+          clearTimeout(proximaFatia);
           mudar('conectado');
           resolver(bv);
           for (const f of ouvintesReaberta) f();
@@ -265,9 +328,14 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
         // depois quem ouve o 'conectado'. O `reconferir` da volta (src/nuvem.ts) pede o valor
         // das células previstas: indo antes dos blocos guardados, a resposta chegava com a
         // célula ainda vazia e tirava da tela o bloco que o servidor pôs logo em seguida.
+        // A rajada sai em fatias (`escoar`); o que vier depois, o `conferir` inclusive, espera
+        // atrás dela.
+        // A volta pode chegar antes da fatia seguinte (a ressincronização é rápida): o que
+        // sobrou dela vai depois do reenvio (que já tinha saído antes) e antes dos guardados.
         estado = 'conectado';
-        if (volta) reenviarSemConfirmacao();
-        for (const c of guardados.splice(0)) mandar(c);
+        const resto = naVez.splice(0);
+        naVez.push(...(volta ? paraReenviar() : []), ...resto, ...guardados.splice(0));
+        escoar();
         mudar('conectado');
         resolver(bv);
         for (const f of ouvintesSala) f(m.sala);
@@ -377,6 +445,7 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
     encerrar() {
       encerrada = true;
       clearTimeout(prazoRessinc);
+      clearTimeout(proximaFatia);
       fila.length = 0;
       // 1000: saiu normalmente (o registro do servidor não conta como queda)
       ws?.close(1000);
