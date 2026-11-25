@@ -15,6 +15,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 3. **Redesenho de dois itens antigos** (decisão do dono em 24 nov, pelo portão visual da 036; spec pequena logo depois da 037). Os dois continuam com quem já comprou e só mudam de desenho:
    - a camiseta de aquário: o peixe laranja de listras brancas pode lembrar um personagem de filme conhecido;
    - o tênis de 20 moedinhas: as listras rosa, amarela e azul ficam perto de arco-íris.
+   - **e os pés no pedal** (dono, 25 nov): na bicicletinha (e no carrinho de pedal), o pedal gira mas os pés pedalam flutuando em cima, sem encostar. É o mesmo problema que as mãos tinham no guidão (resolvido na 036 apontando o braço para o ponto de segurar): apontar a perna para o pedal, com teste de distância.
 4. **027, Noite das Fantasias, partes 2 e 3** (`.sdd/specs/027-mundo-halloween/`, branch `feat/027-noite-das-fantasias`). A parte 1 está no ar desde 22 nov. Faltam:
    - a parte 2, por dentro: os três lugares por dentro e as missões n6 a n8;
    - a parte 3, os passeios: a vassoura-patinete, os brinquedos e as missões n9 e n10.
