@@ -401,11 +401,13 @@
         "src/ui/roleta.ts",
         "src/ui/toque.ts",
         "src/ui/dicaMira.ts",
-        "src/render/modoFoto.ts"
+        "src/render/modoFoto.ts",
+        "src/esboco/primeiraPessoa.ts"
       ],
       "suites": [
         "camera.spec.ts",
         "capturas-camera.spec.ts",
+        "esboco-primeira-pessoa.spec.ts",
         "medidas-033-camera.spec.ts",
         "medidas-033-roleta.spec.ts",
         "mira-toque.spec.ts",

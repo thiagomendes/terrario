@@ -116,10 +116,11 @@ async function rodarVariante(p: Page, v: Variante, gravar: boolean, inicio: numb
   await p.waitForTimeout(900);
   await foto(p, `${v}-02-dentro-mao-vazia`);
   // 2) anda de mão vazia
-  await mover(p, 1);
+  // (devagar: a caminhada inteira cabe na praça, sem chegar no balanço)
+  await mover(p, 0.6);
   await p.waitForTimeout(900);
   await foto(p, `${v}-03-andando-mao-vazia`);
-  await p.waitForTimeout(700);
+  await p.waitForTimeout(300);
   await mover(p, 0);
   // 3) olha para baixo: o corpo, os pés e a sombra
   await girar(p, 0, 1.3, 900);
@@ -138,8 +139,8 @@ async function rodarVariante(p: Page, v: Variante, gravar: boolean, inicio: numb
   await foto(p, `${v}-06-segurando-bloco`);
   const custo = await p.evaluate(() => window.__primeiraPessoa!.custo());
   // anda com o bloco
-  await mover(p, 1);
-  await p.waitForTimeout(900);
+  await mover(p, 0.6);
+  await p.waitForTimeout(800);
   await foto(p, `${v}-07-andando-com-bloco`);
   await mover(p, 0);
   await p.waitForTimeout(500);
@@ -147,7 +148,7 @@ async function rodarVariante(p: Page, v: Variante, gravar: boolean, inicio: numb
   await girar(p, 0, 0.55, 500);
   await p.waitForTimeout(300);
   await p.evaluate(() => window.__brumaluz!.controleDireto!.usar());
-  await p.waitForTimeout(140);
+  await p.waitForTimeout(60);
   await foto(p, `${v}-08-colocando`);
   await p.waitForTimeout(900);
   await p.evaluate(() => window.__brumaluz!.controleDireto!.usar());

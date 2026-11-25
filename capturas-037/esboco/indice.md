@@ -59,8 +59,10 @@ desce e sobe com o novo.
 - **Olhando para baixo:** aparecem a roupa (azul) e os sapatos, mas atrás do joystick e dos
   botões, na faixa de baixo da tela. Dá para ver "sou eu", mas pouco. A fantasia e o brinquedo
   de andar não foram fotografados (o boneco de teste está de roupa comum).
-- **Colocando:** o impulso da mão até o lugar dura 0,45 s e a foto pega quase o fim; no vídeo se
-  vê melhor.
+- **Colocando:** o impulso da mão até o lugar dura 0,45 s e a foto não pega o meio dele (a mão
+  aparece quase onde segura); no vídeo se vê melhor, mas ainda é curto e discreto.
+- Os blocos que a variante A põe ficam no mundo: na B e na C eles aparecem grandes na frente
+  ("Colocando" e "Comendo").
 - **Acenando:** a manga esticada aparece comprida, como um tubo, quando a mão sobe.
 - **Deitado:** a mão fica perto do meio, logo acima da barra de itens; funciona, mas pede ajuste
   fino na spec.
