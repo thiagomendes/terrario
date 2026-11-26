@@ -74,6 +74,10 @@ const GUIDAO_BICI: V3 = [0, 0.74, 0.31];
 /** Spec 038 (T02): o alto do selim da bicicletinha (antes da escala; antes 0,5) e do assento do carrinho. */
 const SELIM_BICI = 0.425;
 const ASSENTO_CARRINHO = 0.255;
+/** Spec 038 (T03): o alto do banco da motoquinha, o raio das rodas e o guidão. */
+const BANCO_MOTO = 0.52;
+const RODA_MOTO = 0.2;
+const GUIDAO_MOTO: V3 = [0.2, 0.82, 0.32];
 /** Do quadril ao fundo da peça do quadril (onde a criança senta) e a perna do modelo `andarilho`. */
 export const FUNDO_DO_QUADRIL = 0.12;
 const QUADRIL_ANDARILHO = 0.34;
@@ -104,18 +108,18 @@ export const MONTARIA: Readonly<Record<IdAndar, Montaria>> = {
     assentoY: SELIM_BICI * BICI,
   },
   'nuvem-fofa': { corpoY: 0.36, sentada: true, bracoX: -0.25, bracoAbre: 0.35, perna: -1.3, pedal: 0, troncoX: 0, raioRoda: 0, flutua: 0.035 },
-  // spec 038 (T01): provisória, igual à do carrinho, só para o catálogo e a rede; a T03 acerta a
-  // pose da motoquinha (sentada, as mãos no guidão alto e os pés nos apoios)
+  // spec 038 (T03): sentada no banco da motoquinha, um tico para a frente, as mãos no guidão alto
+  // e os pés nos apoios (o joelho dobra)
   'motoquinha-dourada': {
-    corpoY: ASSENTO_CARRINHO + FUNDO_DO_QUADRIL - QUADRIL_ANDARILHO,
+    corpoY: BANCO_MOTO + FUNDO_DO_QUADRIL - QUADRIL_ANDARILHO,
     sentada: true,
-    bracoX: -0.85,
-    bracoAbre: -0.16,
-    perna: -1.2,
-    pedal: 0.1,
-    troncoX: 0.04,
-    raioRoda: 0.13,
-    assentoY: ASSENTO_CARRINHO,
+    bracoX: -1.1,
+    bracoAbre: -0.1,
+    perna: -0.9,
+    pedal: 0,
+    troncoX: 0.26,
+    raioRoda: RODA_MOTO,
+    assentoY: BANCO_MOTO,
   },
 };
 
@@ -146,8 +150,9 @@ export const PES: Readonly<Partial<Record<IdAndar, Pes>>> = {
   // sem esticar, e a sola não vira demais na volta)
   bicicletinha: { tipo: 'pedal', eixo: [0.32 * BICI, 0.12 * BICI], raio: 0.05 * BICI, x: 0.118 * BICI, raioPedal: 0.024 * BICI },
   'carrinho-pedal': PEDAL_CARRINHO,
-  // (T01: a motoquinha provisória é o carrinho; a T03 troca pelos apoios)
-  'motoquinha-dourada': PEDAL_CARRINHO,
+  // (T03: os apoios da motoquinha, ao alcance da perna mais curta dos 7 modelos, com o joelho
+  // dobrado na mais comprida)
+  'motoquinha-dourada': { tipo: 'apoio', E: [-0.17, 0.38, 0.13], D: [0.17, 0.38, 0.13] },
 };
 
 /** O brinquedo tem pedal ou apoio (a perna divide no joelho e o pé vai nele). */
@@ -180,7 +185,12 @@ export const GUIDAO: Readonly<Record<IdAndar, { E: V3; D: V3; folga: number }>> 
   },
   'nuvem-fofa': { E: [-0.37, 0.8, 0.1], D: [0.37, 0.8, 0.1], folga: 0.07 },
   // spec 038 (T01): provisório, igual ao do carrinho; a T03 acerta os punhos do guidão da moto
-  'motoquinha-dourada': { E: [-0.13, 0.62, 0.2], D: [0.13, 0.62, 0.2], folga: 0.07 },
+  // (spec 038, T03: as manoplas creme do guidão alto da motoquinha)
+  'motoquinha-dourada': {
+    E: [-GUIDAO_MOTO[0], GUIDAO_MOTO[1], GUIDAO_MOTO[2]],
+    D: [GUIDAO_MOTO[0], GUIDAO_MOTO[1], GUIDAO_MOTO[2]],
+    folga: 0.07,
+  },
 };
 
 // ------------------------------------------------------------------ o estado do andar
@@ -217,7 +227,7 @@ export function avancarAndar(e: EstadoAndar, id: string, dt: number, vel: number
   e.vento += Math.max(-dt * 1.2, Math.min(dt * 1.2, Math.min(1, e.vel / 3.2) - e.vento));
   if (m.raioRoda > 0) e.roda = (e.roda + (e.vel / (m.raioRoda * ESCALA)) * dt) % (Math.PI * 2);
   if (id === 'bicicletinha') e.pedal = (e.pedal + (e.vel / (m.raioRoda * ESCALA)) * dt * 0.55) % (Math.PI * 2);
-  if (id === 'carrinho-pedal' || id === 'motoquinha-dourada') e.pedal = (e.pedal + e.vel * dt * 2.2) % (Math.PI * 2);
+  if (id === 'carrinho-pedal') e.pedal = (e.pedal + e.vel * dt * 2.2) % (Math.PI * 2);
 }
 
 /**
@@ -471,6 +481,101 @@ function bicicleta(P: Pecas): void {
   }
 }
 
+// ------------------------------------------------------------------ a motoquinha dourada
+/**
+ * Spec 038 (T03): a motoquinha dourada (pedido do filho do dono), saída do esboço aprovado: a moto
+ * de brinquedo de criança, gordinha e baixa, com o tanque e a estrela, o farol redondo, o guidão
+ * alto com as manoplas creme, o escapamento curtinho, os para-lamas em dois gomos e as rodinhas
+ * de apoio. Original, sem cara de marca ou de modelo; sem espelhinhos (de frente pareciam dragonas).
+ * O ouro é um amarelo quente e fundo com o ouro escuro embaixo e o reflexo lustroso; só o farol
+ * acende, com a luz mansa do farol do carrinho.
+ */
+function moto(P: Pecas): void {
+  const OURO = '#e8b03c';
+  const OURO_ESC = '#c4871f';
+  const OURO_CLARO = '#ffd97a';
+  const CREME = '#fff3da';
+  const PNEU = '#3a3644';
+  const PRATA = '#cfc8bc';
+  const CORAL = '#ff8a7a';
+  const R = RODA_MOTO;
+  const tras: V3 = [0, R, -0.4];
+  const frente: V3 = [0, R, 0.5];
+  const deitado: V3 = [0, 0, Math.PI / 2];
+  // o motor (a barriga da moto), os cilindros e o quadro até a roda de trás
+  P.caixa('andar-moto-motor', J, undefined, [0.2, 0.2, 0.38], [0, 0.32, 0.06], OURO_ESC, 0.08, NO);
+  for (const s of [-1, 1]) {
+    P.bola(`andar-moto-cilindro${s}`, J, undefined, 0.075, [s * 0.1, 0.3, 0.1], PRATA, [0.6, 1, 1], { gomos: 10, ...NO });
+    tubo(P, `andar-moto-balanca${s}`, [s * 0.075, 0.3, -0.06], [s * 0.075, R, tras[2]], 0.026, OURO_ESC, 8);
+  }
+  // o tanque gordinho na frente do banco, com a estrela creme de cada lado
+  P.caixa('andar-moto-tanque', J, undefined, [0.24, 0.17, 0.3], [0, 0.5, 0.27], OURO, 0.08, { rot: [-0.12, 0, 0], ...NO });
+  P.caixa('andar-moto-tampa', J, undefined, [0.07, 0.025, 0.07], [0, 0.6, 0.24], OURO_CLARO, 0.02, NO);
+  for (const s of [-1, 1])
+    P.placa(`andar-moto-estrela${s}`, J, undefined, perfilEstrela(0.06), 0.012, [s * 0.122, 0.5, 0.28], CREME, { rot: [0, (s * Math.PI) / 2, 0], ...NO });
+  // o banco creme comprido e a rabeta dourada com a lanterninha
+  P.caixa('andar-moto-banco', J, undefined, [0.24, 0.08, 0.46], [0, BANCO_MOTO - 0.04, -0.08], CREME, 0.04, NO);
+  P.caixa('andar-moto-rabeta', J, undefined, [0.22, 0.12, 0.2], [0, 0.45, -0.38], OURO, 0.06, NO);
+  P.bola('andar-moto-lanterna', J, undefined, 0.04, [0, 0.46, -0.485], CORAL, [1, 0.8, 0.5], { gomos: 8, ...NO });
+  // os para-lamas em dois gomos cada, acompanhando a roda (inteiros e retos, pareciam uma tábua)
+  for (const [nome, z0] of [
+    ['t', tras[2]],
+    ['f', frente[2]],
+  ] as const)
+    for (const ang of [0.32, -0.32])
+      P.caixa(`andar-moto-paralama-${nome}${ang}`, J, undefined, [0.16, 0.04, 0.15], [0, R + 0.235 * Math.cos(ang), z0 + 0.235 * Math.sin(ang)], OURO, 0.02, {
+        rot: [ang, 0, 0],
+        ...NO,
+      });
+  // o garfo, o farol redondo com o aro e a caixinha, e o guidão alto com as manoplas creme
+  for (const s of [-1, 1]) tubo(P, `andar-moto-garfo${s}`, [s * 0.085, R, frente[2]], [s * 0.07, 0.7, 0.4], 0.028, OURO_ESC, 8);
+  P.caixa('andar-moto-mesa', J, undefined, [0.2, 0.08, 0.1], [0, 0.72, 0.4], OURO_ESC, 0.035, NO);
+  P.bola('andar-moto-farol', J, undefined, 0.085, [0, 0.66, 0.5], '#fff4d0', [1, 1, 0.55], { luz: 'farol', gomos: 12, ...NO });
+  P.anel('andar-moto-farol-aro', J, undefined, 0.19, 0.035, [0, 0.66, 0.49], OURO_CLARO, { rot: [Math.PI / 2, 0, 0], lados: 14, ...NO });
+  P.caixa('andar-moto-farol-caixa', J, undefined, [0.17, 0.15, 0.1], [0, 0.66, 0.43], OURO, 0.07, NO);
+  const [gx, gy, gz] = GUIDAO_MOTO;
+  tubo(P, 'andar-moto-coluna', [0, 0.74, 0.4], [0, gy, gz], 0.024, PRATA, 8);
+  P.cone('andar-moto-guidao', J, undefined, 0.46, 0.024, 0.024, [0, gy, gz], PRATA, { rot: deitado, lados: 8, ...NO });
+  for (const s of [-1, 1]) {
+    P.cone(`andar-moto-manopla${s}`, J, undefined, 0.11, 0.036, 0.036, [s * gx, gy, gz], CREME, { rot: deitado, lados: 10, ...NO });
+    P.bola(`andar-moto-manopla-ponta${s}`, J, undefined, 0.038, [s * (gx + 0.058), gy, gz], OURO_ESC, [0.6, 1, 1], { gomos: 8, ...NO });
+  }
+  // o escapamento curtinho, dourado escuro, do lado direito
+  P.cone('andar-moto-escape', J, undefined, 0.28, 0.035, 0.042, [0.14, 0.26, -0.24], OURO_ESC, { rot: [Math.PI / 2 + 0.12, 0, 0], lados: 10, ...NO });
+  P.bola('andar-moto-escape-ponta', J, undefined, 0.044, [0.14, 0.276, -0.38], '#8c8478', [1, 1, 0.5], { gomos: 8, ...NO });
+  // os apoios dos pés (onde os sapatos descansam), no alto deles fica o ponto dos pés
+  const apoios = PES['motoquinha-dourada'] as Extract<Pes, { tipo: 'apoio' }>;
+  for (const [s, a] of [
+    [-1, apoios.E],
+    [1, apoios.D],
+  ] as const) {
+    P.caixa(`andar-moto-apoio${s}`, J, undefined, [0.09, 0.03, 0.1], [a[0], a[1] - 0.015, a[2]], PNEU, 0.012, NO);
+    tubo(P, `andar-moto-apoio-haste${s}`, [s * 0.09, a[1] - 0.015, a[2]], [a[0] - s * 0.04, a[1] - 0.015, a[2]], 0.016, PRATA, 6);
+  }
+  // as rodas gordinhas (o pneu, a calota dourada, o miolo e a marquinha que mostra o giro)
+  for (const [no, c, largura] of [
+    ['andarRodaT', tras, 0.14],
+    ['andarRodaF', frente, 0.12],
+  ] as const) {
+    const g = giro(no, c);
+    P.cone(`andar-moto-pneu-${no}`, J, undefined, largura, R, R, [0, 0, 0], PNEU, { rot: deitado, lados: 14, ...g });
+    P.cone(`andar-moto-calota-${no}`, J, undefined, largura + 0.008, R * 0.56, R * 0.56, [0, 0, 0], OURO_CLARO, { rot: deitado, lados: 12, ...g });
+    const fora = largura / 2 + 0.006;
+    for (const s of [-1, 1]) {
+      P.bola(`andar-moto-miolo-${no}${s}`, J, undefined, R * 0.2, [s * fora, 0, 0], OURO_ESC, [0.45, 1, 1], { gomos: 8, ...g });
+      P.bola(`andar-moto-marca-${no}${s}`, J, undefined, R * 0.09, [s * fora, R * 0.36, 0], '#ffffff', [0.5, 1, 1], { gomos: 6, ...g });
+    }
+  }
+  // as rodinhas de apoio de criança, atrás (as duas no mesmo nó)
+  const rr = 0.075;
+  for (const s of [-1, 1]) tubo(P, `andar-moto-haste-rodinha${s}`, [s * 0.25, rr, tras[2]], [s * 0.07, 0.3, tras[2] + 0.02], 0.014, PRATA, 6);
+  const gr = giro('andarRodinhaE', [0, rr, tras[2]]);
+  for (const s of [-1, 1]) {
+    P.cone(`andar-moto-rodinha${s}`, J, undefined, 0.045, rr, rr, [s * 0.25, 0, 0], CREME, { rot: deitado, lados: 10, ...gr });
+    P.bola(`andar-moto-rodinha-marca${s}`, J, undefined, 0.012, [s * 0.275, 0.045, 0], OURO_ESC, [0.6, 1, 1], { gomos: 6, ...gr });
+  }
+}
+
 function nuvem(P: Pecas): void {
   const B = '#ffffff';
   const B2 = '#f1f4ff';
@@ -513,15 +618,16 @@ export function vestirBrinquedoAndar(id: string, lista: Peca[]): void {
   const antes = lista.length;
   const P = new Pecas(lista);
   if (id === 'patinete-luz') patinete(P);
-  // spec 038 (T01): a motoquinha usa o desenho do carrinho, provisório, para casar com a pose e
-  // o guidão provisórios dela; a T03 troca pelo modelo da moto
-  else if (id === 'carrinho-pedal' || id === 'motoquinha-dourada') carrinho(P);
+  else if (id === 'carrinho-pedal') carrinho(P);
   else if (id === 'bicicletinha') bicicleta(P);
+  else if (id === 'motoquinha-dourada') moto(P);
   else nuvem(P);
   // desempenho (T05, a meta da spec: no máximo +20 chamadas de desenho com 4 amigos montados):
   // cada nó leva uma malha por brilho; o brinquedo inteiro num brilho só (o acetinado, o mesmo
-  // degrau dos tesouros) deixa uma malha por nó, e a luz das rodinhas e dos faróis à parte
-  for (let i = antes; i < lista.length; i++) if (!lista[i].luz) lista[i].brilho = lista[i].nome.startsWith('andar-nuvem') ? 0.15 : 0.45;
+  // degrau dos tesouros) deixa uma malha por nó, e a luz das rodinhas e dos faróis à parte.
+  // (spec 038: a motoquinha inteira no lustroso, o reflexo do ouro; a nuvem fosca)
+  const brilho = id === 'nuvem-fofa' ? 0.15 : id === 'motoquinha-dourada' ? 0.8 : 0.45;
+  for (let i = antes; i < lista.length; i++) if (!lista[i].luz) lista[i].brilho = brilho;
 }
 
 /** Os nós que giram dentro do brinquedo (o desenho gira; os testes conferem). */

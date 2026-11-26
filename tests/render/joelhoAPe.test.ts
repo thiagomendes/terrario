@@ -133,8 +133,7 @@ describe('spec 038 (T02): o custo dos brinquedos de pedal', () => {
     const aPe = criarBoneco(scene, normalizarAparencia({}), 'a', undefined, true, true);
     const vestido = criarBoneco(scene, normalizarAparencia({ premium: { andar: id } }), 'b', undefined, true, true);
     const montada = criarBoneco(scene, normalizarAparencia({ premium: { andar: id }, montado: true }), 'c', undefined, true, true);
-    // (a motoquinha ainda é o carrinho provisório da T01; a T03 a deixa com +7)
-    const teto = id === 'bicicletinha' ? 7 : 8;
+    const teto = id === 'carrinho-pedal' ? 8 : 7;
     expect(acesas(vestido) - acesas(aPe)).toBeLessThanOrEqual(2);
     expect(acesas(montada) - acesas(aPe)).toBeLessThanOrEqual(teto);
     scene.dispose();

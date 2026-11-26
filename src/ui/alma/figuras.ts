@@ -83,6 +83,8 @@ const FOTO_PREMIUM: Record<
   'carrinho-pedal': { recorte: 'corpo', giro: 0.9, tudo: true, montado: true },
   bicicletinha: { recorte: 'corpo', giro: 1.1, tudo: true, montado: true },
   'nuvem-fofa': { recorte: 'corpo', giro: 0.7, tudo: true, montado: true },
+  // spec 038 (T03): a motoquinha de três-quartos, o tanque com a estrela e o farol à vista
+  'motoquinha-dourada': { recorte: 'corpo', giro: 0.85, tudo: true, montado: true },
   'camiseta-aquario': { recorte: 'corpo', giro: 0.36 },
   'tenis-cometa': { recorte: 'corpo', giro: 0.75 },
   'capa-estrelas': { recorte: 'corpo', giro: Math.PI - 1.05 },

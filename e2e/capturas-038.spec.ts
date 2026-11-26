@@ -13,6 +13,9 @@ import { assentar, criarMundo, TAMANHOS, type Tamanho } from './guia-palco';
  *   perto; as sequências de fotos da bicicletinha e do carrinho pedalando) e a bandeirinha (a
  *   sequência do carrinho andando). Os vídeos ficam como sequências de fotos (o mp4 do navegador
  *   de teste não abriu no celular do dono).
+ * - `t03`: a motoquinha dourada nas três telas, de dia e de noite, parada e andando; de frente,
+ *   de lado e de costas; os pés nos apoios de perto; a sequência andando; o ícone, a figura e o
+ *   provador na lojinha; e a bandeirinha do carrinho de perto (pedido do orquestrador).
  */
 declare const process: { env: Record<string, string | undefined> };
 const QUAL = (process.env.CAPTURAS_038 ?? '').split(',').filter(Boolean);
@@ -312,6 +315,164 @@ test('T02: deitado e no computador, pedalando de dia e de noite', async ({ brows
         await foto(page, `${PASTA_T02}/${tamanho === 'pc' ? 'computador' : 'deitado'}`, `${nome}-${quando}`);
         await parar(page);
       }
+    }
+    await page.context().close();
+  }
+});
+
+// ------------------------------------------------------------------ T03
+const PASTA_T03 = 'capturas-038/t03-moto';
+const MOTO = 'motoquinha-dourada';
+
+test('T03: a motoquinha parada e andando, de dia e de noite, de todos os lados (celular em pé)', async ({ browser }) => {
+  test.skip(!QUAL.includes('t03'));
+  test.setTimeout(1_200_000);
+  const { page, O } = await abrirGramado(browser, 'empe');
+  for (const [quando, hora] of [
+    ['dia', DIA],
+    ['noite', NOITE],
+  ] as const) {
+    await page.evaluate((h) => (window.__brumaluz!.hora = h), hora);
+    for (const [quem, base] of [
+      ['menino', MENINO],
+      ['menina', MENINA],
+    ] as const) {
+      if (quem === 'menina' && quando === 'noite') continue;
+      await noMeio(page, O, 0, 5);
+      await montarNo(page, base, MOTO);
+      await page.waitForTimeout(1500);
+      for (const [vista, giro, alt] of [
+        ['tres-quartos', 0.8, 0.7],
+        ['lado', Math.PI / 2, 0.3],
+        ['frente', 0, 0.4],
+        ['costas', Math.PI, 0.5],
+        ['outro-tres-quartos', -2.3, 0.6],
+      ] as const) {
+        if (quando === 'noite' && vista !== 'tres-quartos' && vista !== 'lado') continue;
+        await estudio(page, 0.85, giro, 4.2, alt);
+        await page.waitForTimeout(700);
+        await foto(page, PASTA_T03, `${quem}-parada-${vista}-${quando}`);
+      }
+      // andando: a câmera do jogo; para trás e para o lado (o corpo vira de três-quartos) e de lado
+      for (const [vista, frente, lado] of [
+        ['andando-tres-quartos', -0.75, 0.66],
+        ['andando-lado', 0, 1],
+      ] as const) {
+        await noMeio(page, O, 0, 5.2, 0.3);
+        await page.waitForTimeout(600);
+        await page.evaluate(([f, d]) => window.__brumaluz!.controleDireto!.mover(f, d), [frente, lado] as const);
+        await page.waitForTimeout(1500);
+        await foto(page, PASTA_T03, `${quem}-${vista}-${quando}`);
+        await parar(page);
+      }
+    }
+  }
+  await page.evaluate((h) => (window.__brumaluz!.hora = h), DIA);
+  // os pés nos apoios de perto, parada, nos dois lados
+  await noMeio(page, O, 0, 5);
+  await montarNo(page, MENINO, MOTO);
+  await page.waitForTimeout(1500);
+  for (const [vista, giro] of [
+    ['lado', Math.PI / 2],
+    ['outro-lado', -Math.PI / 2],
+  ] as const) {
+    await estudio(page, 0.45, giro, 1.8, 0.2);
+    await page.waitForTimeout(700);
+    await foto(page, PASTA_T03, `pes-nos-apoios-${vista}`);
+  }
+  // a sequência andando de lado (no lugar do vídeo)
+  await noMeio(page, O, 0, 3.6, 0.15);
+  await montarNo(page, MENINO, MOTO);
+  await andarDeLado(page, 0.8);
+  await page.waitForTimeout(1500);
+  const nomes: string[] = [];
+  for (let i = 0; i < 8; i++) {
+    await foto(page, `${PASTA_T03}/sequencia`, `andando-${i + 1}`);
+    nomes.push(`andando-${i + 1}`);
+    await page.waitForTimeout(120);
+  }
+  await parar(page);
+  await prancha(page, `${PASTA_T03}/sequencia`, nomes, 'moto-sequencia', 'A motoquinha andando (8 fotos seguidas)');
+  // a lojinha: o cartão, o detalhe e o provador da motoquinha (a tela inteira, com a interface)
+  await noMeio(page, O, 0, 5);
+  await page.evaluate(() => window.__brumaluz!.personagem!.definir({ corpo: 'masculino', cabeloEstilo: 0, rosto: 0, cabeloCor: 0, pele: 2, roupaEstilo: 0 } as never));
+  await page.evaluate(() => {
+    for (const el of Array.from(document.body.querySelectorAll<HTMLElement>('*'))) el.style.visibility = '';
+    window.dispatchEvent(new Event('brumaluz:lojinha'));
+  });
+  await page.locator('[data-alma-loja]').waitFor({ state: 'visible' });
+  await page.locator('[data-alma-aba="andar"]').click();
+  await page.waitForTimeout(2500);
+  await foto(page, `${PASTA_T03}/lojinha`, 'vitrine-andar');
+  await page.locator('[data-alma-prateleira][data-aba="andar"] .alma-lcard').last().click();
+  await page.waitForTimeout(2000);
+  await foto(page, `${PASTA_T03}/lojinha`, 'detalhe');
+  const provar = page.locator('[data-alma-experimentar]');
+  if (await provar.count()) {
+    await provar.first().click();
+    await page.waitForTimeout(2600);
+    await foto(page, `${PASTA_T03}/lojinha`, 'provador');
+  }
+  await page.context().close();
+});
+
+test('T03: o pano da bandeira do carrinho de perto, parada e andando (celular em pé)', async ({ browser }) => {
+  test.skip(!QUAL.includes('t03'));
+  test.setTimeout(600_000);
+  const { page, O } = await abrirGramado(browser, 'empe');
+  // (pedido do orquestrador: a bandeira grande no quadro. Por trás ela fica de quina; de lado e um
+  // tico por trás, o pano aparece inteiro)
+  await noMeio(page, O, 0, 5);
+  await montarNo(page, MENINA, 'carrinho-pedal');
+  await page.waitForTimeout(1800);
+  const band: string[] = [];
+  // andando para a esquerda da câmera do jogo, a criança fica de perfil com a bandeira do lado da
+  // câmera (e a câmera vai junto); para e assenta: as fotos paradas, do mesmo lugar
+  // (a câmera um tico por cima: o vaivém da bandeira em volta do mastro aparece como giro)
+  await noMeio(page, O, 0, 2.2, 0.55);
+  await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(-0.25, -0.9));
+  await page.waitForTimeout(1200);
+  await parar(page);
+  await page.waitForTimeout(2200);
+  for (let i = 0; i < 3; i++) {
+    await foto(page, `${PASTA_T03}/bandeira`, `parada-${i + 1}`);
+    band.push(`parada-${i + 1}`);
+    await page.waitForTimeout(300);
+  }
+  await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(-0.25, -0.9));
+  await page.waitForTimeout(1400);
+  for (let i = 0; i < 9; i++) {
+    await foto(page, `${PASTA_T03}/bandeira`, `andando-${i + 1}`);
+    band.push(`andando-${i + 1}`);
+    await page.waitForTimeout(110);
+  }
+  await parar(page);
+  await prancha(page, `${PASTA_T03}/bandeira`, band, 'bandeira-de-perto', 'A bandeirinha de perto: parada (1 a 3) e andando (4 a 12)');
+  await page.context().close();
+});
+
+test('T03: a motoquinha deitado e no computador, de dia e de noite', async ({ browser }) => {
+  test.skip(!QUAL.includes('t03'));
+  test.setTimeout(900_000);
+  for (const tamanho of ['deitado', 'pc'] as const) {
+    const { page, O } = await abrirGramado(browser, tamanho);
+    const pasta = `${PASTA_T03}/${tamanho === 'pc' ? 'computador' : 'deitado'}`;
+    for (const [quando, hora] of [
+      ['dia', DIA],
+      ['noite', NOITE],
+    ] as const) {
+      await page.evaluate((h) => (window.__brumaluz!.hora = h), hora);
+      await noMeio(page, O, 0, 4.6, 0.25);
+      await montarNo(page, MENINO, MOTO);
+      await page.waitForTimeout(1500);
+      await estudio(page, 0.85, 0.8, 4.4, 0.7);
+      await page.waitForTimeout(700);
+      await foto(page, pasta, `parada-${quando}`);
+      await noMeio(page, O, 0, 4.6, 0.25);
+      await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(-0.5, 0.85));
+      await page.waitForTimeout(1600);
+      await foto(page, pasta, `andando-${quando}`);
+      await parar(page);
     }
     await page.context().close();
   }

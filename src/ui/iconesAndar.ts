@@ -28,6 +28,19 @@ export const ICONES_ANDAR: Readonly<Record<string, string>> = {
       `<path d="M12 11 H16" stroke="${T}" stroke-width="2.6" stroke-linecap="round"/>` +
       `<circle cx="25" cy="10" r="2" fill="#ff8fb3" stroke="${T}" stroke-width="1.2"/>`,
   ),
+  // spec 038 (T03): a motoquinha dourada de lado: as duas rodas, o tanque com a estrela, o banco,
+  // o farol redondo na frente e o guidão alto
+  'motoquinha-dourada': svg(
+    `<circle cx="8" cy="23" r="4.6" fill="#3b3650" stroke="${T}" stroke-width="1.8"/>` +
+      `<circle cx="8" cy="23" r="2" fill="#ffd97a"/>` +
+      `<circle cx="24" cy="23" r="4.6" fill="#3b3650" stroke="${T}" stroke-width="1.8"/>` +
+      `<circle cx="24" cy="23" r="2" fill="#ffd97a"/>` +
+      `<path d="M7 18 H13 L15 21 H19 L21 15 H14 Q12 13 10 14 Z" fill="#e8b03c" stroke="${T}" stroke-width="1.8" stroke-linejoin="round"/>` +
+      `<path d="M15 15 Q15 11 19 11 Q23 11 22 15 Z" fill="#e8b03c" stroke="${T}" stroke-width="1.8" stroke-linejoin="round"/>` +
+      `<path d="M18.6 12.4 l0.5 1 1.1 .1 -.8 .7 .3 1.1 -1 -.6 -1 .6 .3 -1.1 -.8 -.7 1.1 -.1 z" fill="#fff3da"/>` +
+      `<path d="M21 15 L24 23 M22 9 L22.5 15 M20 8.5 H25" fill="none" stroke="${T}" stroke-width="2" stroke-linecap="round"/>` +
+      `<circle cx="25.5" cy="13" r="2.2" fill="#fff4d0" stroke="${T}" stroke-width="1.4"/>`,
+  ),
   'nuvem-fofa': svg(
     `<path d="M7 24 Q3 24 3 20 Q3 16 7.5 16 Q8 10 14 10 Q19 9 21 13 Q22 12 24 12 Q29 12 29 18 Q29 24 24 24 Z" fill="#fbfdff" stroke="${T}" stroke-width="2" stroke-linejoin="round"/>` +
       `<path d="M9 27 H13 M18 27 H23" stroke="#a9d8ff" stroke-width="2" stroke-linecap="round"/>`,
@@ -48,4 +61,5 @@ export const NOME_ANDAR: Readonly<Record<string, string>> = {
   'carrinho-pedal': 'Andar de carrinho',
   bicicletinha: 'Andar de bicicletinha',
   'nuvem-fofa': 'Andar na nuvem',
+  'motoquinha-dourada': 'Andar de motoquinha',
 };

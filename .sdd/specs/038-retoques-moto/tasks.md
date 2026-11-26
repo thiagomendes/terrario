@@ -21,6 +21,7 @@
 | T00 Medidas de antes | **feita (26 nov)**, na `main` a217838, com o `e2e/desempenho-038.spec.ts` (área desempenho; 4,5 min na placa, 1 trabalhador). Mediana de 3 rodadas, celular em pé, CPU 4×: a pé 46,8 fps e 184 chamadas (andando 46,5 e 185); vestido 46,3 e 188 (andando 45,6 e 189); montados (2 bicicletinhas, 2 carrinhos) 44,6 e 205 (andando 42,8 e 203). Maior quadro: 48 a 150 ms; ao montar os bonecos, até 278 ms. Malhas por boneco: 10,3 a pé, 17,3 vestido ou montado (ativas 4,8, 5,3 e 9,3). Hoje, montados contra a pé: +21 chamadas e de -5% a -8% nos quadros. As rodadas variam até 7 fps, então a T06 alterna a `main` e o ramo na mesma sessão. Os números estão em `capturas-038/t00-desempenho/medidas.txt` |
 | T01 O catálogo e a rede | **feita (26 nov)**. A `motoquinha-dourada` no `PREMIUM` (andar, 140, depois da nuvem) e no `IDS_ANDAR`; a `MONTARIA`, o `GUIDAO` e o desenho dela são os do carrinho, provisórios, até a T03 (o teste das peças exige desenho para cada id). A rede continua 18: `tests/rede/congelado037.ts` congela as regras da `main` a217838 (o catálogo de 18, a aparência com o `montado`, o saneamento e o perfil com o "depois" e a chave à parte), com um teste de que a cópia é fiel sem a moto, e `tests/rede/versao-038.test.ts` tem os 4 casos da spec e a camiseta e o tênis com o mesmo id; os 4 casos já valem hoje, sem conserto. O servidor de antes tira a moto e, com ela, o `montado` (que só vale com o brinquedo); a moto volta do "depois" comprada, mas não vestida. Vitest 262 arquivos e 2432 testes; paridade 36/36 (9,3 min na placa) |
 | T02 O joelho, os pés no pedal e a bandeirinha | **feita (26 nov)**, pelo `artista-voxel`. Os detalhes abaixo |
+| T03 A motoquinha dourada | **feita (26 nov)**, pelo `artista-voxel`. Os detalhes abaixo |
 
 ### T02 (26 nov 2026, `artista-voxel`)
 - **O joelho** (`src/personagem/joelho.ts`, sem Babylon):
@@ -60,3 +61,40 @@
   - **Montados contra a pé:** +32 chamadas parados e +30 andando (a meta é +30); -10% nos quadros parados e +2% andando.
   - **Por boneco:** 10,3 malhas a pé, 20,3 vestido e 20,5 montado (ativas 4,8, 7,3 e 12,3).
   - Está no limite. A T03 tira uma malha de cada moto, e a T06 mede a `main` contra o ramo na mesma sessão. |
+
+### T03 (26 nov 2026, `artista-voxel`)
+- **O modelo** (`moto` em `brinquedoAndar.ts`), saído do esboço aprovado:
+  - o tanque gordinho com a estrela creme, o banco comprido e a rabeta com a lanterninha;
+  - o farol redondo com o aro, o guidão alto com as manoplas creme e o escapamento curtinho;
+  - os para-lamas em dois gomos, os apoios dos pés e as rodinhas de apoio;
+  - sem espelhinhos;
+  - o ouro inteiro no lustroso, e só o farol acende (a luz mansa do farol do carrinho).
+- **A pose:**
+  - sentada no banco (`assentoY` 0,52) pela perna de cada modelo, o tronco um tico para a frente, e as mãos nas manoplas (`GUIDAO`);
+  - os pés nos apoios (`PES`, tipo apoio), pela mesma conta do joelho da T02 (a sola rola no apoio). Os apoios ficam ao alcance da perna mais curta dos 7 modelos.
+- **As rodas e as rodinhas** giram pela velocidade de verdade (`andarRodaF`, `andarRodaT`, `andarRodinhaE`). Parada, a moto fica em pé nas rodinhas.
+- **O ícone da roda** (`iconesAndar.ts`, "Andar de motoquinha") e a figura da lojinha (`figuras.ts`, de três-quartos), com o provador montado (o do 036).
+- **O custo:**
+  - +7 malhas montada sobre o boneco a pé (o brinquedo, o farol, as duas rodas, as rodinhas e os dois joelhos) e menos de 10 mil triângulos, conferidos no `joelhoAPe.test.ts`. O `pePedal.test.ts` agora mede os apoios da moto nos 7 modelos, com dt de 1/60 e de 1/20, e no caminho dos amigos.
+  - **`desempenho-038`** (3 rodadas, montados: 2 motos, bicicletinha e carrinho):
+
+    | Cenário | Chamadas | fps |
+    |---|---|---|
+    | a pé | 184 | 48,5 |
+    | vestido | 196 | 46,1 |
+    | montados, parados | 217 | 43,8 |
+    | montados, andando | 213 | 44,1 |
+
+  - **Montados contra a pé:** +33 chamadas parados e +29 andando (a meta é +30), -9,7% nos quadros parados e -1,8% andando. Por boneco montado: 11,8 malhas ativas (a pé, 4,8).
+  - **Continua no limite.** As 4 réguas por boneco da spec somam +29 a +30 sozinhas, e sobra pouco para o resto da cena. O que dá para tirar sem mudar o desenho já saiu. As opções que mudam o que se vê ficam para o orquestrador:
+    - as rodinhas de apoio paradas, sem nó próprio: -1 por moto e por bicicletinha;
+    - o farol da moto sem luz própria: -1, mas ele não acende de noite.
+- **As fotos:** `capturas-038/t03-moto/` (com o `indice.md`):
+  - as três telas, de dia e de noite, parada e andando;
+  - de frente, de lado e de costas, com o menino e a menina;
+  - os pés nos apoios de perto e a sequência andando;
+  - a lojinha (a vitrine, o detalhe e o provador);
+  - a bandeirinha do carrinho de perto (pedido do orquestrador).
+- **O que ficou fraco:**
+  - na vitrine em pé, o cartão da moto é o quinto da aba de andar e fica embaixo, a meio caminho (a T05 confere o "2 toques, ou a rolagem conta como um toque");
+  - na sequência de perto, a bandeirinha balança pouco de lado (uns 20°): dá para ver, mas é sutil. |
