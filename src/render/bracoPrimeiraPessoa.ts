@@ -174,7 +174,9 @@ const GUARDA_FORA_BAIXA = (50 * Math.PI) / 180;
 // (portão, 3ª rodada: na altura da copa das árvores ela parecia enroscada; mais alta e mais longe,
 // ela fica no céu, abaixo da fileira de botões do alto e longe da mira)
 const PIPA_TELA: [number, number] = [-0.15, 0.6];
-const PIPA_TELA_LARGA: [number, number] = [-0.45, 0.6];
+// (na tela larga e baixa, o alto é da bússola no meio e da carteira à esquerda: a pipa fica um
+// tico mais baixa, entre elas e a copa)
+const PIPA_TELA_LARGA: [number, number] = [-0.4, 0.35];
 const PIPA_DISTANCIA = 5;
 /** O raio da mão no espaço dela (sem a escala do boneco): o item encosta nele. */
 const RAIO_MAO_LOCAL = 0.085;
