@@ -680,13 +680,13 @@
   "vestiu": true,
   "mao": {
    "pega": [],
-   "braco": 0
+   "braco": 4
   },
   "tesouro": {
    "naMao": 0,
    "guardaChuva": 0,
-   "pipa": 0,
-   "fio": false
+   "pipa": 7,
+   "fio": true
   }
  },
  "volta": {
@@ -711,10 +711,10 @@
    "colocou": false,
    "tempos": [
     3,
-    225,
-    450,
-    682,
-    922
+    257,
+    488,
+    713,
+    962
    ]
   }
  },
