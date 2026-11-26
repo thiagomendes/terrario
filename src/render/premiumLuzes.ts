@@ -165,7 +165,8 @@ function corDoCometa(t: number, out: Color3): void {
 export const AQUARIO = { largura: 512, altura: 136, quadrosPorSegundo: 24 } as const;
 
 type Rgb = string;
-interface Peixe {
+/** (spec 038, esboço: exportado para o esboço desenhar o aquário com outros peixinhos) */
+export interface Peixe {
   /** Onde começa na volta (0 a 1) e a altura (0 em cima, na gola; 1 na barra). */
   x0: number;
   y: number;
@@ -375,8 +376,11 @@ interface Aquario {
   quadro(t: number): void;
 }
 
-/** Desenha o aquário no instante t (segundos). Exportada para os testes. */
-export function desenharAquario(c: CanvasRenderingContext2D, t: number): void {
+/**
+ * Desenha o aquário no instante t (segundos). Exportada para os testes. Spec 038 (esboço): os
+ * peixinhos podem vir de fora (o desenho novo da camiseta); sem eles, os de hoje.
+ */
+export function desenharAquario(c: CanvasRenderingContext2D, t: number, peixes: readonly Peixe[] = PEIXES): void {
   const W = AQUARIO.largura;
   const H = AQUARIO.altura;
   const areia = H * 0.83;
@@ -507,8 +511,8 @@ export function desenharAquario(c: CanvasRenderingContext2D, t: number): void {
     if (a > 0) emVolta(x, 8, (xx) => desenharBolha(c, xx, y, r, a));
   }
   // os peixinhos dando a volta (e as bolhinhas que cada um solta)
-  for (let i = 0; i < PEIXES.length; i++) {
-    const p = PEIXES[i];
+  for (let i = 0; i < peixes.length; i++) {
+    const p = peixes[i];
     const x = p.x0 * W + p.vel * t;
     const y = p.y * H + Math.sin(t * 1.4 + i * 1.9) * 3;
     const dir = Math.sign(p.vel) || 1;
