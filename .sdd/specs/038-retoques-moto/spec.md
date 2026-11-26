@@ -143,7 +143,16 @@ Continuam valendo as regras da 036:
   - as pegadas de luz ficam nas mesmas cores.
 - **Os ícones e as figuras** da lojinha e de "Meus tesouros" acompanham o desenho novo.
 
-### 5. O esboço sai
+### 5. O convite das missões aparece e some (pedido do dono, 26 nov)
+- **Hoje:** o baú com "?" é o convite que aparece depois de uns 2 minutos sem missão. Ele fica para sempre embaixo da estrela. No celular deitado, depois que a 037 levou o mapinha e a mochila para a esquerda, ele fica espremido entre eles.
+- **Como fica:** o convite aparece com a pulsada, as estrelinhas e o "plim", fica uns 8 s e some.
+  - Volta no máximo uma vez a cada 5 minutos, enquanto a criança continua sem missão.
+  - Tocar nele enquanto está à vista abre o quadro, como hoje.
+  - O quadro continua vindo pela roda e nunca abre sozinho (030).
+- **O selinho da missão escolhida** não muda: ele fica, porque mostra o que a criança está fazendo.
+- **No celular deitado,** o selinho e o convite não encostam no mapinha, na mochila nem na estrela.
+
+### 6. O esboço sai
 `src/esboco/retoques.ts`, `retoquesPecas.ts` e o e2e do esboço saem só **depois** de a medida pé–pedal estar no teste do jogo. As fotos e as medidas continuam em `capturas-038/esboco/`.
 
 ## Experiência medida (para não frustrar)
