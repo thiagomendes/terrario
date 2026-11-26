@@ -16,6 +16,7 @@
  */
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Viewport } from '@babylonjs/core/Maths/math.viewport';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
@@ -75,7 +76,14 @@ export interface BracoPrimeiraPessoa {
   /** Peso da mão na tela (0 fora, 1 inteira). */
   peso(): number;
   /** Onde a mão e o ombro caem na tela (px) e o ombro desta tela. */
-  tela(): { mao: [number, number]; ombro: [number, number]; ombroCamera: number[]; maoPx: number };
+  tela(): {
+    mao: [number, number];
+    ombro: [number, number];
+    ombroCamera: number[];
+    maoPx: number;
+    /** A caixa do item da mão na tela (px), ou null. */
+    item: [number, number, number, number] | null;
+  };
   /** A conferência do ombro (quadros com a mão na tela e a menor folga, px). */
   ponta(): { quadros: number; menorFolgaPx: number };
   zerarPonta(): void;
@@ -767,6 +775,35 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     vigia.menorFolgaPx = Math.min(vigia.menorFolgaPx, folga);
   };
 
+  /**
+   * A caixa do item da mão na tela (px CSS: esquerda, cima, direita, baixo), pelas caixas das
+   * peças dele (o item da barra e o tesouro na mão; null sem nada aceso). Para as conferências.
+   */
+  const caixaDoItem = (): [number, number, number, number] | null => {
+    if (!vista || !osso.isEnabled() || !canvas) return null;
+    const r = canvas.getBoundingClientRect();
+    const t = scene.getTransformMatrix();
+    const v = new Viewport(0, 0, r.width, r.height);
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    const malhas = [...vista.noDaMao().getChildMeshes(false), ...noTesouro.getChildMeshes(false)];
+    for (const m of malhas) {
+      if (!m.isEnabled()) continue;
+      // (as peças do boneco não refazem a caixa a cada quadro: a caixa local, pela matriz de agora)
+      const w = m.computeWorldMatrix(true);
+      for (const c of m.getBoundingInfo().boundingBox.vectors) {
+        const p = Vector3.Project(Vector3.TransformCoordinates(c, w), Matrix.IdentityReadOnly, t, v);
+        x0 = Math.min(x0, p.x);
+        y0 = Math.min(y0, p.y);
+        x1 = Math.max(x1, p.x);
+        y1 = Math.max(y1, p.y);
+      }
+    }
+    return Number.isFinite(x0) ? [Math.round(x0), Math.round(y0), Math.round(x1), Math.round(y1)] : null;
+  };
+
   return {
     quadro,
     definirLuz(f, noite = 0) {
@@ -782,6 +819,7 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
       ombro: ombroNaTela,
       ombroCamera: achado ? achado.ombro.map((n) => +n.toFixed(3)) : [],
       maoPx: achado?.maoPx ?? 0,
+      item: caixaDoItem(),
     }),
     ponta: () => ({ quadros: vigia.quadros, menorFolgaPx: Math.round(vigia.menorFolgaPx) }),
     zerarPonta() {

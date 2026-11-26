@@ -6,6 +6,7 @@ import {
   FOLGA_INTERFACE_PX,
   FOV_BRACO,
   ITEM_ACIMA,
+  ITEM_CAIXA_BAIXA,
   ITEM_RAIO,
   MAO_MAX_LARGURA,
   MEIA_MANGA,
@@ -105,7 +106,7 @@ describe('a conta do ombro da primeira pessoa (spec 037)', () => {
         // a mão inteira na tela em todas as ações; segurando, o bloco acima dos botões. Na tela
         // deitada e baixa (decisão do dono, 037), o aceno pode sair pela beira de cima, e o item
         // fica inteiro dentro da tela (os botões de baixo são guardados pelos retângulos de verdade)
-        const baixa = tela.h <= TELA_BAIXA && tela.w > tela.h;
+        const baixa = tela.h <= TELA_BAIXA && tela.w > tela.h && !!r.baixa;
         const m = maos(r.ombro, tela);
         m.forEach((q, i) => {
           if (baixa && (i === 5 || i === 6)) return;
@@ -113,9 +114,9 @@ describe('a conta do ombro da primeira pessoa (spec 037)', () => {
           expect(q.x + q.r).toBeLessThanOrEqual(tela.w);
           expect(q.y - q.r).toBeGreaterThanOrEqual(0);
           expect(q.y + q.r).toBeLessThanOrEqual(tela.h);
-          if (baixa) {
-            expect(q.x + 1.9 * q.r).toBeLessThanOrEqual(tela.w);
-            expect(q.y - (ITEM_ACIMA + ITEM_RAIO) * q.r).toBeGreaterThanOrEqual(0);
+          if (baixa && (i === 0 || i === 7)) {
+            expect(q.x + ITEM_CAIXA_BAIXA.direita * q.r).toBeLessThanOrEqual(tela.w);
+            expect(q.y - ITEM_CAIXA_BAIXA.cima * q.r).toBeGreaterThanOrEqual(0);
           }
         });
         if (!baixa) expect(m[0].y + 2.2 * m[0].r).toBeLessThanOrEqual(tela.botoes - 8);
@@ -175,16 +176,24 @@ describe('a conta do ombro da primeira pessoa (spec 037)', () => {
     expect(foraDaTela(r.ombro, MEIA_MANGA, t)).toBeGreaterThanOrEqual(4);
     const m = maos(r.ombro, t);
     m.forEach((q, i) => {
-      // (o aceno passa rápido; o comer, 0,7 s, pode passar atrás da interface)
+      // (o aceno passa rápido; o comer, 0,7 s, e o golpe, um quarto de segundo, podem passar
+      // atrás da interface)
       if (i === 5 || i === 6) return;
-      expect(q.x + 1.9 * q.r).toBeLessThanOrEqual(t.w);
-      if (i === 7) return;
+      if (i === 0 || i === 7) {
+        // segurando e comendo, a caixa do item (9 em cada 10 itens da folha) inteira na tela
+        expect(q.x + ITEM_CAIXA_BAIXA.direita * q.r).toBeLessThanOrEqual(t.w - 4);
+        expect(q.y - ITEM_CAIXA_BAIXA.cima * q.r).toBeGreaterThanOrEqual(4);
+        // o balde de pipoca medido no jogo, comendo (2,71 raios para a direita, 3,55 para cima)
+        expect(q.x + 2.71 * q.r).toBeLessThanOrEqual(t.w - 4);
+        expect(q.y - 3.55 * q.r).toBeGreaterThanOrEqual(4);
+      }
+      if (i >= 7) return;
       expect(encosta(q.x, q.y, q.r)).toBe(false);
       expect(encosta(q.x, q.y - ITEM_ACIMA * q.r, ITEM_RAIO * q.r)).toBe(false);
     });
-    // a mão no canto de baixo à direita, como em pé
+    // a mão na metade de baixo, do lado direito, como em pé
     expect(m[0].y).toBeGreaterThan(t.h * 0.55);
-    expect(m[0].x).toBeGreaterThan(t.w * 0.8);
+    expect(m[0].x).toBeGreaterThan(t.w * 0.75);
   });
 
   it('sem solução (uma tela onde a mão não cabe acima dos botões), devolve null: a mão some', () => {

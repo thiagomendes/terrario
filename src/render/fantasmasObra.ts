@@ -67,6 +67,12 @@ const MIOLO_DENTRO_DA_VEZ = 0.45;
 const CONTORNO_DENTRO_DA_VEZ = 0.7;
 const CONTORNO_DENTRO_CIMA = 0.45;
 const PISO_LUZ_DENTRO = 0.5;
+/**
+ * De dentro, a marca do próximo bloco: o miolo cheio (sobre o alfa do pulso) e amarelo claro (a
+ * cor do vértice multiplica o azul do material: 3 × 0,32, 1,45 × 0,6 e 0,32 × 1 dão o amarelo).
+ */
+const MIOLO_MARCA = 1.3;
+const COR_MARCA: [number, number, number] = [3, 1.45, 0.32];
 
 /** De dentro, quanto de um fantasma aparece pela distância dos olhos até o cubo (0 some, 1 inteiro). */
 function aparecePerto(
@@ -242,14 +248,24 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
       const traco = olho ? (k === 0 ? CONTORNO_DENTRO_DA_VEZ : CONTORNO_DENTRO_CIMA) : 1;
       porCamada[k].forEach((f, i) => {
         const perto = olho ? aparecePerto(olho, f) : 1;
-        const a = perto * miolo;
         // o contorno some mais devagar que o miolo e, no da mira, fica aceso: mostra onde o
         // bloco vai sem a névoa do miolo colado nos olhos
         const naMira = !!mira && mira.x === f.x && mira.y === f.y && mira.z === f.z;
-        const contorno = naMira && olho ? Math.max(Math.min(1, perto * 1.6), ALFA_MIRA_PERTO) : Math.min(1, perto * 1.6) * traco;
-        if (cores[i * 4 + 3] !== a || coresMo[i * 4 + 3] !== contorno) {
-          cores[i * 4 + 3] = a;
-          coresMo[i * 4 + 3] = contorno;
+        // de dentro, o próximo bloco (o da mira) é o único com o miolo cheio, em amarelo claro:
+        // a marca se vê sem procurar no meio da grade leve
+        const marca = naMira && !!olho;
+        const a = marca ? Math.max(perto, ALFA_MIRA_PERTO) * MIOLO_MARCA : perto * miolo;
+        const contorno = marca ? Math.max(Math.min(1, perto * 1.6), ALFA_MIRA_PERTO) : Math.min(1, perto * 1.6) * traco;
+        const cor = marca ? COR_MARCA : corDoFantasma(f.bloco);
+        if (
+          cores[i * 4 + 3] !== a ||
+          coresMo[i * 4 + 3] !== contorno ||
+          cores[i * 4] !== cor[0] ||
+          cores[i * 4 + 1] !== cor[1] ||
+          cores[i * 4 + 2] !== cor[2]
+        ) {
+          cores.set([cor[0], cor[1], cor[2], a], i * 4);
+          coresMo.set(marca ? [1, 0.86, 0.35, contorno] : [1, 1, 1, contorno], i * 4);
           mudou = true;
         }
       });

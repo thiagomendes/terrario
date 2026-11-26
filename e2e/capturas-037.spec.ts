@@ -124,6 +124,12 @@ test('T08: a primeira pessoa nas três telas, de dia e de noite', async ({ brows
         const naMira = await page.evaluate(() => !!window.__brumaluz!.fantasmaNaMira?.());
         nota(`${pre}-obra`, { naMira, mao: await pecasNaMao(page), colher: i >= 0 });
         await foto(page, `${pre}-bloco-na-obra`);
+        // de perto: o meio da tela, onde fica a marca do próximo bloco
+        const vp = page.viewportSize()!;
+        await page.screenshot({
+          path: `${PASTA}/${pre}-bloco-na-obra-perto.png`,
+          clip: { x: Math.round(vp.width * 0.25), y: Math.round(vp.height * 0.2), width: Math.round(vp.width * 0.5), height: Math.round(vp.height * 0.5) },
+        });
       });
       // 1b. colada num fantasma da obra (na altura dos olhos), olhando por ele
       await tentar(`${pre}-fantasma-colado`, async () => {
@@ -148,18 +154,6 @@ test('T08: a primeira pessoa nas três telas, de dia e de noite', async ({ brows
         await page.evaluate((g) => window.__brumaluz!.mirarPonto!(g.x + 0.5, g.y + 0.5, g.z + 0.5), g);
         await page.waitForTimeout(700);
         await foto(page, `${pre}-fantasma-um-passo-atras`);
-      });
-      // 1c. a tela de fora (a terceira pessoa), com as tábuas: no celular deitado, o mapinha e a
-      // mochila na esquerda
-      await tentar(`${pre}-de-fora`, async () => {
-        await ligar(page, false);
-        await fora(page);
-        await naMao(page, `bloco:${Bloco.TABUAS}`, 16);
-        await olhar(page, 0.6 + Math.PI / 2, 0.25);
-        await page.waitForTimeout(1200);
-        await foto(page, `${pre}-de-fora`);
-        await ligar(page, true);
-        await dentro(page);
       });
       // 2. a mão vazia, olhando para a frente
       await tentar(`${pre}-mao-vazia`, async () => {
@@ -413,6 +407,136 @@ test('T08: a roda, a volta, as recusas e a parede (em pé, de dia)', async ({ br
     nota('parede', { camera: await page.evaluate(() => window.__brumaluz!.primeiraPessoa!.camera()) });
   });
   await page.context().close();
+});
+
+/** T08c: a tela de fora num lugar aberto (Doce Reino, numa laje), nas três telas, de dia e de noite. */
+test('T08c: a tela de fora num lugar aberto', async ({ browser }) => {
+  test.skip(!QUAL.includes('defora'));
+  mkdirSync(PASTA, { recursive: true });
+  for (const [tam, nome] of TELAS)
+    for (const [quando, h] of [
+      ['dia', 0.42],
+      ['noite', 0.95],
+    ] as const) {
+      const page = await abrirMundo(browser, { id: `t08c-fora-${nome}-${quando}`, tema: 'doce-reino', tamanho: tam });
+      await hora(page, h);
+      await assentar(page, 12);
+      const { cx, cz, Y } = await page.evaluate((pedra) => {
+        const e = window.__brumaluz!;
+        const [px, , pz] = e.posicao!;
+        const cx = Math.floor(px);
+        const cz = Math.floor(pz);
+        let alto = 0;
+        for (let dx = -8; dx <= 8; dx++)
+          for (let dz = -8; dz <= 8; dz++) {
+            let y = 120;
+            while (y > 2 && e.bloco!(cx + dx, y, cz + dz) === 0) y--;
+            alto = Math.max(alto, y);
+          }
+        const Y = alto + 4;
+        const lote: { x: number; y: number; z: number; v: number }[] = [];
+        for (let dx = -9; dx <= 9; dx++)
+          for (let dz = -9; dz <= 9; dz++) {
+            lote.push({ x: cx + dx, y: Y, z: cz + dz, v: pedra });
+            for (let dy = 1; dy <= 6; dy++) lote.push({ x: cx + dx, y: Y + dy, z: cz + dz, v: 0 });
+          }
+        e.editarLote!(lote);
+        return { cx, cz, Y };
+      }, Bloco.PEDRA_LISA);
+      await page.waitForTimeout(2000);
+      await page.evaluate(({ x, y, z }) => window.__brumaluz!.teleportar!(x, z, y), { x: cx + 0.5, y: Y + 1, z: cz + 0.5 });
+      await naMao(page, `bloco:${Bloco.TABUAS}`, 16);
+      await olhar(page, 0, 0.3);
+      await page.waitForTimeout(2500);
+      await foto(page, `${nome}-${quando}-de-fora`);
+      await page.context().close();
+    }
+});
+
+/**
+ * T08c: a caixa de cada item da folha na tela, nas três telas, segurando, comendo (a comida) e no
+ * meio do golpe (as ferramentas), em raios da mão a partir do meio dela: a régua do item inteiro
+ * na tela da conta do ombro (`ITEM_CAIXA`, em `contaOmbro.ts`).
+ */
+test('T08c: a caixa dos itens da folha na tela (segurando, comendo e golpeando)', async ({ browser }) => {
+  test.skip(!QUAL.includes('itens'));
+  mkdirSync(PASTA, { recursive: true });
+  const medidas: Record<string, unknown> = {};
+  for (const [tam, nome] of TELAS) {
+    const page = await abrirMundo(browser, { id: `t08c-itens-${nome}`, tema: 'doce-reino', tamanho: tam });
+    await hora(page, 0.42);
+    await assentar(page, 12);
+    await ligar(page, true);
+    await dentro(page);
+    await olhar(page, 0, 0.15);
+    await page.waitForTimeout(800);
+    const todos = await page.evaluate(() => window.__brumaluz!.primeiraPessoa!.itens());
+    const blocos = [7, 43, 9, 37, 56, 57, 59, 60, 61, 82, 98, 10];
+    const lista = [
+      ...blocos.map((b) => ({ id: `bloco:${b}`, tipo: 'bloco' })).filter((x) => todos.some((t) => t.id === x.id)),
+      ...todos.filter((t) => t.tipo !== 'bloco'),
+    ];
+    const caixa = async () =>
+      page.evaluate(() => {
+        const t = window.__brumaluz!.primeiraPessoa!.tela();
+        if (!t.item || !t.maoPx) return null;
+        const r = t.maoPx / 2;
+        const [mx, my] = t.mao;
+        const [x0, y0, x1, y1] = t.item;
+        return {
+          px: t.item,
+          mao: t.mao,
+          r,
+          // em raios da mão, a partir do meio dela (esquerda, cima, direita, baixo)
+          rel: [(mx - x0) / r, (my - y0) / r, (x1 - mx) / r, (y1 - my) / r].map((v) => +v.toFixed(2)),
+          dentro: x0 >= 0 && y0 >= 0 && x1 <= innerWidth && y1 <= innerHeight,
+        };
+      });
+    const daTela: Record<string, unknown> = {};
+    for (const it of lista) {
+      const linha: Record<string, unknown> = {};
+      await page.evaluate((id) => {
+        const e = window.__brumaluz!;
+        e.inventario!.definir(5, { item: id, qtd: 3 });
+        e.selecionarSlot!(5);
+      }, it.id);
+      await page.waitForTimeout(650);
+      linha.segurando = await caixa();
+      if (it.tipo === 'comida') {
+        await page.evaluate(() => window.__brumaluz!.comer!());
+        for (const ms of [250, 300, 300]) {
+          await page.waitForTimeout(ms);
+          linha[`comendo${ms}`] = await caixa();
+        }
+        await page.waitForTimeout(900);
+      }
+      if (it.tipo === 'ferramenta') {
+        await olhar(page, 0, 0.55);
+        await page.waitForTimeout(300);
+        await page.evaluate(() => {
+          const c = window.__brumaluz!.controleDireto!;
+          c.mirar(innerWidth * 0.5, innerHeight * 0.6);
+          c.quebrar(true);
+        });
+        for (const ms of [120, 120, 120]) {
+          await page.waitForTimeout(ms);
+          linha[`golpe${ms}`] = await caixa();
+        }
+        await page.evaluate(() => {
+          const c = window.__brumaluz!.controleDireto!;
+          c.quebrar(false);
+          c.soltarMira();
+        });
+        await olhar(page, 0, 0.15);
+        await page.waitForTimeout(300);
+      }
+      daTela[it.id] = linha;
+    }
+    medidas[nome] = daTela;
+    nota(`itens-${nome}`, daTela);
+    await page.context().close();
+  }
+  writeFileSync(`${PASTA}/caixas-dos-itens.json`, JSON.stringify(medidas, null, 1));
 });
 
 test('T08b: a interface de verdade nas três telas (os retângulos que a conta do ombro usa)', async ({ browser }) => {
