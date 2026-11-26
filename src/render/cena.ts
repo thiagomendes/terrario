@@ -6373,6 +6373,7 @@ export function criarCena(
   // dentro, o morador muito perto dos olhos some com suavidade, pela distância dos olhos até a
   // caixa dele (colado, 0,3, some; a 1,2, inteiro)
   const opacidadeCasa = casaCena?.opacidadeDeMorador ?? null;
+  const maoDoQuadro: { quadro: number; mao: { mao: [number, number]; maoPx: number } | null } = { quadro: -1, mao: null };
   renderCriaturas.definirOpacidadeDeMorador((id, x, y, z) => {
     const a = opacidadeCasa ? opacidadeCasa(id, x, y, z) : 1;
     if (primeiraPessoa.fracao() <= 0.5) return a;
@@ -6380,7 +6381,28 @@ export function criarCena(
     const dx = Math.max(0, Math.abs(v.x - x) - 0.45);
     const dy = Math.max(0, Math.abs(v.y - (y + 0.85)) - 0.85);
     const dz = Math.max(0, Math.abs(v.z - z) - 0.45);
-    const t = Math.max(0, Math.min(1, (Math.hypot(dx, dy, dz) - 0.3) / 0.9));
+    const d = Math.hypot(dx, dy, dz);
+    // (portão, 3ª rodada: na cena de comer, quem estava a 1 ou 2 blocos, bem atrás da mão, ficava
+    // com o balde em cima do rosto): quem cai atrás da mão e do item na tela some mais longe, até
+    // 2,2; os outros, como antes, até 1,2
+    let ate = 1.2;
+    // (a mão na tela uma vez por quadro, para todos os moradores)
+    if (maoDoQuadro.quadro !== scene.getFrameId()) {
+      maoDoQuadro.quadro = scene.getFrameId();
+      const t = bracoPP && bracoPP.peso() > 0.5 ? bracoPP.tela() : null;
+      maoDoQuadro.mao = t ? { mao: t.mao, maoPx: t.maoPx } : null;
+    }
+    const mao = maoDoQuadro.mao;
+    if (mao && d < 2.2 && mao.maoPx > 0) {
+      const p = Vector3.TransformCoordinates(new Vector3(x, y + 1.25, z), scene.getTransformMatrix());
+      const r = canvas.getBoundingClientRect();
+      const sx = ((p.x + 1) / 2) * r.width;
+      const sy = ((1 - p.y) / 2) * r.height;
+      const raio = mao.maoPx / 2;
+      const [mx, my] = mao.mao;
+      if (sx > mx - 4 * raio && sx < mx + 4 * raio && sy > my - 6 * raio && sy < my + 2 * raio) ate = 2.2;
+    }
+    const t = Math.max(0, Math.min(1, (d - 0.3) / (ate - 0.3)));
     return Math.min(a, t * t * (3 - 2 * t));
   });
   // os pilotos ficam onde o carrinho deles está na tela (o mesmo lugar do desenho do carrinho);
@@ -6719,7 +6741,8 @@ export function criarCena(
       t = toque ? '' : 'Clique direito (ou F): comer';
     } else if (!semDedo && podeEncherObra() && fantasmaNaMira()) {
       // spec 014: o fantasma da obra na mira (a mãozinha para quem não lê)
-      t = `${MAO}${toque ? 'Toque no bloco azul' : 'Clique direito: pôr no bloco azul'}`;
+      // (spec 037: de dentro, a marca do próximo bloco é amarela; "marcado" vale nas duas câmeras)
+      t = `${MAO}${toque ? 'Toque no bloco marcado' : 'Clique direito: pôr no bloco marcado'}`;
     } else {
       t = dicaDoPlantio(alvo, toque, p?.item);
     }
