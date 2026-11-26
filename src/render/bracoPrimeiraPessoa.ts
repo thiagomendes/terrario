@@ -171,8 +171,10 @@ const GUARDA_FORA = (8 * Math.PI) / 180;
 const GUARDA_FRENTE_BAIXA = (16 * Math.PI) / 180;
 const GUARDA_FORA_BAIXA = (50 * Math.PI) / 180;
 /** A pipa de dentro: onde ela fica na tela (em metades da tela, do meio) e a distância. */
-const PIPA_TELA: [number, number] = [-0.15, 0.36];
-const PIPA_DISTANCIA = 3.4;
+// (portão, 3ª rodada: na altura da copa das árvores ela parecia enroscada; mais alta e mais longe,
+// ela fica no céu, abaixo da fileira de botões do alto e longe da mira)
+const PIPA_TELA: [number, number] = [-0.15, 0.5];
+const PIPA_DISTANCIA = 5;
 /** O raio da mão no espaço dela (sem a escala do boneco): o item encosta nele. */
 const RAIO_MAO_LOCAL = 0.085;
 

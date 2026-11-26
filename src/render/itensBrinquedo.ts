@@ -617,16 +617,23 @@ export function modeloNaMao(
       case 'pipoca': {
         // balde listrado de vermelho e branco, cheio de pipoca
         add(ci('balde', 0.13, 0.085, 0.06, '#f6f2ea'), 0, 0.065, 0);
+        // spec 037 (portão, 3ª rodada: de perto, na primeira pessoa, a listra reta num balde que
+        // fecha para cima (0,085 embaixo, 0,06 em cima) entrava nele no meio da altura, com a ponta
+        // arredondada, e parecia tinta escorrendo): cada listra segue a parede do balde, de borda a
+        // borda, com as pontas retas (o alto dela inclina para dentro)
+        const inclina = -Math.atan2(0.085 - 0.06, 0.13);
+        const alto = Math.hypot(0.13, 0.085 - 0.06);
         for (let i = 0; i < 4; i++) {
           const a = (i / 4) * Math.PI * 2;
+          const r = (0.085 + 0.06) / 2 + 0.004;
           const l = add(
-            cx(`listra${i}`, 0.035, 0.13, 0.012, 0.006, '#e03a34'),
-            Math.cos(a) * 0.073,
+            cx(`listra${i}`, 0.035, alto, 0.008, 0.001, '#e03a34'),
+            Math.cos(a) * r,
             0.065,
-            Math.sin(a) * 0.073,
+            Math.sin(a) * r,
           );
           l.rotation.y = -a + Math.PI / 2;
-          l.rotation.x = 0;
+          l.rotation.x = inclina;
           l.rotation.z = 0;
         }
         for (const [x, y, z] of [
