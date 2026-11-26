@@ -155,6 +155,7 @@ Continuam valendo as regras da 036:
 ### 6. A cama nova (pedido do dono, 26 nov; entra na 038 por decisão dele)
 - **Hoje:** a cama é um cubo de um bloco só, com a textura de cima e de lado (`cama_topo` e `cama_lado` em `src/art/atlas.ts`), sem relevo nenhum. "Não parece uma cama."
 - **O que o dono quer:** uma cama de **dois blocos** de comprimento, retangular, com relevo: cabeceira, travesseiro e cobertor. Desenho original, no estilo dos nossos móveis, sem cópia de outro jogo.
+- **A referência é o ícone da cama na barra** (o dono: "o ícone fica bonitinho, mas na hora que você coloca é um terror"): a cama posta tem que ter a cara do ícone, com estrado de madeira, colchão e travesseiro brancos e cobertor vermelho, em 3D e com relevo.
 - **Esboço primeiro:** 2 ou 3 camas para o dono escolher, com fotos de dia e de noite, de longe e de perto, e na primeira pessoa.
 - **O que precisa ser decidido no esboço e na revisão** (núcleo e rede):
   - pôr e quebrar uma peça de duas células, como a porta (as duas metades, a direção pelo olhar da criança, a recusa se a segunda célula não couber, quebrar uma metade tira as duas);
