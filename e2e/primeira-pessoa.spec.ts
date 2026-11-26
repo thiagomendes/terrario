@@ -818,6 +818,117 @@ test('os lugares com câmera própria: a primeira pessoa sai sozinha e volta dep
   expect(resultado).toEqual({ foto: 'foto', montada: 'montada', dormindo: 'dormindo', parque: 'parque', casa: 'casa' });
 });
 
+/**
+ * Defeito achado pelo dono no ar (26 nov): de dentro, com o machadinho na mão, ligar o voo fazia a
+ * mão e o item sumirem, e eles só voltavam ao pousar. A mão fica à vista voando, pulando e caindo.
+ */
+for (const [nome, tamanho, tela] of [
+  ['empe', 'empe', null],
+  // (um celular em pé menor: com o botão de descer, a mão não achava lugar e sumia o voo inteiro)
+  ['empe-pequeno', 'empe', { width: 360, height: 640 }],
+  ['deitado', 'deitado', null],
+  ['pc', 'pc', null],
+] as const)
+  test(`voando, pulando e caindo de dentro, a mão e o machadinho continuam à vista (${nome})`, async ({ browser }) => {
+    const page = await abrirMundo(browser, { id: `pp-voo-${nome}`, tema: 'doce-reino', tamanho });
+    if (tela) await page.setViewportSize(tela);
+    await assentar(page);
+    await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      e.inventario!.definir(0, { item: 'machado_pedra', qtd: 1 });
+      e.selecionarSlot!(0);
+    });
+    await ligar(page, true);
+    await dentro(page);
+    await olhar(page, 0.6, 0.1);
+    /** A mão (peso) e o tamanho dela na tela, quadro a quadro, por `ms`. */
+    const amostrar = (ms: number) =>
+      page.evaluate(
+        (ms) =>
+          new Promise<{ menor: number; maoPx: number; quadros: number }>((ok) => {
+            const pp = window.__brumaluz!.primeiraPessoa! as unknown as {
+              maos(): { direita: number };
+              tela(): { maoPx: number };
+            };
+            const t0 = performance.now();
+            let menor = 1;
+            let quadros = 0;
+            const f = () => {
+              menor = Math.min(menor, pp.maos().direita);
+              quadros++;
+              if (performance.now() - t0 < ms) requestAnimationFrame(f);
+              else ok({ menor, maoPx: pp.tela().maoPx, quadros });
+            };
+            requestAnimationFrame(f);
+          }),
+        ms,
+      );
+    await page.waitForTimeout(1200);
+    const noChao = await amostrar(600);
+    const y0 = await page.evaluate(() => window.__brumaluz!.posicao![1]);
+    // voando como a criança: dois toques no pulo ligam o voo, segurar sobe (o botão de descer
+    // aparece no celular), e anda para a frente no ar
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(120);
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(100);
+    const subindo = amostrar(2500);
+    await page.keyboard.down('Space');
+    await page.waitForTimeout(900);
+    await page.keyboard.up('Space');
+    await page.keyboard.down('KeyW');
+    await page.waitForTimeout(900);
+    await page.keyboard.up('KeyW');
+    const voando = await subindo;
+    const subiu = (await page.evaluate(() => window.__brumaluz!.posicao![1])) - y0;
+    const descer = await page.evaluate(() => {
+      const b = document.querySelector<HTMLElement>('.toque .descer');
+      return b ? !b.hidden && b.getBoundingClientRect().width > 0 : null;
+    });
+    if (tamanho === 'empe') {
+      mkdirSync('capturas-037/voo', { recursive: true });
+      await page.screenshot({ path: `capturas-037/voo/${nome === 'empe' ? 'em-pe' : nome}-voando-machadinho.png` });
+    }
+    // caindo: o voo desliga lá no alto
+    await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      const [x, y, z] = e.posicao!;
+      e.voar!(false);
+      e.teleportar!(x, z, y - 1.62 + 4);
+    });
+    const caindo = await amostrar(1500);
+    // pulando, no chão
+    await page.waitForTimeout(800);
+    const pulando = await page.evaluate(
+      () =>
+        new Promise<number>((ok) => {
+          const e = window.__brumaluz!;
+          const pp = e.primeiraPessoa! as unknown as { maos(): { direita: number } };
+          e.controleDireto!.tecla?.('pular', true);
+          const t0 = performance.now();
+          let menor = 1;
+          const f = () => {
+            menor = Math.min(menor, pp.maos().direita);
+            if (performance.now() - t0 > 250) e.controleDireto!.tecla?.('pular', false);
+            if (performance.now() - t0 < 1200) requestAnimationFrame(f);
+            else ok(menor);
+          };
+          requestAnimationFrame(f);
+        }),
+    );
+    const medida = { noChao, voando, subiu, descer, caindo, pulando };
+    console.log(`voo ${nome}`, JSON.stringify(medida));
+    mkdirSync('capturas-037/voo', { recursive: true });
+    writeFileSync(`capturas-037/voo/medidas-${nome}.json`, JSON.stringify(medida, null, 1));
+    expect(noChao.menor).toBeGreaterThan(0.9);
+    expect(subiu).toBeGreaterThan(1);
+    expect(voando.menor).toBeGreaterThan(0.9);
+    expect(voando.maoPx).toBeGreaterThan(0);
+    expect(caindo.menor).toBeGreaterThan(0.9);
+    expect(pulando).toBeGreaterThan(0.9);
+    await page.context().close();
+  });
+
 test('desmaiada: a primeira pessoa sai e volta quando ela renasce', async ({ browser }) => {
   const page = await abrirMundo(browser, {
     id: 'pp-desmaio',
