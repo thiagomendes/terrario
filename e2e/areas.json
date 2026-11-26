@@ -93,7 +93,9 @@
         "src/ui/conteiner.ts",
         "src/ui/gestosInventario.ts",
         "src/ui/icones.ts",
-        "src/ui/status.ts"
+        "src/ui/status.ts",
+        "src/esboco/moveis.ts",
+        "src/esboco/moveisPecas.ts"
       ],
       "suites": [
         "ajustes-filho.spec.ts",
@@ -101,6 +103,7 @@
         "construir-037.spec.ts",
         "cristal.spec.ts",
         "dar-item.spec.ts",
+        "esboco-moveis.spec.ts",
         "interacao.spec.ts",
         "inventario.spec.ts",
         "mineracao.spec.ts"
