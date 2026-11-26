@@ -185,6 +185,8 @@ export function criarRenderCriaturas(
       tapa?: boolean;
       ferido: boolean;
       luz: number;
+      /** A opacidade já passada ao que ele leva fora do boneco (o bastão, o teclado, o balão). */
+      opacidadeLeva?: number;
     }
   >();
   /**
@@ -1056,6 +1058,13 @@ export function criarRenderCriaturas(
             for (const k of mb.keytar) if (k.isEnabled(false) !== ver) k.setEnabled(ver);
           }
           mb.balao?.atualizar(dt);
+          // spec 037 (portão, 5ª rodada): o que ele leva fora do boneco (o bastão, o microfone, o
+          // teclado, o balão do gesto) some junto com ele, e volta inteiro com ele
+          const op = mb.boneco.opacidade();
+          if (op < 1 || (mb.opacidadeLeva ?? 1) < 1) {
+            for (const m of mb.boneco.raiz.getChildMeshes(false)) m.visibility = op;
+            mb.opacidadeLeva = op;
+          }
           const l = luz(c);
           if (Math.abs(l - mb.luz) > 0.002) {
             mb.luz = l;
