@@ -187,8 +187,9 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
    */
   const quinas = (() => {
     const h = 0.47;
-    const L = 0.22;
-    const g = 0.05;
+    // (finas e curtas: as do canto perto dos olhos já ficam grandes na tela)
+    const L = 0.18;
+    const g = 0.03;
     const barras: Mesh[] = [];
     for (const sx of [-1, 1])
       for (const sy of [-1, 1])
