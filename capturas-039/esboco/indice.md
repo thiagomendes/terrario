@@ -48,6 +48,22 @@
 | `toque-fogao-1`, `2` | o fogão acende as bocas, a tampa da panela pula e sai o vapor de cubinhos |
 | `toque-pia`, `toque-guarda-roupa`, `toque-tapete` (em pé) | a água cai na cuba, o guarda-roupa abre e mostra as roupinhas, o carrinho anda na pista |
 
+## A segunda volta (`volta2/`, 26 nov)
+O dono escolheu os estilos recomendados e as regras dos quatro toques. Esta volta mostra só o que mudou. Ela sai do mesmo spec, com `ESBOCO_039=volta2-empe,volta2-deitado,volta2-pc`.
+
+- **A prancha:** `volta2/00-prancha.jpg` (1080 × 4872), com o antes ao lado do agora.
+- **As pastas:** `volta2/empe/`, `volta2/deitado/` e `volta2/computador/`. O custo está em `volta2/custo.json`: 15.754 triângulos com tudo ligado.
+
+| Fotos | O que é |
+|---|---|
+| `sala-*`, `cozinha-*`, `quarto-*` | os cômodos na escala nova (a conta de proporção está no estudo, seção 7), de dia, de noite e de dentro |
+| `sofa-a-sentada`, `regua-cozinha` | sentada no sofá novo; em pé ao lado do fogão, com a bancada entre o queixo e os olhos |
+| `cama-a-deitada`, `cama-a-deitada-lado`, `cama-a-dormindo-noite` | a criança deitada de novo: o edredom baixo e inteiro, a cabeça no travesseiro, a criança inteira na cama de dois blocos |
+| `regra-fogao-1` a `4` | o fogão cozinha: o peixe cru na boca, as bocas acesas, o peixe pronto, o peixe na mão |
+| `regra-geladeira-1` a `4` | a geladeira guarda comida: a maçã na mão, a porta abre com a comida guardada (os itens do jogo), a maçã guardada, de perto |
+| `regra-guarda-1` a `4` | o guarda-roupa abre a troca de roupa: toca, abre, a tela de troca de roupa de hoje (só em pé e no computador) e a roupa nova |
+| `regra-mesa-1` a `3` | a mesa junta para comer: a menina e o menino sentados, a comida no prato, comendo juntos |
+
 ## O que é de mentirinha no esboço
 - Não há bloco de móvel, núcleo nem toque de verdade: o teste liga cada toque pela API.
 - A luz do abajur e da lua no chão é um disco morno. No jogo, a luz do bloco faz isso no chão e nas paredes.
