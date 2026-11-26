@@ -38,8 +38,13 @@ export const OLHOS_FRENTE = 0.2;
  */
 const FOLGA_LADO = 0.2;
 const FOLGA_CIMA = 0.12;
-/** Olhando bem para baixo, o olhar passa um tico da vertical: aparecem o peito e os sapatos. */
-const PITCH_CURVADO = 0.35;
+/**
+ * Conserto da 037 (o dono: "não precisaria enxergar ele de cima"): de dentro, olhar para baixo
+ * para em 75°, sem passar da vertical e sem virar a câmera. A mira do meio ainda alcança o bloco do
+ * chão logo à frente dos pés (a ~0,6 do meio do corpo). Antes, o olhar passava um tico da vertical
+ * para mostrar o peito e os sapatos.
+ */
+export const LIMITE_OLHAR_BAIXO = (75 * Math.PI) / 180;
 /** Pouso: quanto a câmera abaixa (blocos) por segundo de queda, no máximo POUSO_MAXIMO. */
 const POUSO_POR_SEGUNDO = 0.14;
 const POUSO_MAXIMO = 0.09;
@@ -465,12 +470,13 @@ export function criarPrimeiraPessoa(op: OpcoesPrimeiraPessoa): PrimeiraPessoa {
       frente = livre < frente ? livre : Math.min(livre, frente + dt * 0.8);
       const destino = olhosPara(yaw);
       visao.position.copyFrom(Vector3.Lerp(visao.position, new Vector3(destino.x, destino.y, destino.z), e));
-      // olhando bem para baixo, o olhar passa um tico da vertical: o peito e os sapatos aparecem
-      // (o alto da tela continua sendo a frente: nada vira de ponta-cabeça)
-      const curva = suave((pitch - 1.0) / 0.45);
-      visao.rotation.x = pitch + PITCH_CURVADO * curva * e;
-      visao.updateUpVectorFromRotation = curva > 0;
-      if (curva <= 0) visao.upVector.set(0, 1, 0);
+      // olhar para baixo para no limite: o controle não passa dele por dentro (nada acumula
+      // para além do limite, e voltar a olhar para a frente responde na hora); a câmera nunca
+      // vira nem passa da vertical
+      if (alvoT === 1 && pitch > LIMITE_OLHAR_BAIXO) op.apontar(yaw, LIMITE_OLHAR_BAIXO);
+      visao.rotation.x = Math.min(pitch, LIMITE_OLHAR_BAIXO);
+      if (visao.updateUpVectorFromRotation) visao.updateUpVectorFromRotation = false;
+      visao.upVector.set(0, 1, 0);
     },
     quadro(dt) {
       const e = suave(t);

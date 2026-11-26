@@ -121,8 +121,6 @@ export interface OpcoesBraco {
 
 /** O grupo de desenho do braço: por cima do mundo (nunca entra na parede). */
 const GRUPO = 2;
-/** Olhando mais para baixo que isto, a mão sai de vista (o corpo aparece). */
-const PITCH_SEM_MAO = 0.85;
 /** Voando, o balanço calmo da mão (rad no ombro, uns 4 px na tela em pé). */
 const BALANCO_VOO = 0.02;
 /** O golpe dura um intervalo de golpe do jogo; o empurrão de colocar, 0,3 s. */
@@ -527,10 +525,13 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
 
   // ---------------------------------------------------------------- o corpo de verdade
   // a cabeça e os braços do boneco somem por dentro (a junta inteira, com o que estiver preso
-  // nela); o boneco continua inteiro para os amigos
+  // nela); o boneco continua inteiro para os amigos. Conserto da 037 (o dono: "não precisaria
+  // enxergar ele de cima"): de dentro, o corpo inteiro some junto com a cabeça (o peito, a roupa,
+  // as pernas e os sapatos); só o braço da frente aparece
   const junta = (n: string) => scene.getTransformNodeByName(`personagem-junta-${n}`);
   let corpoMexido = false;
   const mostrarCorpo = (cabeca: boolean, bracos: boolean) => {
+    junta('corpo')?.setEnabled(cabeca);
     junta('cabeca')?.setEnabled(cabeca);
     junta('bracoD')?.setEnabled(bracos);
     // o tesouro da mão (a varinha, o guarda-chuva) vai com o braço esquerdo de verdade; de dentro,
@@ -693,10 +694,10 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     }
     if (!vista || en.aparencia !== aparenciaDaVista) montarVista(en.aparencia);
     const agora = performance.now() / 1000;
-    // ---------------- o corpo de verdade: a cabeça some quando a câmera passa por ela; os braços
-    // do corpo só aparecem olhando para baixo, quando a mão da frente já saiu (nunca dois braços)
-    const sumir = suave((en.pitch - PITCH_SEM_MAO) / 0.25);
-    mostrarCorpo(en.fracao <= 0.55, sumir > 0.5 || en.fracao < 0.55);
+    // ---------------- o corpo de verdade: some inteiro quando a câmera passa pela cabeça (conserto
+    // da 037, o dono: olhando para baixo, a mão da frente fica, como olhando para a frente, e o
+    // corpo visto de cima não aparece; antes, a mão saía e os braços do corpo voltavam)
+    mostrarCorpo(en.fracao <= 0.55, en.fracao < 0.55);
     corpoMexido = true;
     personagem.definirOpacidade(1);
     // ---------------- a sombra, debaixo dos pés
@@ -756,7 +757,7 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     const comTesouro = !temItem && !!tesouroId && !en.aparencia.montado;
     // (a mão vazia só entra para agir: tocar, colocar, acenar, comer)
     const aparece = (temItem || comTesouro || !!en.gesto || comendo || agindo) && !!achado;
-    const quer = aparece ? (1 - sumir) * (troca >= 0 ? Math.abs(Math.cos(Math.PI * troca)) : 1) : 0;
+    const quer = aparece ? (troca >= 0 ? Math.abs(Math.cos(Math.PI * troca)) : 1) : 0;
     peso = aproximar(peso, quer * e, troca >= 0 ? 40 : 9, dt);
     if (!achado || peso <= 0.02) {
       // (o osso leva o braço e o item juntos: nada fica preso na tela)
