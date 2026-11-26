@@ -45,6 +45,7 @@ import {
   GANHO_PASSO,
   GANHO_PULO,
   MEIA_MANGA,
+  TELA_BAIXA,
   criarCacheOmbro,
   direcaoDoBraco,
   type Retangulo,
@@ -139,6 +140,11 @@ const GIRO_NAO_DENTRO = 0.75;
  * na cor do boneco e a comida parecer comida (portão da 037).
  */
 const LUZ_NOITE_MAO = 0.55;
+/**
+ * Com uma ferramenta na mão, quase nada (portão, 3ª rodada: a lâmina clara da colher do pedreiro,
+ * no alto da tela em pé, longe da vinheta do canto, ficava branca e acesa de noite).
+ */
+const LUZ_NOITE_FERRAMENTA = 0.1;
 
 /**
  * Os tesouros da mão, de dentro (portão da 037): a direção do cabo na mão (no espaço da mão; o
@@ -155,6 +161,15 @@ const TESOURO_DENTRO: Record<string, { dir: [number, number, number]; escala: nu
  */
 const GUARDA_FRENTE = (8 * Math.PI) / 180;
 const GUARDA_FORA = (8 * Math.PI) / 180;
+/**
+ * Na tela deitada e baixa (portão, 3ª rodada: o pano saía do quadro e sobrava a vareta), a mão
+ * fica perto dos olhos e o pano, 1,33 acima dela, passa por cima do quadro. Pela conta
+ * (`referencia/conta-guarda-deitado.mjs`), para a frente o pano já entra em cima da mira; inclinado
+ * 50° para fora e 16° para a frente, ele desce pelo canto de cima à direita, com 3 das 8 pontinhas
+ * à vista, longe da mira e da bússola (27% do pano no quadro).
+ */
+const GUARDA_FRENTE_BAIXA = (16 * Math.PI) / 180;
+const GUARDA_FORA_BAIXA = (50 * Math.PI) / 180;
 /** A pipa de dentro: onde ela fica na tela (em metades da tela, do meio) e a distância. */
 const PIPA_TELA: [number, number] = [-0.15, 0.36];
 const PIPA_DISTANCIA = 3.4;
@@ -270,6 +285,17 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
   let aparenciaDaVista: Aparencia | null = null;
   let juntaMao: TransformNode | null = null;
   let luz = 1;
+  /** A luz do lugar e a noite (da cena), e se a mão leva uma ferramenta (a luz da noite muda). */
+  let luzLugar = 1;
+  let noiteAgora = 0;
+  let comFerramenta = false;
+  const aplicarLuz = () => {
+    const extra = comFerramenta ? LUZ_NOITE_FERRAMENTA : LUZ_NOITE_MAO;
+    const nova = luzLugar * (1 + extra * noiteAgora);
+    if (nova === luz) return;
+    luz = nova;
+    vista?.definirLuz(luz);
+  };
   // o tesouro da mão de dentro: as peças do segundo boneco, na mão da frente (a varinha e o
   // guarda-chuva) ou no céu da frente, com o fio (a pipa)
   const noTesouro = new TransformNode('pp-tesouro', scene);
@@ -501,6 +527,8 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
   let itemMostrado = false;
   const trocarItem = (m: EntradaBraco['naMao']) => {
     itemMostrado = m.bloco !== null || m.item !== null;
+    comFerramenta = !!(m.item && obterItem(m.item)?.ferramenta) || m.item === 'colher_pedreiro';
+    aplicarLuz();
     vista!.definirNaMao(m.bloco, m.item, m.qtd);
     marcarGrupo();
     medirEncosto();
@@ -759,10 +787,14 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
       const f = camera.getDirection(Vector3.Forward());
       const fh = new Vector3(f.x, 0, f.z).normalize();
       const lado = new Vector3(fh.z, 0, -fh.x);
+      const tela = canvas!.getBoundingClientRect();
+      const baixa = tela.height <= TELA_BAIXA && tela.width > tela.height;
+      const frente = baixa ? GUARDA_FRENTE_BAIXA : GUARDA_FRENTE;
+      const fora = baixa ? GUARDA_FORA_BAIXA : GUARDA_FORA;
       const eixo = lado
-        .scale(Math.sin(GUARDA_FORA))
-        .add(new Vector3(0, Math.cos(GUARDA_FRENTE) * Math.cos(GUARDA_FORA), 0))
-        .add(fh.scale(Math.sin(GUARDA_FRENTE)));
+        .scale(Math.sin(fora))
+        .add(new Vector3(0, Math.cos(frente) * Math.cos(fora), 0))
+        .add(fh.scale(Math.sin(frente)));
       noMundo.rotationQuaternion = cabo([eixo.x, eixo.y, eixo.z], 1);
     } else noMundo.setEnabled(false);
     // ---------------- a conferência: o ombro, com a grossura da manga, fora da tela
@@ -807,8 +839,9 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
   return {
     quadro,
     definirLuz(f, noite = 0) {
-      luz = f * (1 + LUZ_NOITE_MAO * Math.max(0, Math.min(1, noite)));
-      vista?.definirLuz(luz);
+      luzLugar = f;
+      noiteAgora = Math.max(0, Math.min(1, noite));
+      aplicarLuz();
     },
     nao() {
       naoT = 0;
