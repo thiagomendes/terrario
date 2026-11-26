@@ -1,6 +1,6 @@
 ---
 id: 038-retoques-moto
-title: 'Retoques e a moto dourada: a motoquinha na lojinha, a camiseta e o tênis redesenhados e os pés no pedal'
+title: 'Retoques e a moto dourada: a motoquinha na lojinha, a camiseta e o tênis redesenhados, os pés no pedal e a bandeirinha'
 status: DRAFT
 base_branch: main
 branch: feat/038-retoques-moto
@@ -15,128 +15,167 @@ checks:
 ## Contexto
 O filho do dono já joga com a Lojinha maior (036), no ar desde 24 nov 2026. Em 25 nov ele pediu **uma moto dourada** na lojinha.
 
-Vão junto três retoques pequenos:
-- **Dois itens antigos com desenho novo**, apontados pelo portão visual da 036:
+Junto com ela vêm quatro retoques pequenos:
+- **Dois itens antigos**, apontados pelo portão visual da 036, ganham desenho novo:
   - a camiseta de aquário, porque o peixe laranja de listras brancas pode lembrar um personagem de filme;
   - o tênis de 20 moedinhas, porque as listras rosa, amarela e azul ficam perto de arco-íris.
-- **Os pés no pedal**, que o dono viu jogando: na bicicletinha o pedal gira, mas os pés pedalam flutuando, e no carrinho de pedal os sapatos saem pelo capô.
+- **Os pés no pedal**, que o dono viu jogando: na bicicletinha o pedal gira, mas os pés pedalam flutuando; no carrinho de pedal, os sapatos saem pelo capô.
+- **A bandeirinha do carrinho**, que fica parada quando o carro anda (o filho reclamou em 26 nov).
 
 ## O que existia
 ### O esboço (26 nov 2026, branch `esboco/038-retoques-moto`)
 - O código está em `src/esboco/retoques.ts` e `retoquesPecas.ts`, ligado só com `?esboco=retoques`. As fotos saem do `e2e/esboco-retoques.spec.ts` (`ESBOCO_038`).
-- Prancha, fotos, vídeos e medidas estão em `capturas-038/esboco/`. O `indice.md` traz o porquê de cada versão.
-- **A medida pé–pedal**, da sola até o alto do pedal, em 72 amostras numa volta:
-  - na bicicletinha de hoje, de 0,087 a 0,43 bloco (média 0,28);
-  - com o joelho do esboço, 0 (menos de 0,1 mm) na bicicletinha, no carrinho e na motoca;
-  - o carrinho de hoje não tem pedal.
-- **O custo do esboço** (`custo.json`) passa da régua da 036:
-  - a motoquinha soma 8 malhas no brinquedo, mais 2 do joelho, e tem 16,8 mil triângulos;
+- Prancha, fotos, vídeos e medidas estão em `capturas-038/esboco/`, com o porquê de cada versão no `indice.md`.
+- **A medida pé–pedal do esboço** é da sola até o alto do pedal, em 72 amostras numa volta, com o modelo `andarilho`:
+  - a bicicletinha de hoje fica de 0,087 a 0,43 bloco (média 0,28);
+  - com o joelho, dá 0 na bicicletinha nova, no carrinho novo e na Motoca de pedal (que ficou de fora);
+  - **a motoquinha ainda não foi medida.**
+
+  A medida escreve o giro direto nas juntas, sem a suavização do jogo, então **não vale como prova do jogo**.
+- **O custo do esboço** (`custo.json`):
+  - a motoquinha soma 8 malhas no brinquedo, mais 2 do joelho, com 16,8 mil triângulos;
   - a bicicletinha nova tem 6 malhas (hoje são 5) e 15,6 mil triângulos (hoje 9,5 mil).
-- `src/render/premiumLuzes.ts` já aceita outra lista de peixinhos no `desenharAquario`. Sem a lista, o desenho continua igual.
+- O esboço só fotografou o menino, de túnica e sapato comum.
 
 ### O jogo hoje (`main` a217838, `VERSAO_REDE` 18)
 - **Os quatro brinquedos de andar** da 036:
   - estão no `PREMIUM` de `src/jogo/alma.ts`, na categoria `andar`: patinete 110, bicicletinha 120, carrinho 140 e nuvem 150;
-  - são desenhados em `src/personagem/brinquedoAndar.ts` (`IDS_ANDAR`, a pose de cada um, as mãos no guidão);
-  - têm ícone em `src/ui/iconesAndar.ts`, figura em `src/ui/alma/figuras.ts` e som em `src/audio/somItens.ts` e na cena;
-  - o estado `montado` mora na aparência;
-  - comprar já monta, e são 2 toques na roda para montar e descer.
-- **A perna do boneco é uma peça só**, do quadril ao sapato, e não dobra.
-- **A camiseta de aquário** (`camiseta-aquario`, 15) e **o tênis-cometa** (`tenis-cometa`, 20) estão no `PREMIUM`, desenhados em `premiumLuzes.ts` e `bonecoPremium.ts`.
-- **A primeira pessoa (037)** sai para fora quando a criança monta, porque montado é um lugar com câmera própria.
+  - são desenhados em `src/personagem/brinquedoAndar.ts` (`IDS_ANDAR`, `MONTARIA`, `GUIDAO`, `avancarAndar`), com ícone (`iconesAndar.ts`), figura (`figuras.ts`) e som;
+  - o estado `montado` mora na aparência. Montar não refaz o boneco: o brinquedo é montado quando é vestido, e o `montado` só troca a pose.
+- **A pose** passa por `render/boneco.aplicarPose`, que suaviza as juntas (`suave`, k = 1−e^(−16·dt)) e o `corpoY`. Esse caminho serve o jogador, os amigos, a figura da lojinha e o provador.
+- **A perna do boneco é uma peça só**, do quadril ao sapato, e não dobra. Os modelos têm pernas de 0,62 a 0,74.
+- **O carrinho** tem um brilho só, então o brinquedo inteiro, com a bandeirinha, é uma malha juntada.
+- **O tênis-cometa** tem luz `cometa`, que anima do ouro ao azul, além de `BRILHOS.cometa` e do anel do pouso azul em `premiumMundo.ts`. O `efeito` do catálogo diz "faixa de luz de ouro e azul".
+- **A camiseta de aquário** desenha a lista padrão `PEIXES` em `premiumLuzes.ts`.
+- **A rede 18** tem o teste `tests/rede/versao-036.test.ts` contra as regras congeladas do `main` ff958e3, de antes da 036.
+- **A primeira pessoa (037)** sai para fora ao montar.
 
 ## Decisões do dono (26 nov 2026, pela prancha do esboço)
 | Pergunta | Decisão |
 |---|---|
-| A moto | **A Motoquinha dourada**, por **140 moedinhas**: tanque gordinho com estrela, farol redondo, guidão alto, escapamento curtinho e rodinhas de apoio. A Motoca de pedal, de três rodas, fica de fora. |
-| A camiseta de aquário | **Os Peixinhos de bolinhas:** o mesmo aquário, com um amarelinho de bolinhas brancas no lugar do peixe de listras, e nenhum peixe com listra. Quem já comprou fica com ela. O preço continua 15. |
-| O tênis de 20 | **Violeta e ouro:** o mesmo tênis com duas cores só, o cano violeta e o ouro na faixa de luz, na estrela e na cauda. As pegadas de luz ficam nas mesmas cores. Quem já comprou fica com ele. |
-| Os pés no pedal | **Como no esboço:** o joelho dobra nos brinquedos de pedal ou de apoio, a bicicletinha é ajustada para o pé alcançar, e o carrinho ganha pedais embaixo do painel. |
+| A moto | **A Motoquinha dourada**, por **140 moedinhas**: tanque gordinho com estrela, farol redondo, guidão alto, escapamento curtinho e rodinhas de apoio. A Motoca de pedal fica de fora. |
+| A camiseta de aquário | **Os Peixinhos de bolinhas:** o mesmo aquário, com um amarelinho de bolinhas brancas no lugar do peixe de listras. Nenhum peixe tem listra. Quem já comprou fica com ela, e o preço continua 15. |
+| O tênis de 20 | **Violeta e ouro:** o mesmo tênis com duas cores só, o cano violeta e o ouro na faixa de luz, na estrela e na cauda. Quem já comprou fica com ele. |
+| Os pés no pedal | **Como no esboço:** o joelho dobra nos brinquedos de pedal ou apoio, a bicicletinha é ajustada, e o carrinho ganha pedais embaixo do painel. |
+| A bandeirinha | Pedido do filho: tremular quando o carrinho anda. |
 
-Regras que já valem desde a 036 e continuam:
-- a moto é só enfeite, com a mesma velocidade e o mesmo pulo;
+Continuam valendo as regras da 036:
+- os brinquedos são só enfeite, com a mesma velocidade e o mesmo pulo;
 - comprar já monta;
 - as mãos vão no guidão;
-- o brilho é contido e sem arco-íris;
-- nada lembra marca ou modelo real.
+- o brilho é contido, sem arco-íris e sem cara de marca ou modelo real.
 
-## Decisões do orquestrador (pequenas, contadas ao dono)
-- **O nome na lojinha:** "Motoquinha dourada", na aba dos de andar, depois da nuvem. O efeito fica escrito no catálogo: "sentada na motoquinha, com farol que acende de noite e rodinhas de apoio".
-- **Nas motos, os espelhinhos saem.** De frente, pareciam dragonas nos ombros da criança.
-- **O som da motoquinha** é um "vrum" de brinquedo, curto e baixo, ao montar, sem ronco de motor. Andando, só as rodinhas, como no carrinho. A buzininha do carrinho não se repete.
-- **O custo da motoquinha:** ela entra na régua da 036, com uns 5 chamadas de desenho por boneco montado.
-  - Para isso, as peças se juntam por material: o ouro, o creme, o pneu e o farol.
-  - As rodas ficam com menos gomos.
-  - O joelho junta a canela e o sapato numa malha só quando der.
-  - Se não couber, a meta é no máximo 6, com a medida registrada.
-- **O joelho** vale só para quem está montado num brinquedo com pedal ou apoio: a bicicletinha, o carrinho e a motoquinha. Andando a pé, a perna continua como hoje: esticada, é a mesma perna.
+## Decisões do orquestrador (pequenas, contadas ao dono; ajustadas na revisão de 26 nov)
+- **O nome:** "Motoquinha dourada", na aba dos de andar, depois da nuvem. O efeito do catálogo é "sentada na motoquinha, com farol que acende de noite e rodinhas de apoio".
+- **As motos ficam sem espelhinhos.** De frente, eles pareciam dragonas nos ombros.
+- **O som da motoquinha:** um "vrum" de brinquedo, curto e baixo, só ao montar, pela régua da 019 (`somResto.test.ts`: curto e abaixo do golpe). Andando, só as rodinhas.
+- **A régua de custo sobe**, porque o joelho e as peças que giram precisam de malha própria:
+  - montado, no máximo **+7 malhas** sobre o mesmo boneco a pé sem brinquedo vestido, na bicicletinha, no carrinho e na motoquinha;
+  - a pé com brinquedo de pedal vestido, no máximo **+2** (o joelho);
+  - cada brinquedo com no máximo **10 mil triângulos**;
+  - os pedais do carrinho ficam sem nó próprio, juntados no brinquedo e parados embaixo do painel, porque quase não aparecem. Os pés giram;
+  - as rodas e os pedais redondos ficam com menos gomos;
+  - as peças se juntam por material.
+- **"Na curva" sai da bandeirinha:** dá pouco ganho, e o giro dos amigos vem da rede, com o risco de tremor que o Unicórnio-pônei teve.
+- **O tênis:** a luz `cometa` passa a animar só do ouro ao ouro claro, sem azul. O `BRILHOS.cometa` e o anel do pouso ficam em ouro e violeta. O `efeito` passa a ser "faixa de luz de ouro; pegadas de luz e estrelinhas a cada passo".
 - **A primeira pessoa** continua saindo para fora ao montar, como na 037.
-- **Os amigos veem** a motoquinha, o joelho e os pés no pedal, com a mesma animação.
 
 ## O que muda
 ### 1. O catálogo e a rede
 - `motoquinha-dourada` entra no `PREMIUM`, na categoria `andar`, por 140, com o `desenho` `premium:motoquinha-dourada`, e no `IDS_ANDAR`.
-- **A versão da rede continua 18**, pela mesma regra da 036: nenhum comando, evento ou campo de quadro novo.
-  - Um navegador de antes descarta o id desconhecido e mostra o amigo sem a moto.
-  - Um servidor de antes tira o que não conhece.
-  - O servidor publica antes do site, para os amigos verem a moto.
-  - Um teste prova que a aparência com a motoquinha passa pelas regras congeladas de hoje.
-- **Nada some:** a lista de ids de "depois" da 036 continua valendo.
-- **A camiseta e o tênis mantêm o mesmo id**: só o desenho muda.
+- **A versão da rede continua 18:** não entra nenhum comando, evento ou campo de quadro novo.
+- **As regras congeladas novas** são as do `main` a217838, o servidor e o site de antes da 038 (normalizar e sanear a aparência e o perfil). Quatro testes:
+  - o servidor de antes tira só a moto e mantém o resto, com o `montado`;
+  - o site de antes mostra o amigo a pé;
+  - um perfil com a moto, no site de antes, vai para a lista de "depois" e volta;
+  - a própria criança, numa sala com o servidor de antes, vê a própria moto.
+- **A camiseta e o tênis mantêm o mesmo id**, e só o desenho muda.
 - **A paridade 36/36 roda na conferência**, porque o catálogo está no caminho do núcleo.
 
-### 2. A motoquinha dourada
-- Sai do esboço para `brinquedoAndar.ts`, com a pose sentada, as mãos no guidão e os pés nos apoios (o joelho dobra).
-- **O dourado:** amarelo quente e fundo, com o ouro escuro embaixo e o reflexo de plástico lustroso.
-  - Só o farol acende, com a mesma luz mansa do farol do carrinho.
-  - Nada entra no brilho que borra.
-  - De noite, a moto continua clara, sem halo.
-- **As rodas e as rodinhas de apoio** giram com a velocidade de verdade. Parada, a moto fica em pé nas rodinhas.
-- **Na lojinha e em "Meus tesouros"** ela tem ícone (`iconesAndar.ts`), figura (`figuras.ts`) e provador, montada e andando um pouquinho em volta, como os outros de andar.
+### 2. O joelho e os pés no pedal
+- **Onde mora a conta:** o `pernaAte` vai para `src/personagem/`, sem Babylon.
+  - Ele é chamado dentro de `render/boneco.aplicarPose`, que serve o jogador, os amigos, a figura da lojinha e o provador.
+  - Os pedais e os apoios ficam numa tabela só, como o `GUIDAO`, usada pelas peças e pela pose.
+  - Os números de `avancarAndar`, `MONTARIA` e `GUIDAO` são atualizados para a bicicletinha e o carrinho novos.
+- **Depois da suavização:** montada em brinquedo de pedal ou apoio, a perna e o joelho saem da conta a cada quadro.
+  - A conta usa o quadril de verdade daquele quadro, depois de suavizar o corpo, e não passa pelo `suave`.
+  - Ao montar e ao descer, um peso leva da pose a pé para a conta, sem salto.
+- **Quando a perna se divide:** quando há brinquedo de pedal ou apoio vestido (bicicletinha, carrinho ou motoquinha), e não com patins ou skate.
+  - A pé, o joelho e o giro para o lado ficam em 0 e voltam suaves ao descer.
+  - Esticada, a perna dividida é a mesma perna de antes.
+- **As roupas que cobrem a perna:**
+  - uma peça vai para a canela pelo seu ponto mais baixo e pelo nome;
+  - a joelheira e o remendo vão para o joelho;
+  - o degradê `pintar` é corrigido pelo deslocamento da peça;
+  - nada espeta para fora com a perna dobrada.
 
-### 3. Os pés no pedal (o joelho)
-- **A perna ganha um joelho**, como no esboço (`pernaAte`):
-  - a canela e o sapato passam para um nó dentro da perna;
-  - a cada quadro, a perna e o joelho apontam o pé para o alto do pedal ou do apoio;
-  - a conta é exata e pura, com teste de unidade.
+  Isso vale para as polainas, as botas, o tênis de cano, o tênis-cometa, a barra do pijama, os tufos do boneco peludo, as patas das fantasias, e as saias e os vestidos da criação (que não podem atravessar a perna dobrada).
+- **A quina do joelho:** com o joelho mais dobrado, não pode abrir fresta nem quina. Se abrir, tapar com uma peça no mesmo nó e no mesmo material, sem malha a mais.
 - **A bicicletinha** fica com as medidas do esboço:
   - o selim um tico mais baixo;
   - o eixo do pedal mais alto e mais perto;
-  - a pedivela mais curta e o pedal redondo.
+  - a pedivela mais curta;
+  - o pedal redondo.
 
-  As cores e os detalhes ficam iguais. O custo volta para as 5 malhas de hoje, ou registra por que não cabe.
-- **O carrinho** ganha pedais embaixo do painel, com o capô um tico mais curto e o volante um tico mais alto. Os sapatos não saem mais pelo capô.
-- **A bandeirinha do carrinho tremula** (o filho do dono reclamou em 26 nov que ela não mexe quando o carro anda). Hoje é uma placa laranja triangular, parada, num mastro atrás do banco.
-  - Ela balança em volta do mastro, para trás, com a amplitude pela velocidade: parado, quase nada; andando, um tremular vivo e liso, sem tremor nem giro.
-  - Na curva, ela se inclina para fora.
+  As cores e os detalhes ficam iguais.
+- **O carrinho** ganha os pedais embaixo do painel, sem nó próprio, com o capô um tico mais curto e o volante um tico mais alto. Os sapatos não saem mais pelo capô.
+- **A bandeirinha do carrinho** sai para um nó próprio (+1 malha, dentro da régua de +7).
+  - Ela gira em volta do mastro com a amplitude pela velocidade suavizada (`e.vel`): parado, quase nada; andando, um balanço lento de até uns 25° com um tremular pequeno de até uns 8°, nunca acima de 3 Hz.
+  - Ela não encosta na capa, nas asas nem na mochila-foguete.
   - Os amigos veem igual.
-  - Se a bandeira estiver juntada com outras peças laranja na mesma malha, ela sai para um nó próprio, sem passar da régua de custo.
-- **O patinete e a nuvem** não mudam: não têm pedal.
+- **O patinete e a nuvem** não mudam.
+
+### 3. A motoquinha dourada
+- Sai do esboço para `brinquedoAndar.ts`, com a pose sentada, as mãos no guidão e os pés nos apoios (o joelho dobra).
+- **O dourado:**
+  - amarelo quente e fundo, com o ouro escuro embaixo e o reflexo de plástico lustroso;
+  - só o farol acende, com a luz mansa do farol do carrinho;
+  - nada entra no brilho que borra;
+  - de noite continua clara, sem halo.
+- **As rodas e as rodinhas de apoio** giram com a velocidade de verdade. Parada, a moto fica em pé nas rodinhas.
+- **Na lojinha e em "Meus tesouros":** ícone, figura e provador, com a criança montada andando um pouquinho em volta.
 
 ### 4. A camiseta de aquário e o tênis-cometa
-- **A camiseta:** o `desenharAquario` recebe a lista dos Peixinhos de bolinhas, e o peixe de listras sai.
-- **O tênis:** fica com as cores de Violeta e ouro, e as pegadas de luz ganham as mesmas cores.
+- **A camiseta:** a lista padrão `PEIXES` vira a dos Peixinhos de bolinhas. Assim o jogo, a figura e o provador mudam juntos. Um teste prova que nenhum peixe tem listra.
+- **O tênis:**
+  - as cores ficam Violeta e ouro;
+  - a luz `cometa`, o `BRILHOS.cometa`, o anel do pouso e o `efeito` mudam como nas decisões acima;
+  - as pegadas de luz ficam nas mesmas cores.
 - **Os ícones e as figuras** da lojinha e de "Meus tesouros" acompanham o desenho novo.
 
 ### 5. O esboço sai
-`src/esboco/retoques.ts`, `retoquesPecas.ts` e o e2e do esboço saem quando a spec estiver pronta. As fotos e as medidas continuam em `capturas-038/esboco/`.
+`src/esboco/retoques.ts`, `retoquesPecas.ts` e o e2e do esboço saem só **depois** de a medida pé–pedal estar no teste do jogo. As fotos e as medidas continuam em `capturas-038/esboco/`.
 
 ## Experiência medida (para não frustrar)
-- **Pé no pedal:** numa volta inteira, andando, a sola fica a no máximo 0,02 bloco do pedal ou do apoio, na bicicletinha, no carrinho e na motoquinha. Medido em teste, como no esboço.
-- **Achar e comprar a moto:** do toque na lojinha até o detalhe dela, no máximo 2 toques.
+- **Pé no pedal**, medido pelo `aplicarPose` de verdade (com a suavização), também pelo caminho dos amigos (`outrosJogadores`), com dt de 1/60 e de 1/20:
+  - os 7 modelos, na bicicletinha, no carrinho e nos apoios da motoquinha;
+  - numa volta inteira andando, e parada em 8 ângulos do pedal;
+  - a sola fica a no máximo 0,02 bloco do pedal ou do apoio;
+  - a sola fica a no máximo uns 35° do pedal, e o pedal não atravessa o sapato de forma visível (conferido nas fotos de lado).
+- **A pé com o brinquedo vestido nada muda:** um teste prova que a sola e a ponta do sapato ficam onde estão hoje ao andar, correr, pular, sentar no parque e fazer gestos.
+- **A bandeirinha não treme:** a 20 quadros por segundo, nenhum salto de ângulo entre quadros passa de um teto, também com o giro da rede tremido.
+- **Achar e comprar a moto:** do toque na lojinha até o detalhe dela, no máximo 2 toques. O cartão aparece sem rolar no celular em pé, ou a rolagem conta como um toque.
 - **Montar:** em menos de 0,5 s, com puf e som, como na 036.
-- **Desempenho:** no celular em pé (390×844), com a CPU 4× mais lenta, na Vila Neon de dia, com 4 amigos montados (um em cada brinquedo com pedal ou apoio, mais a motoquinha):
-  - os quadros não caem mais de 10% em relação ao mesmo lugar sem brinquedo;
-  - as chamadas de desenho sobem no máximo 5 por boneco montado.
+- **Desempenho:** no celular em pé (390×844), com a CPU 4× mais lenta, na Vila Neon de dia, medindo a `main` contra o ramo na mesma rodada. Os cenários são:
+  - 4 amigos a pé sem brinquedo;
+  - 4 amigos a pé com brinquedo de pedal vestido;
+  - 4 amigos montados: motoquinha, motoquinha, bicicletinha e carrinho.
+
+  Com eles montados:
+  - as chamadas de desenho sobem no máximo 30 sobre os 4 a pé sem brinquedo;
+  - os quadros caem no máximo 10%.
 - **Nada some:** quem já tem a camiseta ou o tênis continua com eles, com o desenho novo, depois de recarregar, também num mundo da nuvem.
 
 ## Cuidados (crianças e legais; ver `.sdd/cuidados-legais.md`)
-- A moto não tem cara de marca ou de modelo real: nada de logotipo, tanque de marca nem forma conhecida. É dourada, sem arco-íris.
-- Nada de ronco alto nem som de corrida. A moto não corre mais que os outros brinquedos.
-- O preço é fixo, nada é sorteado e nada expira. A moto não dá nenhuma vantagem no jogo.
+- **A moto:**
+  - não tem cara de marca ou de modelo real: nada de logotipo, tanque de marca ou forma conhecida;
+  - é dourada, sem arco-íris;
+  - não tem ronco alto nem som de corrida, e não corre mais que os outros brinquedos.
+- **A compra:** o preço é fixo, nada é sorteado e nada expira. A moto não dá vantagem no jogo.
 
 ## Fora desta spec
-- A Motoca de pedal, de três rodas, que o dono não escolheu. Fica no histórico do esboço.
-- A primeira pessoa montada, porque a 037 sai para fora ao montar.
-- O formato da colher do pedreiro, que parece cutelo, e os outros defeitos antigos da lista do backlog.
-- Os vídeos do esboço em `.mp4` não abriram no celular do dono. Os próximos vídeos vão num formato que o celular abra, ou como sequência de fotos.
+- A Motoca de pedal, que fica no histórico do esboço.
+- A bandeirinha inclinando na curva, cortada pelo risco de tremor nos amigos.
+- A primeira pessoa montada.
+- O formato da colher do pedreiro e os outros defeitos antigos da lista do backlog.
+- Os vídeos em `.mp4` do esboço, que não abriram no celular do dono. Os próximos vão num formato que o celular abra, ou como sequência de fotos.
