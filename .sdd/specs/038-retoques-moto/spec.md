@@ -1,7 +1,7 @@
 ---
 id: 038-retoques-moto
 title: 'Retoques e a moto dourada: a motoquinha na lojinha, a camiseta e o tênis redesenhados, os pés no pedal e a bandeirinha'
-status: APPROVED
+status: DONE
 base_branch: main
 branch: feat/038-retoques-moto
 created_at: 2026-11-26T13:30:00Z

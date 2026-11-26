@@ -163,3 +163,8 @@
 - **O que ficou fraco:**
   - as pegadas de luz, que já existiam, ficam quase brancas e com um halo de noite. Não é desta tarefa;
   - de dentro, na primeira pessoa, a camiseta e o tênis quase não aparecem (o mesmo que o esboço mostrou). |
+| T08 (revisão do núcleo) | **aprovada em 26 nov** por um `engenheiro-nucleo-rede` novo, sem nada alto nem médio: a rede fica na 18; os 4 casos estão seguros no código; o novo do joelho e da moto não vaza para o núcleo; a paridade não muda. Baixos: o `servidor.yml` não dispara com `src/personagem/**`, `src/player/**` e `src/art/**`, que o servidor importa (vai para os defeitos); a fidelidade de `carregar` e `salvar` da cópia de antes conferida à mão |
+| Portão visual | 1ª rodada (`t02`–`t05`, `convite`): não liberou (o tênis pedalando nas cores antigas, com fotos de antes da T04; as lascas brancas na cintura da saia). Consertados: o tênis, a saia e o vestido montados, a sola numa peça só, a bandeirinha a uns 53° para fora, o vestido de baile, o apoio da moto e a `camiseta-barra` fora da saia (com o quadril dentro dela). 2ª rodada (`t09`): **liberou**. Antigos, para a lista de defeitos: a ponta do sapato na barra do vestido parado; o tênis de cano da Roqueira por dentro do tênis-cometa; a barra da jaqueta da Roqueira pedalando; o brilho do neon por cima do rosto à noite; os vagalumes de dia nas bochechas |
+| Conferência final | `--base 2c43d39`, em e52c05b: 35 min 17 s; Vitest 2469 de 2469; build; fumaça 26 de 26; áreas (alma-lojinha, personagem) 52 de 52; quarentena 1 de 1. Antes, `--base 38bb9e9`: 39 min 38 s, com o `mira-toque` da fumaça caindo uma vez com a placa ocupada, e depois 2 de 2 sozinho |
+| T09 (publicação) | 26 nov, à noite: o servidor antes do site |
+| Falta | a rodada em família |
