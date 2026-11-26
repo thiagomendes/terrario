@@ -78,6 +78,41 @@ const vistosPerto = (p: Page) =>
     }
     return { perto: perto.slice(0, 60), meio };
   });
+/**
+ * O que está neste ponto da tela (fração da largura e da altura): a peça à vista (fora a mão e a
+ * mira), o bloco do mundo quando é o chão ou uma parede de blocos, e os moradores a até 3 blocos
+ * dali (com a visibilidade de cada um).
+ */
+const oQueTem = (p: Page, fx: number, fy: number) =>
+  p.evaluate(
+    ([fx, fy]) => {
+      const e = window.__brumaluz!;
+      const s = e.cenaBabylon!();
+      const eng = s.getEngine();
+      const r = s.pick(
+        fx * eng.getRenderWidth(),
+        fy * eng.getRenderHeight(),
+        (m) => m.isEnabled() && m.isVisible && m.visibility > 0 && !/^(pp-|fantasma)/.test(m.name),
+      );
+      const q = r?.pickedPoint;
+      if (!q || !r?.ray) return { malha: r?.pickedMesh?.name ?? null };
+      // um tico para dentro do que foi tocado
+      const d = r.ray.direction;
+      const [bx, by, bz] = [q.x + d.x * 0.02, q.y + d.y * 0.02, q.z + d.z * 0.02].map(Math.floor);
+      const moradores = s.meshes
+        .filter((m) => /^morador-\d+/.test(m.name))
+        .map((m) => ({ m, c: m.getBoundingInfo().boundingSphere.centerWorld }))
+        .filter(({ c }) => Math.hypot(c.x - q.x, c.z - q.z) < 3)
+        .map(({ m }) => `${m.name} vis=${m.visibility.toFixed(2)} ligada=${m.isEnabled()}`);
+      return {
+        malha: r.pickedMesh?.name ?? null,
+        ponto: [q.x, q.y, q.z].map((v) => +v.toFixed(2)),
+        bloco: /^chunk/.test(r.pickedMesh?.name ?? '') ? { x: bx, y: by, z: bz, id: e.bloco!(bx, by, bz), embaixo: e.bloco!(bx, by - 1, bz) } : null,
+        moradores: [...new Set(moradores)],
+      };
+    },
+    [fx, fy] as const,
+  );
 const hora = (p: Page, h: number) =>
   p.evaluate((h) => {
     const e = window.__brumaluz!;
@@ -177,6 +212,29 @@ test('T08: a primeira pessoa nas três telas, de dia e de noite', async ({ brows
           cam,
           naMira: await page.evaluate(() => window.__brumaluz!.fantasmaNaMira?.() ?? null),
           vistos: await vistosPerto(page),
+          // (portão, 5ª rodada: a caixa marrom em cima do tapume, à esquerda, deitado e no computador)
+          caixaDaEsquerda: tam === 'empe' ? null : await oQueTem(page, tam === 'pc' ? 0.12 : 0.19, 0.5),
+          // (e onde cai na tela a placa da obra, o bloco PLACA em cima do tapume que o toque achou)
+          placaNaTela: await page.evaluate(() => {
+            const e = window.__brumaluz!;
+            const s = e.cenaBabylon!();
+            const out: { x: number; y: number; z: number; id: number; tela: number[] }[] = [];
+            const [px, , pz] = e.jogadorPes!();
+            for (let x = Math.floor(px) - 6; x <= Math.floor(px) + 6; x++)
+              for (let z = Math.floor(pz) - 6; z <= Math.floor(pz) + 6; z++)
+                for (let y = 75; y <= 80; y++) {
+                  if (e.bloco!(x, y, z) !== 98) continue;
+                  const m = s.getTransformMatrix();
+                  const w = [x + 0.5, y + 0.5, z + 0.5];
+                  // (a conta da projeção, como a do Vector3.TransformCoordinates)
+                  const a = m.m;
+                  const rx = w[0] * a[0] + w[1] * a[4] + w[2] * a[8] + a[12];
+                  const ry = w[0] * a[1] + w[1] * a[5] + w[2] * a[9] + a[13];
+                  const rw = w[0] * a[3] + w[1] * a[7] + w[2] * a[11] + a[15];
+                  out.push({ x, y, z, id: 98, tela: [+((rx / rw + 1) / 2).toFixed(3), +((1 - ry / rw) / 2).toFixed(3)] });
+                }
+            return out;
+          }),
         });
         await foto(page, `${pre}-fantasma-colado`);
         // e um passo para trás: os fantasmas da frente voltam inteiros
