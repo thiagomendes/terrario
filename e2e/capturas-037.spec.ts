@@ -202,7 +202,9 @@ test('T08: a primeira pessoa nas três telas, de dia e de noite', async ({ brows
         nota(`${pre}-pipoca`, { antes, comendo });
       });
       // 5. os tesouros da mão (a varinha, o guarda-chuva e a pipa), um de cada vez, sem item na barra
-      for (const id of ['varinha-bolhas', 'guarda-chuva-gotinhas', 'pipa-lacinhos'])
+      // (a varinha por último: as bolhas que ela já soltou continuam no ar uns 3 a 4 s, como
+      // bolhas de verdade, e apareciam na foto do tesouro seguinte)
+      for (const id of ['guarda-chuva-gotinhas', 'pipa-lacinhos', 'varinha-bolhas'])
         await tentar(`${pre}-tesouro-${id}`, async () => {
         await naMao(page, null);
         const vestiu = await page.evaluate((id) => {
