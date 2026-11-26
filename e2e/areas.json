@@ -416,6 +416,7 @@
         "medidas-033-roleta.spec.ts",
         "mira-toque.spec.ts",
         "olhar-baixo-037.spec.ts",
+        "olhar-baixo-amigos-037.spec.ts",
         "primeira-pessoa.spec.ts",
         "roleta-mundos.spec.ts",
         "roleta.spec.ts",

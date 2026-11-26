@@ -528,7 +528,20 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
   // nela); o boneco continua inteiro para os amigos. Conserto da 037 (o dono: "não precisaria
   // enxergar ele de cima"): de dentro, o corpo inteiro some junto com a cabeça (o peito, a roupa,
   // as pernas e os sapatos); só o braço da frente aparece
-  const junta = (n: string) => scene.getTransformNodeByName(`personagem-junta-${n}`);
+  // (as juntas da própria criança, achadas dentro da raiz dela: os amigos usam o mesmo prefixo
+  // "personagem", e uma busca pelo nome na cena podia pegar a junta de um amigo, que ficava sem
+  // cabeça e sem corpo, enquanto a criança se via por dentro. O boneco refaz as juntas quando a
+  // aparência muda: a junta guardada que foi descartada é procurada de novo)
+  const juntasDaCrianca = new Map<string, TransformNode>();
+  const junta = (n: string): TransformNode | null => {
+    const ja = juntasDaCrianca.get(n);
+    if (ja && !ja.isDisposed()) return ja;
+    const nome = `personagem-junta-${n}`;
+    const achada = personagem.raiz.getChildTransformNodes(false, (x) => x.name === nome)[0] ?? null;
+    if (achada) juntasDaCrianca.set(n, achada);
+    else juntasDaCrianca.delete(n);
+    return achada;
+  };
   let corpoMexido = false;
   const mostrarCorpo = (cabeca: boolean, bracos: boolean) => {
     junta('corpo')?.setEnabled(cabeca);
