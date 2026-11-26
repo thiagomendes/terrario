@@ -106,6 +106,11 @@ Regras que já valem desde a 036 e continuam:
 
   As cores e os detalhes ficam iguais. O custo volta para as 5 malhas de hoje, ou registra por que não cabe.
 - **O carrinho** ganha pedais embaixo do painel, com o capô um tico mais curto e o volante um tico mais alto. Os sapatos não saem mais pelo capô.
+- **A bandeirinha do carrinho tremula** (o filho do dono reclamou em 26 nov que ela não mexe quando o carro anda). Hoje é uma placa laranja triangular, parada, num mastro atrás do banco.
+  - Ela balança em volta do mastro, para trás, com a amplitude pela velocidade: parado, quase nada; andando, um tremular vivo e liso, sem tremor nem giro.
+  - Na curva, ela se inclina para fora.
+  - Os amigos veem igual.
+  - Se a bandeira estiver juntada com outras peças laranja na mesma malha, ela sai para um nó próprio, sem passar da régua de custo.
 - **O patinete e a nuvem** não mudam: não têm pedal.
 
 ### 4. A camiseta de aquário e o tênis-cometa
