@@ -111,7 +111,10 @@ describe('spec 038 (T02): a perna dividida no joelho', () => {
         if (p.junta !== 'pernaE') continue;
         const curto = p.nome.replace(/^pernaE-/, '');
         const naCanela = p.subjunta?.nome === 'joelhoE';
-        if (/(sapato|bota|tenis|polaina|pantufa|dedo|garra|joelheira|remendo|barra)/.test(curto) && !naCanela) ruins.push(`${nome}: ${curto} fora da canela`);
+        // (o que fica todo acima do joelho e a parte de cima do cano dividido ficam na coxa)
+        const acimaDoJoelho = p.pos[1] - (p.rot ? Math.max(...p.tamanho) : p.tamanho[1]) / 2 >= -coxa - 0.005;
+        if (/(sapato|bota|tenis|polaina|pantufa|dedo|garra|joelheira|remendo|barra)/.test(curto) && !naCanela && !acimaDoJoelho && !curto.endsWith('-cima'))
+          ruins.push(`${nome}: ${curto} fora da canela`);
         // nada da canela fica acima do quadril, e nada da coxa desce até o pé
         if (naCanela && p.pos[1] - coxa > 0) ruins.push(`${nome}: ${curto} acima do quadril`);
         if (!naCanela && p.pos[1] < -coxa - 0.06) ruins.push(`${nome}: ${curto} na coxa, embaixo do joelho`);

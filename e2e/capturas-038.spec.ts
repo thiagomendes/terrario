@@ -557,3 +557,123 @@ test('T04: a camiseta e o tênis deitado e no computador', async ({ browser }) =
     await page.context().close();
   }
 });
+
+// ------------------------------------------------------------------ T09 (o portão visual)
+const PASTA_T09 = 'capturas-038/t09';
+
+test('T09: os consertos do portão visual (celular em pé)', async ({ browser }) => {
+  test.skip(!QUAL.includes('t09'));
+  test.setTimeout(1_500_000);
+  const { page, O } = await abrirGramado(browser, 'empe');
+  /** Monta com a roupa ou a fantasia (o premium da roupa junto com o brinquedo). */
+  const montarCom = async (base: object, id: string) => {
+    const { premium, ...resto } = base as { premium?: Record<string, string> };
+    await noMeio(page, O, 0, 4.2, 0.18);
+    await montarNo(page, resto, id);
+    if (premium)
+      await page.evaluate(({ resto, premium, id }) => window.__brumaluz!.personagem!.definir({ ...resto, montado: true, premium: { ...premium, andar: id } } as never), {
+        resto,
+        premium,
+        id,
+      });
+    await page.waitForTimeout(1000);
+  };
+  // 1. o tênis-cometa pedalando, de lado, na bicicletinha e no carrinho (as cores de hoje)
+  for (const [nome, id] of [
+    ['bici', 'bicicletinha'],
+    ['carrinho', 'carrinho-pedal'],
+  ] as const) {
+    await montarCom({ ...MENINO, premium: { roupa: 'tenis-cometa' } }, id);
+    await andarDeLado(page, 0.8);
+    for (const k of [0, 1]) {
+      await page.waitForTimeout(k === 0 ? 1400 : 330);
+      await foto(page, PASTA_T09, `1-tenis-cometa-${nome}-${k + 1}`);
+    }
+    await parar(page);
+    await estudio(page, 0.4, Math.PI / 2, 1.9, 0.15);
+    await page.waitForTimeout(700);
+    await foto(page, PASTA_T09, `1-tenis-cometa-${nome}-perto`);
+  }
+  // as pegadas (o rastro) de noite, a pé
+  await page.evaluate((h) => (window.__brumaluz!.hora = h), NOITE);
+  await noMeio(page, O, 0, 4.4, 0.5);
+  await page.evaluate(() => window.__brumaluz!.personagem!.definir({ corpo: 'masculino', cabeloEstilo: 0, premium: { roupa: 'tenis-cometa' } } as never));
+  await page.waitForTimeout(800);
+  await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(1, 0));
+  await page.waitForTimeout(1600);
+  await foto(page, PASTA_T09, '1-tenis-cometa-pegadas-noite');
+  await parar(page);
+  await page.evaluate((h) => (window.__brumaluz!.hora = h), DIA);
+  // 3 e 7. a saia, o vestido, o vestido de realeza e o tênis de cano da roqueira, montados
+  for (const [nome, base, id] of [
+    ['menina-saia', MENINA, 'bicicletinha'],
+    ['menina-saia-moto', MENINA, 'motoquinha-dourada'],
+    ['menina-vestido', { ...MENINA, roupaEstilo: 8 }, 'bicicletinha'],
+    ['realeza', { ...MENINA, fantasia: { id: 'realeza-flores', cor: 0 } }, 'bicicletinha'],
+    ['roqueira', { ...MENINA, fantasia: { id: 'roqueira-palco', cor: 0 } }, 'bicicletinha'],
+  ] as const) {
+    await montarCom(base, id);
+    await andarDeLado(page, 0.8);
+    for (const k of [0, 1]) {
+      await page.waitForTimeout(k === 0 ? 1400 : 330);
+      await foto(page, PASTA_T09, `3-${nome}-pedalando-${k + 1}`);
+    }
+    await parar(page);
+    await page.waitForTimeout(1200);
+    for (const [vista, giro, alt] of [
+      ['lado', Math.PI / 2, 0.2],
+      ['tres-quartos', 0.8, 0.5],
+    ] as const) {
+      await estudio(page, 0.55, giro, 2.2, alt);
+      await page.waitForTimeout(700);
+      await foto(page, PASTA_T09, `3-${nome}-${vista}`);
+    }
+  }
+  // 4. a sola do tênis de perto, em pé (a pé)
+  await noMeio(page, O, 0, 5);
+  await page.evaluate(() => window.__brumaluz!.personagem!.definir({ corpo: 'masculino', cabeloEstilo: 0, premium: { roupa: 'tenis-cometa' } } as never));
+  await page.waitForTimeout(1200);
+  for (const [vista, giro] of [
+    ['frente', 0.35],
+    ['lado', Math.PI / 2],
+    ['costas', Math.PI - 0.4],
+  ] as const) {
+    await estudio(page, 0.25, giro, 1.6, 0.3);
+    await page.waitForTimeout(700);
+    await foto(page, PASTA_T09, `4-tenis-sola-${vista}`);
+  }
+  // 5. a bandeirinha com a câmera da criança (atrás dela), parada e andando
+  await noMeio(page, O, 0, 5, 0.3);
+  await montarNo(page, MENINA, 'carrinho-pedal');
+  await page.waitForTimeout(1500);
+  const band: string[] = [];
+  for (let i = 0; i < 2; i++) {
+    await foto(page, `${PASTA_T09}/bandeira`, `parada-${i + 1}`);
+    band.push(`parada-${i + 1}`);
+    await page.waitForTimeout(300);
+  }
+  await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(1, 0));
+  await page.waitForTimeout(300);
+  for (let i = 0; i < 10; i++) {
+    await foto(page, `${PASTA_T09}/bandeira`, `andando-${i + 1}`);
+    band.push(`andando-${i + 1}`);
+    await page.waitForTimeout(140);
+  }
+  await parar(page);
+  await prancha(page, `${PASTA_T09}/bandeira`, band, '5-bandeira-camera-da-crianca', 'A bandeirinha com a câmera da criança: parada (1 e 2) e andando (3 a 12)');
+  // 8. a moto: os pés nos apoios, de lado
+  await montarCom(MENINO, 'motoquinha-dourada');
+  await page.waitForTimeout(800);
+  for (const [vista, giro] of [
+    ['lado', Math.PI / 2],
+    ['outro-lado', -Math.PI / 2],
+  ] as const) {
+    await estudio(page, 0.45, giro, 1.9, 0.2);
+    await page.waitForTimeout(700);
+    await foto(page, PASTA_T09, `8-moto-pes-nos-apoios-${vista}`);
+  }
+  await estudio(page, 0.85, Math.PI / 2, 4.2, 0.3);
+  await page.waitForTimeout(700);
+  await foto(page, PASTA_T09, '8-moto-lado');
+  await page.context().close();
+});

@@ -38,7 +38,13 @@ import {
   ondeOsPes,
   poseNoBrinquedo,
 } from '../personagem/brinquedoAndar';
-import { medidaDaPerna, pernaNoPedal, type MedidaPerna } from '../personagem/joelho';
+import { SAIA_DA_ROUPA, medidaDaPerna, pernaNoPedal, type MedidaPerna } from '../personagem/joelho';
+
+/**
+ * Spec 038 (portão): a saia montada num brinquedo de pedal ou de apoio: inclinada para a frente
+ * por cima das coxas (rad), mais curta e sem abrir.
+ */
+const SAIA_MONTADA = { giro: -0.55, altura: 0.7, largura: 0.96 };
 import { luzPremium, texturaAquario } from './premiumLuzes';
 import type { Pose } from '../personagem/poses';
 import {
@@ -428,6 +434,8 @@ export function criarBoneco(
    * suave ao montar e ao descer).
    */
   let medidaPerna: MedidaPerna | null = null;
+  /** Spec 038 (portão): a saia da roupa passou do tronco para a junta da saia. */
+  let saiaDaRoupa = false;
   let quadrilDoPlano = 0.34;
   let pesoPes = 0;
   /** Spec 023: os nós próprios dos premium (as asas do dragão). */
@@ -690,6 +698,7 @@ export function criarBoneco(
     // spec 038 (T02): a perna com joelho e o quadril do plano
     quadrilDoPlano = plano.juntas.pernaE.pos[1];
     medidaPerna = subjuntas.joelhoE && subjuntas.joelhoD ? medidaDaPerna(plano) : null;
+    saiaDaRoupa = plano.pecas.some((p) => p.nome === SAIA_DA_ROUPA);
     pesoPes = montado && medidaPerna ? 1 : 0;
   }
 
@@ -1074,6 +1083,34 @@ export function criarBoneco(
     }
   }
 
+  /**
+   * Spec 038 (portão visual): com brinquedo de pedal ou de apoio vestido, a saia e o vestido.
+   * - A saia da roupa passou do tronco para a junta da saia (`dividirPernas`): a pé, ela segue o
+   *   tronco como antes (o mesmo giro, sem abrir).
+   * - Montada, a saia (a da roupa e a das fantasias) inclina para a frente por cima das coxas
+   *   dobradas e encurta, sem abrir: as coxas não furam o pano, e o vestido não fica aberto como
+   *   um abajur por cima do selim nem passa pela roda de trás.
+   */
+  function ajustarSaia(): void {
+    const j = juntas;
+    if (!medidaPerna || !j.saia) return;
+    if (saiaDaRoupa) {
+      j.saia.rotation.set(j.tronco.rotation.x, j.tronco.rotation.y, j.tronco.rotation.z);
+      j.saia.scaling.setAll(1);
+    }
+    const w = pesoPes;
+    if (w <= 0) return;
+    const mistura = (a: number, b: number) => a + (b - a) * w;
+    j.saia.rotation.x = mistura(j.saia.rotation.x, SAIA_MONTADA.giro);
+    j.saia.rotation.y = mistura(j.saia.rotation.y, 0);
+    j.saia.rotation.z = mistura(j.saia.rotation.z, 0);
+    j.saia.scaling.set(
+      mistura(j.saia.scaling.x, SAIA_MONTADA.largura),
+      mistura(j.saia.scaling.y, SAIA_MONTADA.altura),
+      mistura(j.saia.scaling.z, SAIA_MONTADA.largura),
+    );
+  }
+
   function animarBrinquedo(): void {
     const s = subjuntas;
     // spec 038 (T02): a bandeirinha tremula em volta do mastro com o vento do andar
@@ -1164,6 +1201,8 @@ export function criarBoneco(
     j.saia.rotation.z = suave('saiaZ', alvo.saia[2], kLento);
     const abre = subirJunto('saiaAbre', alvo.saiaEscala[0], kLento);
     j.saia.scaling.set(abre, suave('saiaY', alvo.saiaEscala[1], k), abre);
+    // spec 038 (portão): com brinquedo de pedal ou de apoio vestido, a saia e o vestido
+    ajustarSaia();
     j.rabo.rotation.x = subirJunto('raboX', alvo.rabo[0], kLento);
     j.rabo.rotation.y = suave('raboY', alvo.rabo[1], k);
     // spec 023: as asas do dragão batem: devagar parado (mas sempre se vê), rápido correndo e

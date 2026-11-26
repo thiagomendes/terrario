@@ -88,6 +88,23 @@ export function dividirPernas(pl: PlanoBoneco): MedidaPerna {
       }
       const [y0, y1] = alturas(p);
       const meio = (y0 + y1) / 2;
+      // (portão: o que fica todo acima do joelho fica na coxa, mesmo com nome de sapato, como a
+      // borda do tênis de cano da roqueira; na canela, ele girava para dentro da coxa dobrada)
+      if (y0 >= -coxa - 0.005) continue;
+      // o cano que passa do joelho (o tênis de cano, a bota) se divide como a perna: a parte de
+      // cima fica na coxa e a de baixo vai com a canela, as duas se cruzando um tico no joelho
+      if (y1 > -coxa + 0.005 && p.forma === 'caixa' && !p.rot && DA_CANELA.test(curto)) {
+        const cruza = CRUZA / 2;
+        const hCima = y1 - (-coxa - cruza);
+        const hBaixo = -coxa + cruza - y0;
+        const pintar = p.pintar;
+        novas.push({ ...p, nome: `${p.nome}-cima`, tamanho: [p.tamanho[0], hCima, p.tamanho[2]], pos: [p.pos[0], y1 - hCima / 2, p.pos[2]] });
+        p.tamanho = [p.tamanho[0] * 0.98, hBaixo, p.tamanho[2] * 0.98];
+        p.pos = [p.pos[0], y0 + hBaixo / 2 + coxa, p.pos[2]];
+        p.subjunta = joelho;
+        if (pintar) p.pintar = (x, y, z) => pintar(x, y - coxa, z);
+        continue;
+      }
       if (!(DA_CANELA.test(curto) || meio < -coxa)) continue;
       p.pos = [p.pos[0], p.pos[1] + coxa, p.pos[2]];
       p.subjunta = joelho;
@@ -96,8 +113,18 @@ export function dividirPernas(pl: PlanoBoneco): MedidaPerna {
     }
   }
   pl.pecas.push(...novas);
+  // a saia e o vestido da roupa (presos ao tronco) passam para a junta da saia, no mesmo lugar:
+  // montada, ela se ajeita por cima das coxas dobradas (`render/boneco`); a pé, ela acompanha o
+  // tronco como antes
+  for (const p of pl.pecas) if (p.junta === 'tronco' && p.nome === 'saia') {
+    p.junta = 'saia';
+    p.nome = SAIA_DA_ROUPA;
+  }
   return m;
 }
+
+/** O nome da saia (ou do vestido) da roupa depois de passar para a junta da saia. */
+export const SAIA_DA_ROUPA = 'saia-da-roupa';
 
 /**
  * A perna com joelho até o ponto `T` (no espaço do corpo, relativo ao quadril): o giro da perna
