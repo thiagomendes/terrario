@@ -1,0 +1,600 @@
+{
+ "em-pe-dia-obra": {
+  "naMira": true,
+  "mao": {
+   "pega": [
+    "pp-braco-mao-cabo",
+    "pp-braco-mao-virola",
+    "pp-braco-mao-lamina"
+   ],
+   "braco": 7
+  },
+  "colher": true
+ },
+ "em-pe-dia-fantasma-colado": {
+  "g": {
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "canteiro": 1
+  },
+  "cam": {
+   "frente": 0.2,
+   "cima": 1.62,
+   "lado": 0,
+   "pitch": 0,
+   "fovV": 80,
+   "dentroDeBloco": false
+  },
+  "naMira": {
+   "canteiro": 1,
+   "i": 7,
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "meta": 0,
+   "camada": 1,
+   "pulsa": false
+  },
+  "vistos": {
+   "perto": [
+    "veiculos-rodas vis=1.00 d=NaN y=NaN",
+    "veiculos-luzes vis=1.00 d=NaN y=NaN"
+   ],
+   "meio": []
+  },
+  "caixaDaEsquerda": null
+ },
+ "em-pe-dia-pipoca": {
+  "antes": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "comendo": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "vistos": {
+   "perto": [
+    "veiculos-rodas vis=1.00 d=NaN y=NaN",
+    "veiculos-luzes vis=1.00 d=NaN y=NaN"
+   ],
+   "meio": []
+  }
+ },
+ "em-pe-noite-obra": {
+  "naMira": true,
+  "mao": {
+   "pega": [
+    "pp-braco-mao-cabo",
+    "pp-braco-mao-virola",
+    "pp-braco-mao-lamina"
+   ],
+   "braco": 7
+  },
+  "colher": true
+ },
+ "em-pe-noite-fantasma-colado": {
+  "g": {
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "canteiro": 1
+  },
+  "cam": {
+   "frente": 0.2,
+   "cima": 1.62,
+   "lado": 0,
+   "pitch": 0,
+   "fovV": 80,
+   "dentroDeBloco": false
+  },
+  "naMira": {
+   "canteiro": 1,
+   "i": 7,
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "meta": 0,
+   "camada": 1,
+   "pulsa": false
+  },
+  "vistos": {
+   "perto": [
+    "veiculos-rodas vis=1.00 d=NaN y=NaN",
+    "veiculos-luzes vis=1.00 d=NaN y=NaN"
+   ],
+   "meio": []
+  },
+  "caixaDaEsquerda": null
+ },
+ "em-pe-noite-pipoca": {
+  "antes": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "comendo": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "vistos": {
+   "perto": [
+    "veiculos-rodas vis=1.00 d=NaN y=NaN",
+    "veiculos-luzes vis=1.00 d=NaN y=NaN"
+   ],
+   "meio": []
+  }
+ },
+ "deitado-dia-obra": {
+  "naMira": true,
+  "mao": {
+   "pega": [
+    "pp-braco-mao-cabo",
+    "pp-braco-mao-virola",
+    "pp-braco-mao-lamina"
+   ],
+   "braco": 7
+  },
+  "colher": true
+ },
+ "deitado-dia-fantasma-colado": {
+  "g": {
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "canteiro": 1
+  },
+  "cam": {
+   "frente": 0.2,
+   "cima": 1.62,
+   "lado": 0,
+   "pitch": 0,
+   "fovV": 70,
+   "dentroDeBloco": false
+  },
+  "naMira": {
+   "canteiro": 1,
+   "i": 7,
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "meta": 0,
+   "camada": 1,
+   "pulsa": false
+  },
+  "vistos": {
+   "perto": [
+    "veiculos-rodas vis=1.00 d=NaN y=NaN",
+    "veiculos-luzes vis=1.00 d=NaN y=NaN"
+   ],
+   "meio": []
+  },
+  "caixaDaEsquerda": {
+   "malha": "chunk--3,-13",
+   "ponto": [
+    -47.43,
+    77.62,
+    -206
+   ],
+   "bloco": {
+    "x": -48,
+    "y": 77,
+    "z": -206,
+    "id": 98,
+    "embaixo": 101
+   },
+   "moradores": [
+    "morador-2-fundida vis=1.00 ligada=true"
+   ]
+  }
+ },
+ "deitado-dia-pipoca": {
+  "antes": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "comendo": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "vistos": {
+   "perto": [
+    "veiculos-rodas vis=1.00 d=NaN y=NaN",
+    "veiculos-luzes vis=1.00 d=NaN y=NaN"
+   ],
+   "meio": []
+  }
+ },
+ "deitado-noite-obra": {
+  "naMira": true,
+  "mao": {
+   "pega": [
+    "pp-braco-mao-cabo",
+    "pp-braco-mao-virola",
+    "pp-braco-mao-lamina"
+   ],
+   "braco": 7
+  },
+  "colher": true
+ },
+ "deitado-noite-fantasma-colado": {
+  "g": {
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "canteiro": 1
+  },
+  "cam": {
+   "frente": 0.2,
+   "cima": 1.62,
+   "lado": 0,
+   "pitch": 0,
+   "fovV": 70,
+   "dentroDeBloco": false
+  },
+  "naMira": {
+   "canteiro": 1,
+   "i": 7,
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "meta": 0,
+   "camada": 1,
+   "pulsa": false
+  },
+  "vistos": {
+   "perto": [
+    "veiculos-rodas vis=1.00 d=NaN y=NaN",
+    "veiculos-luzes vis=1.00 d=NaN y=NaN"
+   ],
+   "meio": []
+  },
+  "caixaDaEsquerda": {
+   "malha": "chunk--3,-13",
+   "ponto": [
+    -47.43,
+    77.62,
+    -206
+   ],
+   "bloco": {
+    "x": -48,
+    "y": 77,
+    "z": -206,
+    "id": 98,
+    "embaixo": 101
+   },
+   "moradores": [
+    "morador-2-fundida vis=1.00 ligada=true"
+   ]
+  }
+ },
+ "deitado-noite-pipoca": {
+  "antes": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "comendo": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "vistos": {
+   "perto": [
+    "veiculos-rodas vis=1.00 d=NaN y=NaN",
+    "veiculos-luzes vis=1.00 d=NaN y=NaN"
+   ],
+   "meio": []
+  }
+ },
+ "computador-dia-obra": {
+  "naMira": true,
+  "mao": {
+   "pega": [
+    "pp-braco-mao-cabo",
+    "pp-braco-mao-virola",
+    "pp-braco-mao-lamina"
+   ],
+   "braco": 7
+  },
+  "colher": true
+ },
+ "computador-dia-fantasma-colado": {
+  "g": {
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "canteiro": 1
+  },
+  "cam": {
+   "frente": 0.2,
+   "cima": 1.62,
+   "lado": 0,
+   "pitch": 0,
+   "fovV": 70,
+   "dentroDeBloco": false
+  },
+  "naMira": {
+   "canteiro": 1,
+   "i": 7,
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "meta": 0,
+   "camada": 1,
+   "pulsa": false
+  },
+  "vistos": {
+   "perto": [
+    "veiculos-rodas vis=1.00 d=NaN y=NaN",
+    "veiculos-luzes vis=1.00 d=NaN y=NaN"
+   ],
+   "meio": []
+  },
+  "caixaDaEsquerda": {
+   "malha": "ceu",
+   "ponto": [
+    -220.7,
+    102.15,
+    -33.94
+   ],
+   "bloco": null,
+   "moradores": []
+  }
+ },
+ "computador-dia-pipoca": {
+  "antes": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "comendo": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "vistos": {
+   "perto": [
+    "veiculos-rodas vis=1.00 d=NaN y=NaN",
+    "veiculos-luzes vis=1.00 d=NaN y=NaN"
+   ],
+   "meio": []
+  }
+ },
+ "computador-noite-obra": {
+  "naMira": true,
+  "mao": {
+   "pega": [
+    "pp-braco-mao-cabo",
+    "pp-braco-mao-virola",
+    "pp-braco-mao-lamina"
+   ],
+   "braco": 7
+  },
+  "colher": true
+ },
+ "computador-noite-fantasma-colado": {
+  "g": {
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "canteiro": 1
+  },
+  "cam": {
+   "frente": 0.2,
+   "cima": 1.62,
+   "lado": 0,
+   "pitch": 0,
+   "fovV": 70,
+   "dentroDeBloco": false
+  },
+  "naMira": {
+   "canteiro": 1,
+   "i": 7,
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "meta": 0,
+   "camada": 1,
+   "pulsa": false
+  },
+  "vistos": {
+   "perto": [
+    "veiculos-rodas vis=1.00 d=NaN y=NaN",
+    "veiculos-luzes vis=1.00 d=NaN y=NaN"
+   ],
+   "meio": []
+  },
+  "caixaDaEsquerda": {
+   "malha": "ceu",
+   "ponto": [
+    -220.7,
+    102.15,
+    -33.94
+   ],
+   "bloco": null,
+   "moradores": []
+  }
+ },
+ "computador-noite-pipoca": {
+  "antes": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "comendo": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "vistos": {
+   "perto": [
+    "veiculos-rodas vis=1.00 d=NaN y=NaN",
+    "veiculos-luzes vis=1.00 d=NaN y=NaN"
+   ],
+   "meio": []
+  }
+ }
+}
