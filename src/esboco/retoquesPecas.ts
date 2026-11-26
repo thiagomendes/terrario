@@ -175,8 +175,18 @@ function motoca(P: Pecas): Montagem {
   P.caixa('moto-rabeta', J, undefined, [0.22, 0.12, 0.2], [0, 0.45, -0.38], OURO, 0.06, { brilho: 0.8, ...NO });
   P.bola('moto-lanterna', J, undefined, 0.04, [0, 0.46, -0.485], CORAL, [1, 0.8, 0.5], NO);
   // os para-lamas
-  P.caixa('moto-paralama-t', J, undefined, [0.15, 0.04, 0.3], [0, 0.42, -0.5], OURO, 0.02, { rot: [0.55, 0, 0], brilho: 0.8, ...NO });
-  P.caixa('moto-paralama-f', J, undefined, [0.15, 0.04, 0.3], [0, 0.43, 0.52], OURO, 0.02, { rot: [-0.25, 0, 0], brilho: 0.8, ...NO });
+  // (em dois gomos cada, acompanhando a roda: inteiros e retos, pareciam uma tábua espetada)
+  for (const [nome, z0, lado] of [
+    ['t', -0.4, -1],
+    ['f', 0.5, 1],
+  ] as const)
+    for (const [k, a] of [
+      [0, 0.32],
+      [1, -0.32],
+    ] as const) {
+      const ang = a * lado;
+      P.caixa(`moto-paralama-${nome}${k}`, J, undefined, [0.16, 0.04, 0.15], [0, R + 0.235 * Math.cos(ang), z0 + 0.235 * Math.sin(ang)], OURO, 0.02, { rot: [ang, 0, 0], brilho: 0.8, ...NO });
+    }
   // o garfo, o farol redondo com o aro e o guidão alto com as manoplas creme
   for (const s of [-1, 1]) tubo(P, `moto-garfo${s}`, [s * 0.085, R, frente[2]], [s * 0.07, 0.7, 0.4], 0.028, OURO_ESC, { brilho: 0.8, ...NO });
   P.caixa('moto-mesa', J, undefined, [0.2, 0.08, 0.1], [0, 0.72, 0.4], OURO_ESC, 0.035, NO);
@@ -188,13 +198,11 @@ function motoca(P: Pecas): Montagem {
   for (const s of [-1, 1]) {
     P.cone(`moto-manopla${s}`, J, undefined, 0.11, 0.036, 0.036, [s * 0.2, 0.82, 0.32], CREME, { ...deitado, ...NO });
     P.bola(`moto-manopla-ponta${s}`, J, undefined, 0.038, [s * 0.258, 0.82, 0.32], OURO_ESC, [0.6, 1, 1], NO);
-    // os espelhinhos redondos (de brinquedo)
-    tubo(P, `moto-haste-espelho${s}`, [s * 0.15, 0.83, 0.32], [s * 0.19, 0.95, 0.3], 0.012, PRATA);
-    P.bola(`moto-espelho${s}`, J, undefined, 0.045, [s * 0.195, 0.97, 0.3], OURO, [1, 1, 0.45], { brilho: 0.8, ...NO });
   }
-  // o escapamento redondo, curtinho, do lado direito
-  P.cone('moto-escape', J, undefined, 0.3, 0.035, 0.04, [0.135, 0.26, -0.24], PRATA, { rot: [Math.PI / 2 + 0.12, 0, 0], brilho: 0.8, ...NO });
-  P.bola('moto-escape-ponta', J, undefined, 0.042, [0.135, 0.278, -0.39], '#bfbcb4', [1, 1, 0.5], NO);
+  // (sem espelhinhos: de frente, as bolinhas deles pareciam dragonas nos ombros da criança)
+  // o escapamento redondo, curtinho, do lado direito, dourado escuro (claro, parecia um cabo branco)
+  P.cone('moto-escape', J, undefined, 0.28, 0.035, 0.042, [0.14, 0.26, -0.24], OURO_ESC, { rot: [Math.PI / 2 + 0.12, 0, 0], brilho: 0.8, ...NO });
+  P.bola('moto-escape-ponta', J, undefined, 0.044, [0.14, 0.276, -0.38], '#8c8478', [1, 1, 0.5], NO);
   // os apoios dos pés (onde os sapatos descansam)
   const apoio = (s: number): V3 => [s * 0.17, 0.3, 0.14];
   for (const s of [-1, 1]) {
@@ -251,14 +259,12 @@ function triciclo(P: Pecas): Montagem {
   P.caixa('tri-carenagem', J, undefined, [0.36, 0.3, 0.16], [0, 0.53, 0.39], OURO, 0.09, { brilho: 0.8, rot: [-0.22, 0, 0], ...NO });
   P.bola('tri-farol', J, undefined, 0.085, [0, 0.58, 0.48], '#fff4d0', [1, 1, 0.55], { luz: 'farol', ...NO });
   P.anel('tri-farol-aro', J, undefined, 0.19, 0.034, [0, 0.58, 0.47], OURO_CLARO, { rot: [Math.PI / 2 - 0.22, 0, 0], brilho: 0.8, ...NO });
-  P.placa('tri-estrela-f', J, undefined, perfilEstrela(0.05), 0.012, [0, 0.44, 0.47], CREME, { rot: [-0.22, 0, 0], ...NO });
+  P.placa('tri-estrela-f', J, undefined, perfilEstrela(0.05), 0.012, [0, 0.45, 0.5], CREME, { rot: [-0.22, 0, 0], ...NO });
   tubo(P, 'tri-coluna', [0, 0.66, 0.33], [0, 0.73, 0.27], 0.024, PRATA);
   P.cone('tri-guidao', J, undefined, 0.46, 0.024, 0.024, [0, 0.73, 0.27], PRATA, { ...deitado, brilho: 0.8, ...NO });
   for (const s of [-1, 1]) {
     P.cone(`tri-manopla${s}`, J, undefined, 0.11, 0.036, 0.036, [s * 0.2, 0.73, 0.27], CREME, { ...deitado, ...NO });
     P.bola(`tri-manopla-ponta${s}`, J, undefined, 0.038, [s * 0.258, 0.73, 0.27], OURO_ESC, [0.6, 1, 1], NO);
-    tubo(P, `tri-haste-espelho${s}`, [s * 0.15, 0.74, 0.27], [s * 0.19, 0.86, 0.25], 0.012, PRATA);
-    P.bola(`tri-espelho${s}`, J, undefined, 0.045, [s * 0.195, 0.88, 0.25], OURO, [1, 1, 0.45], { brilho: 0.8, ...NO });
   }
   // as duas rodas de trás e a da frente (com os pedais no miolo dela, que giram juntos)
   rodaMoto(P, 'tri-rodaT', 'andarRodaT', [0, Rt, zT], Rt, 0.09, [-xT, xT]);

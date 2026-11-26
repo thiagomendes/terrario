@@ -20,6 +20,8 @@ import { assentar, criarMundo, TAMANHOS, type Tamanho } from './guia-palco';
 declare const process: { env: Record<string, string | undefined> };
 const QUAL = (process.env.ESBOCO_038 ?? '').split(',').filter(Boolean);
 test.skip(!QUAL.length, 'fotos do esboço da 038 só com ESBOCO_038');
+// (cada tela no seu navegador: com 2 trabalhadores, em pé e deitado ou o computador vão juntos)
+test.describe.configure({ mode: 'parallel' });
 
 type V3 = [number, number, number];
 const PASTA = process.env.RETOQUES_PASTA ?? 'capturas-038/esboco';
@@ -70,13 +72,13 @@ const Q = {
   montadoAndando: { ang: 0.62, dist: 5.8, alt: 1.0, alvoY: 0.9, fov: 44, segue: true },
   lado: { ang: Math.PI / 2, dist: 5.4, alt: 0.35, alvoY: 0.9, fov: 40 },
   ladoAndando: { ang: Math.PI / 2, dist: 5.4, alt: 0.35, alvoY: 0.9, fov: 40, segue: true },
-  pes: { ang: Math.PI / 2, dist: 3.3, alt: 0.15, alvoY: 0.5, fov: 40, segue: true },
-  pesRaioX: { ang: 1.0, dist: 3.4, alt: 1.3, alvoY: 0.4, fov: 40, segue: true, raioX: true },
+  pes: { ang: Math.PI / 2, dist: 4.2, alt: 0.2, alvoY: 0.6, fov: 40, segue: true },
+  pesRaioX: { ang: Math.PI / 2, dist: 4.0, alt: 0.3, alvoY: 0.55, fov: 40, segue: true, raioX: true },
   roupa: { ang: 0.55, dist: 5.4, alt: 0.6, alvoY: 0.95, fov: 42 },
   roupaAndando: { ang: 0.6, dist: 5.6, alt: 0.8, alvoY: 0.95, fov: 44, segue: true },
   tenis: { ang: 0.7, dist: 2.4, alt: 0.35, alvoY: 0.25, fov: 40 },
   camiseta: { ang: 0.25, dist: 2.9, alt: 0.1, alvoY: 0.85, fov: 40 },
-  dentroMontado: { ang: 0, dist: 0, alt: 0, alvoY: 0, fov: 70, dentro: { olhar: 0.55 } },
+  dentroMontado: { ang: 0, dist: 0, alt: 0, alvoY: 0, fov: 70, dentro: { olhar: 0.95 } },
   dentroRoupa: { ang: 0, dist: 0, alt: 0, alvoY: 0, fov: 70, dentro: { olhar: 1.25 } },
 } satisfies Record<string, Enquadre>;
 /** Os pés de perto: de lado na bicicletinha e na motoca; o carrinho de cima, com a lataria clarinha. */
@@ -178,10 +180,21 @@ test('provas: as vistas de lado para acertar as medidas', async ({ browser }) =>
       await foto(page, `${nome}-lado`, pasta);
       await tomada(page, item, 'parado', 1.2, Q.montado);
       await foto(page, `${nome}-tres-quartos`, pasta);
+      // de frente e de costas (nenhuma forma estranha de nenhum lado)
+      await tomada(page, item, 'parado', 1.2, { ...Q.montado, ang: 0 });
+      await foto(page, `${nome}-frente`, pasta);
+      await tomada(page, item, 'parado', 1.2, { ...Q.montado, ang: Math.PI });
+      await foto(page, `${nome}-costas`, pasta);
       await tomada(page, item, 'andando', 2.4, pesDe(item));
       await foto(page, `${nome}-pes`, pasta);
       await tomada(page, item, 'parado', 1.2, Q.dentroMontado);
       await foto(page, `${nome}-dentro`, pasta);
+      console.log(
+        `DENTRO ${await page.evaluate(() => {
+          const c = window.__brumaluz!.cenaBabylon!().activeCamera!;
+          return JSON.stringify({ cam: c.position, info: window.__retoques!.info() });
+        })}`,
+      );
     } else {
       await tomada(page, item, 'parado', 1.2, Q.roupa);
       await foto(page, `${nome}`, pasta);
@@ -257,6 +270,16 @@ test('celular em pé: cada versão parada e andando, de dia e de noite, de fora 
     }
   if (medidas.length) writeFileSync(`${PASTA}/medida-pe-pedal.json`, JSON.stringify(medidas, null, 1));
   passo('medida');
+  // o custo de cada um (as malhas acesas do boneco são as chamadas de desenho dele), com a criança
+  // a pé de base
+  const custos: Record<string, unknown> = {};
+  for (const { nome, item } of [{ nome: 'a-pe', item: { tipo: 'nada' } as unknown as Item }, ...escolhidos()])
+    custos[nome] = await page.evaluate((item) => {
+      window.__retoques!.mostrar(item as never);
+      window.__retoques!.cena('parado', 0.5, false);
+      return window.__retoques!.custo();
+    }, item);
+  writeFileSync(`${PASTA}/custo.json`, JSON.stringify(custos, null, 1));
   if (!SO) await prancha(page);
   await page.context().close();
 });
@@ -286,8 +309,25 @@ for (const tamanho of ['deitado', 'pc'] as const)
       return;
     }
     // os vídeos: a moto andando (as duas versões) e os pés pedalando (de lado, de perto)
+    // (o mp4 abre em qualquer celular; quando o navegador de teste não grava mp4, fica o webm)
+    const mp4 = await page.evaluate(() =>
+      ['video/mp4;codecs=avc1.42E01E', 'video/mp4;codecs=avc1', 'video/mp4'].find((t) => MediaRecorder.isTypeSupported(t)) ?? null,
+    );
+    console.log(`MP4 ${mp4}`);
     const filmar = async (arquivo: string, trechos: Array<{ item: Item; q: Enquadre; s: number; hora?: number }>) => {
-      await comecarGravacao(page);
+      if (mp4) {
+        arquivo = arquivo.replace(/\.webm$/, '.mp4');
+        await page.evaluate((tipo) => {
+          const canvas = document.getElementById('cena') as HTMLCanvasElement;
+          const rec = new MediaRecorder(canvas.captureStream(30), { mimeType: tipo, videoBitsPerSecond: 10_000_000 });
+          const partes: Blob[] = [];
+          rec.ondataavailable = (e) => {
+            if (e.data.size) partes.push(e.data);
+          };
+          rec.start(250);
+          (window as unknown as { __gravacao: { rec: MediaRecorder; partes: Blob[] } }).__gravacao = { rec, partes };
+        }, mp4);
+      } else await comecarGravacao(page);
       for (const tr of trechos) {
         await page.evaluate(
           ({ item, q, hora }) => {
@@ -349,7 +389,7 @@ async function prancha(page: Page) {
     cartao('pedal-bici-hoje-pes-dia', 'Bicicletinha hoje', 'o pé passa longe do pedal'),
     cartao('pedal-bici-pes-dia', 'Bicicletinha nova', 'o pé encosta no pedal', true),
     cartao('pedal-carrinho-hoje-andando-dia', 'Carrinho hoje', 'os sapatos saem pelo capô'),
-    cartao('pedal-carrinho-pes-dia', 'Carrinho novo', 'os pés nos pedais, embaixo do painel', true),
+    cartao('pedal-carrinho-andando-dia', 'Carrinho novo', 'os pés nos pedais, embaixo do painel', true),
   ].join('');
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>
     body { margin: 0; background: #fbf6ec; font-family: system-ui, sans-serif; color: #3a2f4a; width: 1080px; }

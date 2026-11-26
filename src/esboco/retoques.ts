@@ -54,7 +54,9 @@ export type Item =
   | { tipo: 'moto'; versao: IdMoto }
   | { tipo: 'pedal'; versao: IdPedal; antes?: boolean }
   | { tipo: 'tenis'; versao: IdTenis }
-  | { tipo: 'camiseta'; versao: IdCamiseta };
+  | { tipo: 'camiseta'; versao: IdCamiseta }
+  /** A criança a pé, sem nada da lojinha (a base do custo). */
+  | { tipo: 'nada'; versao?: undefined };
 
 /** As duas crianças das fotos (as mesmas das capturas da 036). */
 const MENINA: Partial<Aparencia> = { corpo: 'feminino', cabeloEstilo: 5, rosto: 1, cabeloCor: 1, pele: 1, roupaEstilo: 6 };
@@ -108,6 +110,11 @@ export interface EsbocoRetoques {
   /** Uma volta inteira do pedal, em `n` amostras, com a criança andando. */
   medirPedal(n: number): MedidaPedal | null;
   info(): { crianca: V3; yaw: number; malhas: number; nos: string[] };
+  /**
+   * O custo do boneco agora (as malhas acesas são as chamadas de desenho dele): o total, o que é
+   * do brinquedo (o nó dele e os que giram dentro) e o que é do joelho.
+   */
+  custo(): { malhas: number; triangulos: number; brinquedo: [number, number]; joelho: [number, number] };
 }
 
 declare global {
@@ -486,7 +493,17 @@ function ligar(scene: Scene): void {
       // nos olhos: o meio da cabeça um tico à frente, olhando para a frente e para baixo
       const cab = juntas.cabeca;
       atualizarAte(cab);
-      const olho = Vector3.TransformCoordinates(new Vector3(0, 0.02, 0.18), cab.getWorldMatrix());
+      // (como no jogo: no máximo 0,2 à frente do meio do corpo; montada, a cabeça inclinada já
+      // passaria do guidão)
+      const olho = Vector3.TransformCoordinates(new Vector3(0, 0.05, 0), cab.getWorldMatrix());
+      const fx = olho.x - est.x;
+      const fz = olho.z - est.z;
+      const frente = fx * Math.sin(yaw) + fz * Math.cos(yaw);
+      // (a pé, os olhos vão os 0,2 à frente, como no jogo: olhando para baixo aparecem o peito e
+      // os sapatos)
+      const quer = ehMontado() ? Math.min(frente, 0.2) : 0.2;
+      olho.x += Math.sin(yaw) * (quer - frente);
+      olho.z += Math.cos(yaw) * (quer - frente);
       const dir = new Vector3(Math.sin(yaw) * Math.cos(q.dentro.olhar), -Math.sin(q.dentro.olhar), Math.cos(yaw) * Math.cos(q.dentro.olhar));
       const eng = scene.getEngine();
       const aspecto = eng.getRenderWidth() / Math.max(1, eng.getRenderHeight());
@@ -602,7 +619,7 @@ function ligar(scene: Scene): void {
       enquadre = q;
       esconderCabeca(!!q?.dentro);
       if (boneco && juntas.brinquedo)
-        for (const m of boneco.raiz.getChildMeshes(false)) if (m.parent === juntas.brinquedo) m.visibility = q?.raioX ? 0.3 : 1;
+        for (const m of boneco.raiz.getChildMeshes(false)) if (m.parent === juntas.brinquedo) m.visibility = q?.raioX ? 0.16 : 1;
       if (!q) fixa = null;
       else calcularCamera();
     },
@@ -623,6 +640,26 @@ function ligar(scene: Scene): void {
       malhas: boneco?.contarMalhas() ?? 0,
       nos: Object.keys(juntas),
     }),
+    custo() {
+      const r = { malhas: 0, triangulos: 0, brinquedo: [0, 0] as [number, number], joelho: [0, 0] as [number, number] };
+      if (!boneco) return r;
+      for (const m of boneco.raiz.getChildMeshes(false)) {
+        if (!m.isEnabled() || !m.isVisible) continue;
+        const t = Math.round(m.getTotalIndices() / 3);
+        r.malhas++;
+        r.triangulos += t;
+        const no = juntas.brinquedo;
+        if (no && m.isDescendantOf(no)) {
+          r.brinquedo[0]++;
+          r.brinquedo[1] += t;
+        }
+        if ((juntas.joelhoE && m.isDescendantOf(juntas.joelhoE)) || (juntas.joelhoD && m.isDescendantOf(juntas.joelhoD))) {
+          r.joelho[0]++;
+          r.joelho[1] += t;
+        }
+      }
+      return r;
+    },
   };
   window.__retoques = api;
 }
