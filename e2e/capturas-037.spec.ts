@@ -55,6 +55,29 @@ const pecasNaMao = (p: Page) =>
       braco: osso ? osso.getChildMeshes(false).filter((m) => m.isEnabled() && m.isVisible).length : -1,
     };
   });
+/**
+ * Portão, 5ª rodada: o que está à vista perto dos olhos (até 6 blocos), fora o chão e as paredes
+ * de blocos: o nome, a visibilidade e a distância. `meio` lista as peças meio transparentes
+ * (visibilidade entre 0 e 1), que depois do sumiço não podem sobrar.
+ */
+const vistosPerto = (p: Page) =>
+  p.evaluate(() => {
+    const s = window.__brumaluz!.cenaBabylon!();
+    const cam = s.activeCamera!.globalPosition;
+    const perto: string[] = [];
+    const meio: string[] = [];
+    for (const m of s.meshes) {
+      if (!m.isEnabled() || !m.isVisible || m.visibility <= 0) continue;
+      if (/^(chunk|agua|ceu|nuvem|pp-)/.test(m.name)) continue;
+      const c = m.getBoundingInfo().boundingSphere.centerWorld;
+      const d = Math.hypot(c.x - cam.x, c.y - cam.y, c.z - cam.z);
+      if (d > 6) continue;
+      const v = `${m.name} vis=${m.visibility.toFixed(2)} d=${d.toFixed(1)} y=${c.y.toFixed(1)}`;
+      if (m.visibility < 1) meio.push(v);
+      if (/morador|criatura|veic|prop|caixa|placa|balao/.test(m.name) || m.visibility < 1) perto.push(v);
+    }
+    return { perto: perto.slice(0, 60), meio };
+  });
 const hora = (p: Page, h: number) =>
   p.evaluate((h) => {
     const e = window.__brumaluz!;
@@ -64,7 +87,10 @@ const hora = (p: Page, h: number) =>
     e.definirClima?.('limpo');
   }, h);
 
+/** Só as cenas cujo nome tem uma destas palavras (CAPTURAS_037_SO=obra,colado,pipoca); vazio: todas. */
+const SO = (process.env.CAPTURAS_037_SO ?? '').split(',').filter(Boolean);
 async function tentar(nome: string, f: () => Promise<void>) {
+  if (SO.length && !SO.some((s) => nome.includes(s))) return;
   try {
     await f();
   } catch (err) {
@@ -146,7 +172,12 @@ test('T08: a primeira pessoa nas três telas, de dia e de noite', async ({ brows
         await page.evaluate((g) => window.__brumaluz!.mirarPonto!(g.x + 0.5, g.y + 0.62, g.z + 4), g);
         await page.waitForTimeout(900);
         const cam = await page.evaluate(() => window.__brumaluz!.primeiraPessoa!.camera());
-        nota(`${pre}-fantasma-colado`, { g, cam, naMira: await page.evaluate(() => window.__brumaluz!.fantasmaNaMira?.() ?? null) });
+        nota(`${pre}-fantasma-colado`, {
+          g,
+          cam,
+          naMira: await page.evaluate(() => window.__brumaluz!.fantasmaNaMira?.() ?? null),
+          vistos: await vistosPerto(page),
+        });
         await foto(page, `${pre}-fantasma-colado`);
         // e um passo para trás: os fantasmas da frente voltam inteiros
         await page.evaluate((g) => window.__brumaluz!.teleportar!(g.x + 0.5, g.z - 1.6), g);
@@ -199,7 +230,7 @@ test('T08: a primeira pessoa nas três telas, de dia e de noite', async ({ brows
         await page.waitForTimeout(700);
         const comendo = await pecasNaMao(page);
         await foto(page, `${pre}-pipoca-comendo`);
-        nota(`${pre}-pipoca`, { antes, comendo });
+        nota(`${pre}-pipoca`, { antes, comendo, vistos: await vistosPerto(page) });
       });
       // 5. os tesouros da mão (a varinha, o guarda-chuva e a pipa), um de cada vez, sem item na barra
       // (a varinha por último: as bolhas que ela já soltou continuam no ar uns 3 a 4 s, como
