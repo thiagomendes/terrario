@@ -8,7 +8,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
    - a ideia do filho é um brinquedo de andar (patinete, carrinho), diferente da vassoura-patinete da festa;
    - primeiro vai um **esboço com uma foto de cada item candidato**, para o dono escolher com o filho;
    - junto vai o conserto do **Unicórnio-pônei**, que tem borda estranha, brilho forte demais e treme quando voa (é defeito, e o orquestrador decide).
-2. **037, Construir melhor** (pedido do dono em 24 nov, vindo do filho; logo depois da lojinha):
+2. ~~**037, Construir melhor**~~ **publicada em 26 nov** (ver "Feitas"). (pedido do dono em 24 nov, vindo do filho; logo depois da lojinha):
    - **câmera em primeira pessoa num botão de trocar** (olho), com transição suave, as mãozinhas segurando o bloco, a escolha guardada no aparelho; volta sozinha à terceira pessoa ao comprar ou vestir na lojinha. Esboço primeiro;
    - **bloco nunca em cima de corpo** (defeito): hoje o núcleo só olha os jogadores, numa caixa menor que o corpo, e deixa pôr bloco em cima de bicho e de amigo, que ficam presos. Recusar onde houver criança, amigo, bicho ou morador, e soltar quem ficar preso;
    - **bloco só encostado**, em todos os modos: o bloco só entra encostado em outro bloco ou no chão (lado, embaixo ou em cima), com o tremor de mão das outras recusas.
@@ -80,7 +80,8 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
   - o ícone da colher do pedreiro na barra parece machadinha ou cutelo;
   - a dica "Toque para comer" cai em cima da cabeça do boneco;
   - a câmera de fora entra na grade dos blocos-guia da obra (eles não têm colisão desde a 014);
-  - a tocha do Doce Reino parece um palito laranja da cor do chão.
+  - a tocha do Doce Reino parece um palito laranja da cor do chão;
+  - a placa da obra, vista de trás em cima do tapume, parece um caixote solto flutuando.
 - **Consertado:** a velocidade do carrinho de quem guia o bate-bate dobrava sem controle para refazer (`src/cliente/bate.ts`); vai ao ar com a próxima publicação.
 - **A página deitada perde o contexto WebGL** na ponte da placa do WSL (a placa trava uns 2 min). Esses testes só rodam no `--tudo`; conferir no aparelho de verdade.
 
@@ -118,6 +119,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 - **A dica "trocar" nos fãs da plateia da Vila** (achado na revisão da 027, 21 nov): o defeito da dica de trocar nos fãs da plateia, a conferir e consertar numa spec própria. Fora da 027.
 
 ## Feitas e publicadas (resumo)
+- **037, Construir melhor (26 nov 2026):** a primeira pessoa no olhinho da roda ("Ver de dentro" e "Ver de fora"), com os olhos na altura de verdade, o braço curto de uma mão só e os itens de frente; no celular a mira segue o toque, no computador o mouse travado com a mira do meio. Os tesouros na mão: o guarda-chuva de verdade por cima, a pipa no céu da frente, a varinha com bolhas. No celular deitado, o mapinha e a mochila foram para a esquerda. O bloco nunca entra em cima de gente ou bicho, e só encostado num bloco ou no chão (a obra, o bolo e o lote do criativo sem a regra do apoio); quem ficou preso sai sozinho. `VERSAO_REDE` 18 (o núcleo mudou, o protocolo não). Medidas: +10% de quadros na primeira pessoa; paridade 36 de 36; cinco rodadas do portão visual e o estudo dos tesouros.
 - **036, Lojinha maior (24 nov 2026):** 12 itens novos: os 4 brinquedos de andar (patinete-luz, carrinho de pedal, bicicletinha, nuvem fofa; só enfeite, comprar já monta, 2 toques na roda para montar e descer), o passarinho voando perto do ombro, o boné de hélice, o pijama de nuvem, as asas de borboleta, a mochila-foguete, a varinha de bolhas, o guarda-chuva e a pipa; a vitrine com abas só de desenho e a estrelinha de novo; o provador montado; os sons; o Unicórnio-pônei e o pinguim sem tremer. `VERSAO_REDE` 18. Conferência por área (79 min e a final de 38 min); dois portões visuais. Pendências pequenas na Situação da spec.
 - **007 a 017, 019, 021, 023, 026, 030 a 035:** ver cada spec.
 - **027 parte 1, Noite das Fantasias (22 nov 2026):** o sexto mundo, a vila da festa: os lugares, os moradores com fantasia, os bichos, comprar e comer as comidas de festa, a varinha, as missões n1 a n5, a música e os sons (aprovados pelo dono). `VERSAO_REDE` 18. Também valem em todo mundo: a dica "Toque para comer" some depois de 8 s; os moradores e os bichos de longe com menos peças. Conferida no ar; fotos e vídeo em `capturas-027/parte1/no-ar/`.
