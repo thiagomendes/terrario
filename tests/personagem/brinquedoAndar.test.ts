@@ -167,8 +167,9 @@ describe('spec 036 (T05): as animações dos brinquedos de andar', () => {
     const lista: Parameters<typeof vestirBrinquedoAndar>[1] = [];
     vestirBrinquedoAndar('bicicletinha', lista);
     const selim = lista.find((p) => p.nome === 'andar-bici-selim')!;
-    // (no esboço o selim ficava a 0,47 e a roda tinha raio 0,2)
-    expect(selim.pos[1]).toBeGreaterThan(0.5);
+    // (no esboço o selim ficava a 0,47 e a roda tinha raio 0,2; spec 038: o selim desceu para o pé
+    // alcançar o pedal, e continua acima do selim do esboço)
+    expect(selim.pos[1]).toBeGreaterThan(0.45);
     expect(MONTARIA.bicicletinha.raioRoda).toBeGreaterThan(0.22);
   });
 });

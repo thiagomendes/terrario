@@ -28,7 +28,17 @@ import {
   type TexturaPremium,
 } from '../personagem/boneco';
 import { ALTURA_PRANCHA } from '../personagem/bonecoFantasia';
-import { GUIDAO, avancarAndar, boiarNuvem, estadoAndar, poseNoBrinquedo } from '../personagem/brinquedoAndar';
+import {
+  GUIDAO,
+  avancarAndar,
+  bandeiraNoVento,
+  boiarNuvem,
+  corpoNoAssento,
+  estadoAndar,
+  ondeOsPes,
+  poseNoBrinquedo,
+} from '../personagem/brinquedoAndar';
+import { medidaDaPerna, pernaNoPedal, type MedidaPerna } from '../personagem/joelho';
 import { luzPremium, texturaAquario } from './premiumLuzes';
 import type { Pose } from '../personagem/poses';
 import {
@@ -152,7 +162,7 @@ export function dadosDaPeca(
       height: p.tamanho[0],
       diameterBottom: p.tamanho[1] * 2,
       diameterTop: p.tamanho[2] * 2,
-      tessellation: grosso ? 8 : 14,
+      tessellation: grosso ? Math.min(8, p.lados ?? 8) : (p.lados ?? 14),
     });
   else if (p.forma === 'placa') vd = dadosPlaca(p.perfil ?? [], p.tamanho[2]);
   else if (p.forma === 'malha') vd = dadosMalhaPano(p.malha?.pos ?? [], p.malha?.ind ?? [], p.malha?.avessoClaro);
@@ -161,7 +171,8 @@ export function dadosDaPeca(
     vd = CreateTorusVertexData({
       diameter: p.tamanho[0],
       thickness: p.tamanho[1],
-      tessellation: 20,
+      // (spec 038: as rodas dos brinquedos de andar com menos gomos)
+      tessellation: p.lados ?? 20,
     });
   if ((p.viva || corNoVertice) && !p.pintar) {
     const n = vd.positions!.length / 3;
@@ -411,6 +422,14 @@ export function criarBoneco(
    */
   let andarVestido: string | null = null;
   let montado = false;
+  /**
+   * Spec 038 (T02): a perna com joelho (só com brinquedo de pedal ou de apoio vestido), a altura
+   * do quadril do plano (para sentar no assento) e o peso dos pés no pedal (0 a pé, 1 montada,
+   * suave ao montar e ao descer).
+   */
+  let medidaPerna: MedidaPerna | null = null;
+  let quadrilDoPlano = 0.34;
+  let pesoPes = 0;
   /** Spec 023: os nós próprios dos premium (as asas do dragão). */
   let subjuntas: Partial<Record<SubjuntaPremium, TransformNode>> = {};
   /** Spec 036: o giro de repouso de cada nó próprio (a animação soma em cima). */
@@ -668,6 +687,10 @@ export function criarBoneco(
     mats.definirLuz(luz);
     // spec 036 (T04): o brinquedo de andar só aparece com a criança montada
     subjuntas.brinquedo?.setEnabled(montado);
+    // spec 038 (T02): a perna com joelho e o quadril do plano
+    quadrilDoPlano = plano.juntas.pernaE.pos[1];
+    medidaPerna = subjuntas.joelhoE && subjuntas.joelhoD ? medidaDaPerna(plano) : null;
+    pesoPes = montado && medidaPerna ? 1 : 0;
   }
 
   /** Spec 036 (T04): montar e descer sem refazer o boneco (só o nó do brinquedo e a pose). */
@@ -1007,8 +1030,54 @@ export function criarBoneco(
       braco.rotation.y *= 1 - w;
     }
   }
+  /**
+   * Spec 038 (T02): montada num brinquedo de pedal ou de apoio, a perna e o joelho saem da conta
+   * (`pernaNoPedal`) a cada quadro, com o quadril de verdade deste quadro (depois de o corpo ser
+   * suavizado): a sola pisa no alto do pedal em toda a volta. A conta não passa pelo `suave`; ao
+   * montar e ao descer, o peso leva da pose a pé para a conta, sem salto. A pé, o joelho e o
+   * giro para o lado ficam em 0.
+   */
+  const mCorpoInv = new Matrix();
+  const vAlvo = new Vector3();
+  function pesNoPedal(k: number): void {
+    const j = juntas;
+    const med = medidaPerna;
+    const alvos = med && andarVestido ? ondeOsPes(andarVestido, andar) : null;
+    if (!med || !alvos || !j.prancha) return;
+    pesoPes += ((montado ? 1 : 0) - pesoPes) * k;
+    if (!montado && pesoPes < 0.002) pesoPes = 0;
+    const w = pesoPes;
+    const jE = subjuntas.joelhoE;
+    const jD = subjuntas.joelhoD;
+    if (w <= 0) {
+      if (jE) jE.rotation.x = 0;
+      if (jD) jD.rotation.x = 0;
+      j.pernaE.rotation.z = 0;
+      j.pernaD.rotation.z = 0;
+      return;
+    }
+    for (const n of [raiz, escalar, j.corpo, j.prancha]) n.computeWorldMatrix(true);
+    j.corpo.getWorldMatrix().invertToRef(mCorpoInv);
+    for (const [lado, perna, joelho] of [
+      ['E', j.pernaE, jE],
+      ['D', j.pernaD, jD],
+    ] as const) {
+      const p = alvos[lado];
+      vAlvo.set(p[0], p[1], p[2]);
+      Vector3.TransformCoordinatesToRef(vAlvo, j.prancha.getWorldMatrix(), vAlvo);
+      Vector3.TransformCoordinatesToRef(vAlvo, mCorpoInv, vAlvo);
+      const r = pernaNoPedal([vAlvo.x - perna.position.x, vAlvo.y - perna.position.y, vAlvo.z - perna.position.z], med);
+      perna.rotation.x += (r.x - perna.rotation.x) * w;
+      perna.rotation.y *= 1 - w;
+      perna.rotation.z = r.z * w;
+      if (joelho) joelho.rotation.x = r.joelho * w;
+    }
+  }
+
   function animarBrinquedo(): void {
     const s = subjuntas;
+    // spec 038 (T02): a bandeirinha tremula em volta do mastro com o vento do andar
+    if (s.andarBandeira) s.andarBandeira.rotation.y = bandeiraNoVento(andar);
     for (const r of [s.andarRodaF, s.andarRodaT]) if (r) r.rotation.x = andar.roda;
     // (as rodinhas de apoio são menores: giram mais depressa no mesmo chão)
     if (s.andarRodinhaE) s.andarRodinhaE.rotation.x = (andar.roda * 2.5) % (Math.PI * 2);
@@ -1044,6 +1113,9 @@ export function criarBoneco(
     if (montado && andarVestido) {
       if (extras) avancarAndar(andar, andarVestido, dt, (extras.vista?.passada ?? 0) * VEL_ANDAR_BONECO);
       poseNoBrinquedo(andarVestido, alvo, pose, andar);
+      // spec 038 (T02): sentada de verdade no assento, pela perna deste modelo
+      const sentar = corpoNoAssento(andarVestido, quadrilDoPlano);
+      if (sentar !== null) alvo.corpoY = sentar;
     }
     // spec 036: o tesouro da mão esquerda (a varinha, o guarda-chuva, a pipa): o braço segura no
     // alto, menos durante um gesto (o gesto manda no braço)
@@ -1078,6 +1150,8 @@ export function criarBoneco(
     // spec 036 (T05, acerto do dono): montada, as mãos fecham no guidão e no volante de verdade,
     // como quer que o tronco esteja (fora de um gesto, que manda nos braços)
     if (montado && andarVestido) maosNoGuidao(andarVestido, 1 - Math.min(1, Math.max(0, (pose.pesoGesto ?? 0) / 0.3)));
+    // spec 038 (T02): os pés no pedal (ou no apoio), depois da suavização, a cada quadro
+    pesNoPedal(k);
     j.cabeca.rotation.x = suave('cabecaX', alvo.cabeca[0], k);
     j.cabeca.rotation.y = suave('cabecaY', alvo.cabeca[1], k);
     j.cabeca.rotation.z = suave('cabecaZ', alvo.cabeca[2], k);
