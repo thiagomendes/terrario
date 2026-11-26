@@ -1,7 +1,7 @@
 ---
 id: 038-retoques-moto
 title: 'Retoques e a moto dourada: a motoquinha na lojinha, a camiseta e o tênis redesenhados, os pés no pedal e a bandeirinha'
-status: DRAFT
+status: APPROVED
 base_branch: main
 branch: feat/038-retoques-moto
 created_at: 2026-11-26T13:30:00Z
@@ -70,10 +70,10 @@ Continuam valendo as regras da 036:
 - **As motos ficam sem espelhinhos.** De frente, eles pareciam dragonas nos ombros.
 - **O som da motoquinha:** um "vrum" de brinquedo, curto e baixo, só ao montar, pela régua da 019 (`somResto.test.ts`: curto e abaixo do golpe). Andando, só as rodinhas.
 - **A régua de custo sobe**, porque o joelho e as peças que giram precisam de malha própria:
-  - montado, no máximo **+7 malhas** sobre o mesmo boneco a pé sem brinquedo vestido, na bicicletinha, no carrinho e na motoquinha;
+  - montado, no máximo **+7 malhas** sobre o mesmo boneco a pé sem brinquedo vestido, na bicicletinha e na motoquinha, e **+8** no carrinho;
   - a pé com brinquedo de pedal vestido, no máximo **+2** (o joelho);
   - cada brinquedo com no máximo **10 mil triângulos**;
-  - os pedais do carrinho ficam sem nó próprio, juntados no brinquedo e parados embaixo do painel, porque quase não aparecem. Os pés giram;
+  - os pedais do carrinho giram de verdade, com os pés, num nó próprio (+1). O dono escolheu os pedais no esboço, e pedal parado com o pé girando em volta fica errado. Por isso o carrinho tem +8;
   - as rodas e os pedais redondos ficam com menos gomos;
   - as peças se juntam por material.
 - **"Na curva" sai da bandeirinha:** dá pouco ganho, e o giro dos amigos vem da rede, com o risco de tremor que o Unicórnio-pônei teve.
@@ -118,8 +118,8 @@ Continuam valendo as regras da 036:
   - o pedal redondo.
 
   As cores e os detalhes ficam iguais.
-- **O carrinho** ganha os pedais embaixo do painel, sem nó próprio, com o capô um tico mais curto e o volante um tico mais alto. Os sapatos não saem mais pelo capô.
-- **A bandeirinha do carrinho** sai para um nó próprio (+1 malha, dentro da régua de +7).
+- **O carrinho** ganha os pedais embaixo do painel, girando com os pés num nó próprio, com o capô um tico mais curto e o volante um tico mais alto. Os sapatos não saem mais pelo capô.
+- **A bandeirinha do carrinho** sai para um nó próprio (+1 malha, dentro da régua de +8 do carrinho).
   - Ela gira em volta do mastro com a amplitude pela velocidade suavizada (`e.vel`): parado, quase nada; andando, um balanço lento de até uns 25° com um tremular pequeno de até uns 8°, nunca acima de 3 Hz.
   - Ela não encosta na capa, nas asas nem na mochila-foguete.
   - Os amigos veem igual.
@@ -153,7 +153,7 @@ Continuam valendo as regras da 036:
   - a sola fica a no máximo 0,02 bloco do pedal ou do apoio;
   - a sola fica a no máximo uns 35° do pedal, e o pedal não atravessa o sapato de forma visível (conferido nas fotos de lado).
 - **A pé com o brinquedo vestido nada muda:** um teste prova que a sola e a ponta do sapato ficam onde estão hoje ao andar, correr, pular, sentar no parque e fazer gestos.
-- **A bandeirinha não treme:** a 20 quadros por segundo, nenhum salto de ângulo entre quadros passa de um teto, também com o giro da rede tremido.
+- **A bandeirinha não treme:** a 20 quadros por segundo, nenhum salto de ângulo entre quadros passa de 0,15 rad.
 - **Achar e comprar a moto:** do toque na lojinha até o detalhe dela, no máximo 2 toques. O cartão aparece sem rolar no celular em pé, ou a rolagem conta como um toque.
 - **Montar:** em menos de 0,5 s, com puf e som, como na 036.
 - **Desempenho:** no celular em pé (390×844), com a CPU 4× mais lenta, na Vila Neon de dia, medindo a `main` contra o ramo na mesma rodada. Os cenários são:

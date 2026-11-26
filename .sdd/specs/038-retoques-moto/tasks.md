@@ -17,4 +17,4 @@
 | Parte | Estado |
 |---|---|
 | Esboço | feito em 26 nov (`capturas-038/esboco/`); o dono escolheu pela prancha às 13h |
-| Spec | revisada por um `artista-voxel` novo em 26 nov: 4 altos (a régua de custo, a suavização contra a medida, a medida só num modelo e sem a motoquinha, as roupas que cobrem a perna), 6 médios e 4 baixos, todos ajustados no texto; "na curva" saiu da bandeirinha |
+| Spec | revisada por um `artista-voxel` novo em 26 nov: 4 altos (a régua de custo, a suavização contra a medida, a medida só num modelo e sem a motoquinha, as roupas que cobrem a perna), 6 médios e 4 baixos, todos ajustados no texto; "na curva" saiu da bandeirinha. Na releitura: os pedais do carrinho giram num nó próprio (o carrinho fica com +8) e o teto da bandeirinha é 0,15 rad por quadro. **Aprovada em 26 nov** |
