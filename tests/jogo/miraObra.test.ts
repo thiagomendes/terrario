@@ -57,4 +57,23 @@ describe('mira nos fantasmas da obra', () => {
       fantasmaNoRaio(o, d, [a], { limite: 40, ima: 0.5, solido: Infinity, alcanca: () => false }),
     ).toBeNull();
   });
+
+  it('spec 037: o apoiado só desempata no ímã; nunca passa na frente do tocado em cheio', () => {
+    const baixo = { x: 0, y: 0, z: 5 };
+    const cima = { x: 0, y: 1, z: 5 };
+    const lado = { x: 1, y: 0, z: 5 };
+    const d = { x: 0, y: 0, z: 1 };
+    const op = { limite: 40, ima: 1.5, solido: Infinity, alcanca: sempre };
+    const apoiado = (c: { y: number }) => c.y === 0;
+    // o raio passa por cima dos dois: só o ímã pega, e o de cima (solto) está mais perto
+    const porCima = { x: 0.5, y: 2.3, z: 0 };
+    expect(fantasmaNoRaio(porCima, d, [cima, baixo], op)).toBe(cima);
+    expect(fantasmaNoRaio(porCima, d, [cima, baixo], { ...op, apoiado })).toBe(baixo);
+    // tocado em cheio, o solto ganha mesmo com o apoiado ao lado
+    const emCheio = { x: 0.5, y: 1.5, z: 0 };
+    expect(fantasmaNoRaio(emCheio, d, [baixo, cima], { ...op, apoiado })).toBe(cima);
+    // entre dois apoiados, o mais perto do raio
+    const entre = { x: 0.4, y: 1.6, z: 0 };
+    expect(fantasmaNoRaio(entre, d, [lado, baixo], { ...op, apoiado: sempre })).toBe(baixo);
+  });
 });

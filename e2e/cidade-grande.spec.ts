@@ -95,38 +95,66 @@ const fantasmas = (p: Page, n: number): Promise<Fantasma[]> =>
     n,
   );
 
-/** Voa ao lado de um fantasma até a mira pegar e enche com o clique direito; devolve se encheu. */
+/**
+ * Voa ao lado de um fantasma até a mira pegar e enche com o clique direito; devolve se encheu.
+ *
+ * Spec 037 (o mesmo conserto do canteiro, c55fc51): o boneco que o teleporte põe dentro do
+ * tapume, do andaime ou de um bloco da obra é solto para o lugar livre mais perto, e a mira que
+ * nascia dentro de um bloco passava pelas paredes. Então a mira é feita depois que ele assenta,
+ * no meio do fantasma ou perto de uma face, e primeiro só vale o fantasma visado (de baixo para
+ * cima), para nenhum de baixo ficar fechado entre os de cima já cheios.
+ */
 async function encherUm(p: Page, lista: Fantasma[]): Promise<boolean> {
-  for (const f of lista.slice(0, 6))
-    for (const [dx, dz, dy] of [
-      [0, -2.6, 1.2],
-      [0, 2.6, 1.2],
-      [-2.6, 0, 1.2],
-      [2.6, 0, 1.2],
-      [0, -1.8, 2.8],
-      [0, 1.8, 2.8],
-      [-1.8, 0, 2.8],
-      [1.8, 0, 2.8],
-    ]) {
-      const ok = await p.evaluate(
-        ([f, dx, dz, dy]) => {
-          const e = window.__brumaluz!;
-          e.voar?.(true);
-          e.teleportar!(f.x + 0.5 + dx, f.z + 0.5 + dz, f.y + dy);
-          e.mirarPonto!(f.x + 0.5, f.y + 0.5, f.z + 0.5);
-          return !!e.fantasmaNaMira?.();
-        },
-        [f, dx, dz, dy] as const,
-      );
-      if (!ok) continue;
-      const antes = (await fantasmas(p, f.canteiro)).length;
-      await p.evaluate(() => window.__brumaluz!.usarOuColocar!());
-      // na nuvem o bloco volta no quadro do servidor
-      for (let i = 0; i < 12; i++) {
-        await p.waitForTimeout(120);
-        if ((await fantasmas(p, f.canteiro)).length < antes) return true;
+  for (const soOVisado of [true, false])
+    for (const f of lista.slice(0, 6))
+      for (const [dx, dz, dy] of [
+        [0, -2.6, 1.2],
+        [0, 2.6, 1.2],
+        [-2.6, 0, 1.2],
+        [2.6, 0, 1.2],
+        [0, -1.8, 2.8],
+        [0, 1.8, 2.8],
+        [-1.8, 0, 2.8],
+        [1.8, 0, 2.8],
+      ]) {
+        await p.evaluate(
+          ([f, dx, dz, dy]) => {
+            const e = window.__brumaluz!;
+            e.voar?.(true);
+            e.teleportar!(f.x + 0.5 + dx, f.z + 0.5 + dz, f.y + dy);
+          },
+          [f, dx, dz, dy] as const,
+        );
+        await p.waitForTimeout(60);
+        const ok = await p.evaluate(
+          ([f, so]) => {
+            const e = window.__brumaluz!;
+            const pontos = [
+              [0, 0, 0],
+              [-0.45, -0.3, 0],
+              [0.45, -0.3, 0],
+              [0, -0.3, -0.45],
+              [0, -0.3, 0.45],
+              [0, 0.45, 0],
+            ];
+            for (const [px, py, pz] of pontos) {
+              e.mirarPonto!(f.x + 0.5 + px, f.y + 0.5 + py, f.z + 0.5 + pz);
+              const m = e.fantasmaNaMira?.() as { x: number; y: number; z: number } | null;
+              if (m && (!so || (m.x === f.x && m.y === f.y && m.z === f.z))) return true;
+            }
+            return false;
+          },
+          [f, soOVisado] as const,
+        );
+        if (!ok) continue;
+        const antes = (await fantasmas(p, f.canteiro)).length;
+        await p.evaluate(() => window.__brumaluz!.usarOuColocar!());
+        // na nuvem o bloco volta no quadro do servidor
+        for (let i = 0; i < 12; i++) {
+          await p.waitForTimeout(120);
+          if ((await fantasmas(p, f.canteiro)).length < antes) return true;
+        }
       }
-    }
   return false;
 }
 

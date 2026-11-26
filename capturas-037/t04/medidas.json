@@ -1,0 +1,169 @@
+{
+ "em-pe-dia": {
+  "tela": {
+   "mao": [
+    332,
+    561
+   ],
+   "ombro": [
+    445,
+    547
+   ],
+   "ombroCamera": [
+    0.548,
+    -0.274,
+    1.322
+   ],
+   "maoPx": 76
+  },
+  "custo": {
+   "malhas": 10,
+   "triangulos": 5674
+  }
+ },
+ "naoDeDentro": {
+  "giroDaMao": [
+   0.35,
+   0.63,
+   0.244,
+   0.235,
+   0.438,
+   0.446,
+   0.304,
+   0.333
+  ]
+ },
+ "volta": {
+  "antesDaVolta": {
+   "osso": true,
+   "pecas": 9
+  },
+  "depois": {
+   "osso": false,
+   "pecas": 0
+  },
+  "pecasDoItemNoBoneco": 5
+ },
+ "naoDeFora": {
+  "giroDoItem": [
+   0,
+   0.279,
+   -0.104,
+   -0.185,
+   0.068,
+   0.09,
+   -0.03,
+   -0.029
+  ]
+ },
+ "em-pe-noite": {
+  "tela": {
+   "mao": [
+    332,
+    559
+   ],
+   "ombro": [
+    445,
+    547
+   ],
+   "ombroCamera": [
+    0.548,
+    -0.274,
+    1.322
+   ],
+   "maoPx": 76
+  },
+  "custo": {
+   "malhas": 10,
+   "triangulos": 5674
+  }
+ },
+ "deitado-dia": {
+  "tela": {
+   "mao": [
+    739,
+    224
+   ],
+   "ombro": [
+    895,
+    206
+   ],
+   "ombroCamera": [
+    1.377,
+    -0.031,
+    0.812
+   ],
+   "maoPx": 52
+  },
+  "custo": {
+   "malhas": 10,
+   "triangulos": 5674
+  }
+ },
+ "deitado-noite": {
+  "tela": {
+   "mao": [
+    739,
+    224
+   ],
+   "ombro": [
+    895,
+    206
+   ],
+   "ombroCamera": [
+    1.377,
+    -0.031,
+    0.812
+   ],
+   "maoPx": 52
+  },
+  "custo": {
+   "malhas": 10,
+   "triangulos": 5674
+  }
+ },
+ "computador-dia": {
+  "tela": {
+   "mao": [
+    1088,
+    477
+   ],
+   "ombro": [
+    1360,
+    459
+   ],
+   "ombroCamera": [
+    1.045,
+    -0.143,
+    0.746
+   ],
+   "maoPx": 103
+  },
+  "custo": {
+   "malhas": 10,
+   "triangulos": 5674
+  }
+ },
+ "computador-noite": {
+  "tela": {
+   "mao": [
+    1088,
+    477
+   ],
+   "ombro": [
+    1360,
+    459
+   ],
+   "ombroCamera": [
+    1.045,
+    -0.143,
+    0.746
+   ],
+   "maoPx": 103
+  },
+  "custo": {
+   "malhas": 10,
+   "triangulos": 5674
+  }
+ }
+}

@@ -373,6 +373,9 @@ describe('o que é só da Noite das Fantasias', () => {
         });
         n.passo();
         n.quadros();
+        // spec 037: a célula fica no ar (longe do que a geração protege); uma pedra embaixo dá
+        // o apoio, para a recusa ser a do tema e não a do bloco solto
+        n.estado.edicoes.definir(x, y - 1, z, Bloco.PEDRA_LISA);
         const pedir = (bloco: number, id: number) =>
           n.comando('ana', sanear({ t: 'colocar', id, x, y, z, bloco, meta: 0, slot: 0 })!);
         pedir(recusa, 1);

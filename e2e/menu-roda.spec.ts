@@ -118,6 +118,8 @@ async function cadaItem(page: Page, tocar: boolean, nome: string) {
     // spec 030: o baú (a carteira) mora na roda (as "Missões" só onde há missões)
     'bau',
     'lojinha',
+    // spec 037 (dono, 25 nov 2026): o olhinho da primeira pessoa mora na roda
+    'ver-de-dentro',
     'foto',
     'gestos',
     'casa',

@@ -14,6 +14,7 @@ import { celulasPlanejadas, definirObrasFeitas } from '../../src/world/obras';
 import { COLHER_PEDREIRO } from '../../src/jogo/exclusivos';
 import { Bloco } from '../../src/world/blocks';
 import { empacotar } from '../../src/world/edicoes';
+import { soltarDoBloco } from '../../src/player/fisica';
 import { gerarCodigo } from '../../src/jogo/codigos';
 import { VERSAO_REDE, type RespostaServidor } from '../../src/rede/protocolo';
 import { VERSAO_PROTOCOLO, type Quadro } from '../../src/nucleo/protocolo';
@@ -1057,6 +1058,11 @@ describe('construções protegidas na sala (spec 016, três jogadores)', () => {
         slot: 0,
       });
     await s.avancar(100);
+    // spec 037: o bloco novo precisa encostar num sólido; a célula do teste fica no céu, então
+    // uma pedra solta embaixo dela dá o apoio (como num mundo salvo com bloco no ar)
+    // (a célula P e a do baú, dois para o lado)
+    for (const dz of [0, 2])
+      nucleo().estado.edicoes.definir(P.x, P.y - 1, P.z + dz, Bloco.PEDRA_LISA);
     return { ...s, b, c, nucleo, mandar, P };
   }
 
@@ -1190,6 +1196,8 @@ describe('construções protegidas na sala (spec 016, três jogadores)', () => {
       });
     await s.avancar(300);
     await s.g.receber(a, tel(1));
+    // spec 037: a pedra solta embaixo dá o apoio à célula no céu
+    s.g.ativas.get(codigo)!.nucleo.estado.edicoes.definir(P.x, P.y - 1, P.z, Bloco.PEDRA_LISA);
     await s.g.receber(
       a,
       JSON.stringify({ t: 'colocar', id: 1, ...P, bloco: Bloco.TABUAS, meta: 0, slot: 0, seq: 2 }),
@@ -1591,5 +1599,94 @@ describe('spec 034: os mundos dos quatro temas que saíram, na nuvem', () => {
       await s.g.receber(a, entrarComo('ana', { criar: { ...criarMundo, tema } }));
       expect(a.recebidas[0]?.t, tema).toBe('bemvindo');
     }
+  });
+});
+
+describe('spec 037 (T02): o soltar do cliente e o teleporte do servidor', () => {
+  it('quem sai de dentro de um bloco (de lado ou subindo) não volta para dentro pelo teleporte', async () => {
+    // como a sala de verdade: sem os atalhos de teste (o servidor confere cada posição)
+    let t = 0;
+    const g = criarGerenciador({ armazem: armazemMemoria(), agora: () => t, sorteio: Math.random });
+    const avancar = async (ms: number) => {
+      for (let i = 0; i < ms; i += 50) {
+        t += 50;
+        g.passo();
+      }
+      await g.manutencao();
+    };
+    const a = canal();
+    await g.receber(
+      a,
+      JSON.stringify({
+        t: 'entrar',
+        versao: VERSAO_REDE,
+        jogador: ident('ana'),
+        criar: { ...criarMundo, tema: 'doce-reino', modo: 'sobrevivencia' },
+      }),
+    );
+    const bv = a.recebidas.find((m) => m.t === 'bemvindo') as Extract<
+      RespostaServidor,
+      { t: 'bemvindo' }
+    >;
+    const nucleo = g.ativas.get(bv.sala.codigo)!.nucleo;
+    let seq = 0;
+    const posicao = (p: { x: number; y: number; z: number }) =>
+      g.receber(
+        a,
+        JSON.stringify({
+          t: 'jogador',
+          ...p,
+          yaw: 0,
+          pitch: 0,
+          olhos: p.y + 1.62,
+          noChao: true,
+          voando: false,
+          vel: 0,
+          correndo: false,
+          submerso: false,
+          quedas: [],
+          pulos: 0,
+          golpes: 0,
+          slot: 0,
+          seq: ++seq,
+        }),
+      );
+    const teleportes = () =>
+      quadros(a).flatMap((q) => (q.eventos ?? []).filter((e) => e.e === 'teleporte')).length;
+    const tel = () => nucleo.estado.jogadores.get('ana')!.tel;
+    await posicao(bv.pos!);
+    await avancar(300);
+    const antes = teleportes();
+    // o caso 1: um bloco de 2 de altura nasce em cima dela (o andaime da obra seguinte, um mundo
+    // salvo); o cliente a solta de lado, na mesma altura
+    const p = tel();
+    const [cx, cy, cz] = [Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)];
+    for (const dy of [0, 1]) nucleo.estado.edicoes.definir(cx, cy + dy, cz, Bloco.PEDRA_LISA);
+    const e = { x: p.x, y: p.y, z: p.z, vy: 0, noChao: true };
+    expect(soltarDoBloco(e, nucleo.estado.mundo.solido)).toBe(true);
+    expect(e.y).toBe(p.y);
+    await posicao(e);
+    await avancar(300);
+    expect(teleportes(), 'de lado').toBe(antes);
+    expect([tel().x, tel().y, tel().z]).toEqual([e.x, e.y, e.z]);
+    // o caso 2: tapada dos lados (um poço de 5 de fundo): o cliente a solta subindo
+    const q = tel();
+    const [qx, qy, qz] = [Math.floor(q.x), Math.floor(q.y), Math.floor(q.z)];
+    for (let dx = -2; dx <= 2; dx++)
+      for (let dz = -2; dz <= 2; dz++)
+        for (let dy = 0; dy < 5; dy++)
+          nucleo.estado.edicoes.definir(qx + dx, qy + dy, qz + dz, Bloco.PEDRA_LISA);
+    const f = { x: q.x, y: q.y, z: q.z, vy: 0, noChao: true };
+    expect(soltarDoBloco(f, nucleo.estado.mundo.solido)).toBe(true);
+    expect(f.y).toBe(qy + 5);
+    await posicao(f);
+    await avancar(300);
+    expect(teleportes(), 'subindo').toBe(antes);
+    expect(tel().y).toBe(qy + 5);
+    // a conferência continua de pé: um salto de 20 blocos ainda volta
+    await posicao({ x: f.x, y: f.y + 20, z: f.z });
+    await avancar(300);
+    expect(teleportes()).toBe(antes + 1);
+    expect(tel().y).toBe(qy + 5);
   });
 });

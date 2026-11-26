@@ -1,0 +1,731 @@
+{
+ "em-pe-dia-obra": {
+  "naMira": true,
+  "mao": {
+   "pega": [
+    "pp-braco-mao-cabo",
+    "pp-braco-mao-virola",
+    "pp-braco-mao-lamina"
+   ],
+   "braco": 7
+  },
+  "colher": true
+ },
+ "em-pe-dia-fantasma-colado": {
+  "g": {
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "canteiro": 1
+  },
+  "cam": {
+   "frente": 0.2,
+   "cima": 1.62,
+   "lado": 0,
+   "pitch": 0,
+   "fovV": 80,
+   "dentroDeBloco": false
+  },
+  "naMira": {
+   "canteiro": 1,
+   "i": 7,
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "meta": 0,
+   "camada": 1,
+   "pulsa": false
+  }
+ },
+ "em-pe-dia-pipoca": {
+  "antes": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "comendo": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  }
+ },
+ "em-pe-dia-tesouro-varinha-bolhas": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 8
+  },
+  "tesouro": {
+   "naMao": 4,
+   "guardaChuva": 0,
+   "pipa": 0,
+   "fio": false
+  }
+ },
+ "em-pe-dia-tesouro-guarda-chuva-gotinhas": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 4
+  },
+  "tesouro": {
+   "naMao": 0,
+   "guardaChuva": 3,
+   "pipa": 0,
+   "fio": false
+  }
+ },
+ "em-pe-dia-tesouro-pipa-lacinhos": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 4
+  },
+  "tesouro": {
+   "naMao": 0,
+   "guardaChuva": 0,
+   "pipa": 7,
+   "fio": true
+  }
+ },
+ "em-pe-noite-obra": {
+  "naMira": true,
+  "mao": {
+   "pega": [
+    "pp-braco-mao-cabo",
+    "pp-braco-mao-virola",
+    "pp-braco-mao-lamina"
+   ],
+   "braco": 7
+  },
+  "colher": true
+ },
+ "em-pe-noite-fantasma-colado": {
+  "g": {
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "canteiro": 1
+  },
+  "cam": {
+   "frente": 0.2,
+   "cima": 1.62,
+   "lado": 0,
+   "pitch": 0,
+   "fovV": 80,
+   "dentroDeBloco": false
+  },
+  "naMira": {
+   "canteiro": 1,
+   "i": 7,
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "meta": 0,
+   "camada": 1,
+   "pulsa": false
+  }
+ },
+ "em-pe-noite-pipoca": {
+  "antes": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "comendo": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  }
+ },
+ "em-pe-noite-tesouro-varinha-bolhas": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 8
+  },
+  "tesouro": {
+   "naMao": 4,
+   "guardaChuva": 0,
+   "pipa": 0,
+   "fio": false
+  }
+ },
+ "em-pe-noite-tesouro-guarda-chuva-gotinhas": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 4
+  },
+  "tesouro": {
+   "naMao": 0,
+   "guardaChuva": 3,
+   "pipa": 0,
+   "fio": false
+  }
+ },
+ "em-pe-noite-tesouro-pipa-lacinhos": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 4
+  },
+  "tesouro": {
+   "naMao": 0,
+   "guardaChuva": 0,
+   "pipa": 7,
+   "fio": true
+  }
+ },
+ "deitado-dia-obra": {
+  "naMira": true,
+  "mao": {
+   "pega": [
+    "pp-braco-mao-cabo",
+    "pp-braco-mao-virola",
+    "pp-braco-mao-lamina"
+   ],
+   "braco": 7
+  },
+  "colher": true
+ },
+ "deitado-dia-fantasma-colado": {
+  "g": {
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "canteiro": 1
+  },
+  "cam": {
+   "frente": 0.2,
+   "cima": 1.62,
+   "lado": 0,
+   "pitch": 0,
+   "fovV": 70,
+   "dentroDeBloco": false
+  },
+  "naMira": {
+   "canteiro": 1,
+   "i": 7,
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "meta": 0,
+   "camada": 1,
+   "pulsa": false
+  }
+ },
+ "deitado-dia-pipoca": {
+  "antes": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "comendo": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  }
+ },
+ "deitado-dia-tesouro-varinha-bolhas": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 8
+  },
+  "tesouro": {
+   "naMao": 4,
+   "guardaChuva": 0,
+   "pipa": 0,
+   "fio": false
+  }
+ },
+ "deitado-dia-tesouro-guarda-chuva-gotinhas": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 4
+  },
+  "tesouro": {
+   "naMao": 0,
+   "guardaChuva": 3,
+   "pipa": 0,
+   "fio": false
+  }
+ },
+ "deitado-dia-tesouro-pipa-lacinhos": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 4
+  },
+  "tesouro": {
+   "naMao": 0,
+   "guardaChuva": 0,
+   "pipa": 7,
+   "fio": true
+  }
+ },
+ "deitado-noite-obra": {
+  "naMira": true,
+  "mao": {
+   "pega": [
+    "pp-braco-mao-cabo",
+    "pp-braco-mao-virola",
+    "pp-braco-mao-lamina"
+   ],
+   "braco": 7
+  },
+  "colher": true
+ },
+ "deitado-noite-fantasma-colado": {
+  "g": {
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "canteiro": 1
+  },
+  "cam": {
+   "frente": 0.2,
+   "cima": 1.62,
+   "lado": 0,
+   "pitch": 0,
+   "fovV": 70,
+   "dentroDeBloco": false
+  },
+  "naMira": {
+   "canteiro": 1,
+   "i": 7,
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "meta": 0,
+   "camada": 1,
+   "pulsa": false
+  }
+ },
+ "deitado-noite-pipoca": {
+  "antes": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "comendo": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  }
+ },
+ "deitado-noite-tesouro-varinha-bolhas": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 8
+  },
+  "tesouro": {
+   "naMao": 4,
+   "guardaChuva": 0,
+   "pipa": 0,
+   "fio": false
+  }
+ },
+ "deitado-noite-tesouro-guarda-chuva-gotinhas": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 4
+  },
+  "tesouro": {
+   "naMao": 0,
+   "guardaChuva": 3,
+   "pipa": 0,
+   "fio": false
+  }
+ },
+ "deitado-noite-tesouro-pipa-lacinhos": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 4
+  },
+  "tesouro": {
+   "naMao": 0,
+   "guardaChuva": 0,
+   "pipa": 7,
+   "fio": true
+  }
+ },
+ "computador-dia-obra": {
+  "naMira": true,
+  "mao": {
+   "pega": [
+    "pp-braco-mao-cabo",
+    "pp-braco-mao-virola",
+    "pp-braco-mao-lamina"
+   ],
+   "braco": 7
+  },
+  "colher": true
+ },
+ "computador-dia-fantasma-colado": {
+  "g": {
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "canteiro": 1
+  },
+  "cam": {
+   "frente": 0.2,
+   "cima": 1.62,
+   "lado": 0,
+   "pitch": 0,
+   "fovV": 70,
+   "dentroDeBloco": false
+  },
+  "naMira": {
+   "canteiro": 1,
+   "i": 7,
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "meta": 0,
+   "camada": 1,
+   "pulsa": false
+  }
+ },
+ "computador-dia-pipoca": {
+  "antes": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "comendo": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  }
+ },
+ "computador-dia-tesouro-varinha-bolhas": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 8
+  },
+  "tesouro": {
+   "naMao": 4,
+   "guardaChuva": 0,
+   "pipa": 0,
+   "fio": false
+  }
+ },
+ "computador-dia-tesouro-guarda-chuva-gotinhas": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 4
+  },
+  "tesouro": {
+   "naMao": 0,
+   "guardaChuva": 3,
+   "pipa": 0,
+   "fio": false
+  }
+ },
+ "computador-dia-tesouro-pipa-lacinhos": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 4
+  },
+  "tesouro": {
+   "naMao": 0,
+   "guardaChuva": 0,
+   "pipa": 7,
+   "fio": true
+  }
+ },
+ "computador-noite-obra": {
+  "naMira": true,
+  "mao": {
+   "pega": [
+    "pp-braco-mao-cabo",
+    "pp-braco-mao-virola",
+    "pp-braco-mao-lamina"
+   ],
+   "braco": 7
+  },
+  "colher": true
+ },
+ "computador-noite-fantasma-colado": {
+  "g": {
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "canteiro": 1
+  },
+  "cam": {
+   "frente": 0.2,
+   "cima": 1.62,
+   "lado": 0,
+   "pitch": 0,
+   "fovV": 70,
+   "dentroDeBloco": false
+  },
+  "naMira": {
+   "canteiro": 1,
+   "i": 7,
+   "x": -45,
+   "y": 77,
+   "z": -209,
+   "bloco": 7,
+   "meta": 0,
+   "camada": 1,
+   "pulsa": false
+  }
+ },
+ "computador-noite-pipoca": {
+  "antes": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  },
+  "comendo": {
+   "pega": [
+    "pp-braco-mao-balde",
+    "pp-braco-mao-listra0",
+    "pp-braco-mao-listra1",
+    "pp-braco-mao-listra2",
+    "pp-braco-mao-listra3",
+    "pp-braco-mao-pipoca-0.040.140",
+    "pp-braco-mao-pipoca0.040.140.01",
+    "pp-braco-mao-pipoca00.15-0.04",
+    "pp-braco-mao-pipoca00.1450.04",
+    "pp-braco-mao-pipoca00.180",
+    "pp-braco-mao-pipoca-0.030.170.03",
+    "pp-braco-mao-pipoca0.0350.17-0.03"
+   ],
+   "braco": 16
+  }
+ },
+ "computador-noite-tesouro-varinha-bolhas": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 8
+  },
+  "tesouro": {
+   "naMao": 4,
+   "guardaChuva": 0,
+   "pipa": 0,
+   "fio": false
+  }
+ },
+ "computador-noite-tesouro-guarda-chuva-gotinhas": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 4
+  },
+  "tesouro": {
+   "naMao": 0,
+   "guardaChuva": 3,
+   "pipa": 0,
+   "fio": false
+  }
+ },
+ "computador-noite-tesouro-pipa-lacinhos": {
+  "vestiu": true,
+  "mao": {
+   "pega": [],
+   "braco": 4
+  },
+  "tesouro": {
+   "naMao": 0,
+   "guardaChuva": 0,
+   "pipa": 7,
+   "fio": true
+  }
+ },
+ "volta": {
+  "mao": {
+   "pega": [],
+   "braco": 0
+  }
+ },
+ "recusaEmCimaDelaMesma": {
+  "mirou": true,
+  "colocou": false
+ },
+ "recusas": {
+  "emCimaDoAmigo": {
+   "achou": true,
+   "mirou": false,
+   "ali": true,
+   "deFora": true
+  },
+  "noAr": {
+   "mirou": true,
+   "colocou": false,
+   "tempos": [
+    3,
+    257,
+    488,
+    713,
+    962
+   ]
+  }
+ },
+ "parede": {
+  "camera": {
+   "frente": 0.2,
+   "cima": 1.62,
+   "lado": 0,
+   "pitch": 0.05,
+   "fovV": 80,
+   "dentroDeBloco": false
+  }
+ }
+}

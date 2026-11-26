@@ -74,10 +74,12 @@ body:has(.entrada:not([hidden])) .minimapa, body:has(.entrada:not([hidden])) .bu
   content: ''; width: 12px; height: 12px; border-radius: 50%; background: var(--cor-marcador, var(--amarela)); box-shadow: 0 1px 0 rgba(60, 35, 10, 0.4);
 }
 @media (pointer: coarse) { .mapa-mundo .lista-marcadores .btn { min-height: 44px; } }
-/* paisagem baixa no toque: a linha de ícones ocupa o alto à direita; minimapa menor abaixo dela */
+/* paisagem baixa: o minimapa menor vai para a esquerda, embaixo dos botões do alto (spec 037,
+   decisão do dono: o canto de baixo à direita fica só com correr e pular, e a mão de dentro cabe
+   nele do tamanho do em pé, com o item fora da interface) */
 @media (orientation: landscape) and (max-height: 500px) {
-  .minimapa { width: 96px; height: 96px; top: 40px; }
-  body.toque-ativo .minimapa { width: 84px; height: 84px; top: calc(env(safe-area-inset-top, 0px) + 58px); right: max(10px, env(safe-area-inset-right)); }
+  .minimapa { width: 96px; height: 96px; top: 58px; right: auto; left: max(10px, env(safe-area-inset-left)); transform-origin: top left; }
+  body.toque-ativo .minimapa { width: 84px; height: 84px; top: calc(env(safe-area-inset-top, 0px) + 58px); right: auto; left: max(10px, env(safe-area-inset-left)); }
   .bussola { width: min(300px, 36vw); }
   .mapa-mundo header { padding-top: 8px; padding-bottom: 6px; }
 }

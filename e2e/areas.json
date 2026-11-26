@@ -46,6 +46,7 @@
     "andar-construir": {
       "nome": "Andar, pôr e tirar bloco, mochila",
       "gatilhos": [
+        "src/jogo/construir.ts",
         "src/player/alvo.ts",
         "src/player/controle.ts",
         "src/player/entrada.ts",
@@ -97,6 +98,7 @@
       "suites": [
         "ajustes-filho.spec.ts",
         "bloco-some.spec.ts",
+        "construir-037.spec.ts",
         "cristal.spec.ts",
         "dar-item.spec.ts",
         "interacao.spec.ts",
@@ -402,19 +404,21 @@
         "src/ui/toque.ts",
         "src/ui/dicaMira.ts",
         "src/render/modoFoto.ts",
-        "src/esboco/primeiraPessoa.ts"
+        "src/render/primeiraPessoa.ts",
+        "src/render/bracoPrimeiraPessoa.ts",
+        "src/render/contaOmbro.ts"
       ],
       "suites": [
         "camera.spec.ts",
+        "capturas-037.spec.ts",
         "capturas-camera.spec.ts",
-        "esboco-primeira-pessoa.spec.ts",
-        "estudo-braco-primeira-pessoa.spec.ts",
-        "estudo-visao-primeira-pessoa.spec.ts",
         "medidas-033-camera.spec.ts",
         "medidas-033-roleta.spec.ts",
         "mira-toque.spec.ts",
+        "primeira-pessoa.spec.ts",
         "roleta-mundos.spec.ts",
-        "roleta.spec.ts"
+        "roleta.spec.ts",
+        "t04-braco-primeira-pessoa.spec.ts"
       ]
     },
     "gestos-roda": {
@@ -557,6 +561,7 @@
       "suites": [
         "desempenho-027.spec.ts",
         "desempenho-036.spec.ts",
+        "desempenho-037.spec.ts",
         "desempenho-achar-amigo.spec.ts",
         "desempenho-brinquedo.spec.ts",
         "desempenho-premium.spec.ts",

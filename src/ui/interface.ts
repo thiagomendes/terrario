@@ -131,6 +131,11 @@ body[data-overlay] .coleta-area, body.tela-titulo .coleta-area { display: none; 
   content: ''; position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; border-radius: 50%;
   border: 2.5px solid rgba(255, 255, 255, 0.95); box-shadow: 0 0 0 1px rgba(40, 30, 60, 0.25), inset 0 0 0 1px rgba(40, 30, 60, 0.2);
 }
+/* spec 037: de dentro, no computador, a mira do meio vira um pontinho (no celular ela nem aparece) */
+body.primeira-pessoa .hud .mira::before {
+  top: 6px; left: 6px; width: 6px; height: 6px; border: 0; background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 1.5px rgba(40, 30, 60, 0.4);
+}
 /* chips do alto: som, nome, mundo e quadros por segundo */
 .hud .fps, .hud .som, .hud .chip-hud {
   position: absolute; padding: 4px 11px; border-radius: 999px;

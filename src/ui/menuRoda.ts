@@ -37,6 +37,33 @@ const IC = {
 
 const svg = (miolo: string) =>
   `<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">${miolo}</svg>`;
+
+/** O olhinho (spec 037): o branco do olho, a íris azul, a pupila e o brilho. */
+const OLHO =
+  '<path d="M2.5 16 Q16 3 29.5 16 Q16 29 2.5 16 Z" fill="#ffffff" stroke="#24314d" stroke-width="2.4" stroke-linejoin="round"/>' +
+  '<circle cx="16" cy="16" r="6" fill="#3f8be0" stroke="#24314d" stroke-width="1.6"/>' +
+  '<circle cx="16" cy="16" r="2.9" fill="#24314d"/>' +
+  '<circle cx="18.1" cy="13.9" r="1.4" fill="#ffffff"/>';
+/** Ver de dentro: o olhinho. */
+export const ICONE_OLHINHO = svg(OLHO);
+/**
+ * Ver de fora (já está dentro): o bonequinho inteiro, de pé no chão, como a criança se vê de fora
+ * (portão da 037: o mesmo olhinho nos dois não se distinguia sem ler). Diferente do "Personagem"
+ * (só a cabeça e o peito): aqui tem cabelo, braços, pernas e o chãozinho verde.
+ */
+export const ICONE_VER_DE_FORA = svg(
+  '<ellipse cx="16" cy="28.6" rx="10" ry="2.3" fill="#7cc35a" stroke="#3b2a1e" stroke-width="1.4"/>' +
+    '<rect x="11.6" y="20.5" width="3.8" height="7" rx="1.4" fill="#2b4f8f" stroke="#3b2a1e" stroke-width="1.4"/>' +
+    '<rect x="16.6" y="20.5" width="3.8" height="7" rx="1.4" fill="#2b4f8f" stroke="#3b2a1e" stroke-width="1.4"/>' +
+    '<rect x="6.6" y="13.6" width="4" height="7.4" rx="1.8" fill="#3b6fb6" stroke="#3b2a1e" stroke-width="1.4"/>' +
+    '<rect x="21.4" y="13.6" width="4" height="7.4" rx="1.8" fill="#3b6fb6" stroke="#3b2a1e" stroke-width="1.4"/>' +
+    '<circle cx="8.6" cy="21.6" r="1.7" fill="#e8b48a" stroke="#3b2a1e" stroke-width="1.2"/>' +
+    '<circle cx="23.4" cy="21.6" r="1.7" fill="#e8b48a" stroke="#3b2a1e" stroke-width="1.2"/>' +
+    '<rect x="10.2" y="12.8" width="11.6" height="9.4" rx="2.6" fill="#3b6fb6" stroke="#3b2a1e" stroke-width="1.6"/>' +
+    '<rect x="10" y="2.6" width="12" height="10.6" rx="3" fill="#e8b48a" stroke="#3b2a1e" stroke-width="1.6"/>' +
+    '<path d="M10 7.6 V5.6 a3 3 0 0 1 3 -3 H19 a3 3 0 0 1 3 3 V7.6 Q16 5.4 10 7.6 Z" fill="#7a4a2a" stroke="#3b2a1e" stroke-width="1.4" stroke-linejoin="round"/>' +
+    '<circle cx="13.8" cy="9.6" r="1.1" fill="#3b2a1e"/><circle cx="18.2" cy="9.6" r="1.1" fill="#3b2a1e"/>',
+);
 /** O ícone de cada item; o de "Gestos" é a carinha do boneco (spec 034, a dos ícones dos gestos). */
 const iconeDoItem = (id: ItemMenu['id']) =>
   id === 'gestos' ? svgDoIcone(ICONE_CARINHA) : svg(IC[id]);
@@ -138,6 +165,12 @@ body .botao-amigos { top: calc(280px + env(safe-area-inset-top)); right: max(16p
 @media (orientation: landscape) and (max-height: 520px) {
   .menu-hud.mochila { --topo: 162px; }
   body .botao-amigos { top: calc(164px + env(safe-area-inset-top)); right: max(72px, calc(env(safe-area-inset-right) + 60px)); }
+}
+/* spec 037 (decisão do dono): na paisagem baixa, a mochila e os amigos vão para a esquerda, ao
+   lado do minimapa (o canto de baixo à direita fica para a mão de dentro) */
+@media (orientation: landscape) and (max-height: 500px) {
+  .menu-hud.mochila { --topo: 104px; right: auto; left: calc(max(10px, env(safe-area-inset-left)) + 106px); }
+  body .botao-amigos { top: calc(160px + env(safe-area-inset-top)); right: auto; left: calc(max(10px, env(safe-area-inset-left)) + 108px); }
 }
 /* tocar no minimapa abre o mapa grande */
 body:not(.tela-titulo) .minimapa { pointer-events: auto; cursor: pointer; }

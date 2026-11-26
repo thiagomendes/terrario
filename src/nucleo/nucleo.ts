@@ -138,7 +138,15 @@ import {
 import type { DadosMundo, ModoJogo } from '../jogo/mundos';
 import { DURACAO_DIA, HORA_INICIAL, noiteNaHora, normalizarHora } from '../jogo/tempo';
 import { criarGerador } from '../audio/variacao';
-import { colocacaoBloqueada } from '../player/alvo';
+import {
+  blocoOcupa,
+  corpoNaCelula,
+  corposDoRetrato,
+  corposNaRegiao,
+  recusaConstruir,
+  type Corpo,
+} from '../jogo/construir';
+import { ALTURA_JOGADOR, MEIA_LARGURA, colideCorpo } from '../player/fisica';
 import { preencherKit, SLOTS, KIT_EXTRA } from '../player/hotbar';
 import { criarAcessoMundo } from './mundo';
 import { contaFecha } from './conta';
@@ -1008,6 +1016,16 @@ export function criarNucleo(op: OpcoesNucleo) {
    * Põe um jogador no mundo. Sem opções (servidor local): o jogador do mundo salvo.
    * Com opções (nuvem): os dados dele neste mundo, ou um jogador novo no nascimento.
    */
+  /**
+   * Spec 037: a primeira altura, de `y` para cima, em que o corpo cabe sem tocar bloco nenhum
+   * (nunca procura do fundo nem do topo). Sem lugar até o céu, fica em `y`.
+   */
+  function livreAcima(x: number, y: number, z: number): number {
+    for (let yy = y; yy < ALTURA; yy = Math.floor(yy) + 1)
+      if (!colideCorpo(mundo.solido, x, yy, z, MEIA_LARGURA, ALTURA_JOGADOR)) return yy;
+    return y;
+  }
+
   function conectar(id: string, oc?: OpcoesConexao): void {
     if (jogadores.has(id)) return;
     const legado = !oc;
@@ -1015,8 +1033,10 @@ export function criarNucleo(op: OpcoesNucleo) {
     // o nascimento já é o centro de um bloco
     const x = pos?.x ?? nascimento.x;
     const z = pos?.z ?? nascimento.z;
-    // quem chega pela primeira vez fica em cima do terreno do nascimento
-    const y0 = pos?.y ?? alturaTerreno(Math.floor(x), Math.floor(z), semente) + 1;
+    // quem chega pela primeira vez fica em cima do terreno do nascimento; spec 037: se alguém
+    // construiu ali (no nascimento ou onde ela estava ao sair), nasce no primeiro lugar livre
+    // logo acima
+    const y0 = livreAcima(x, pos?.y ?? alturaTerreno(Math.floor(x), Math.floor(z), semente) + 1, z);
     const j: Jogador = {
       id,
       tel: {
@@ -1208,6 +1228,28 @@ export function criarNucleo(op: OpcoesNucleo) {
       z,
       v: edicoes.obterValor(x, y, z) ?? empacotar(mundo.bloco(x, y, z)),
     });
+  }
+
+  /**
+   * Spec 037: os corpos na região (x0..x1, y0..y1, z0..z1, em células) que um bloco não pode
+   * prender. Quem coloca vai com a caixa do corpo (ou fica de fora: o lote do criativo), os
+   * amigos com a folga pela velocidade e os bichos, moradores e peixes com o tamanho deles (o
+   * que está morrendo, não).
+   */
+  function corposPerto(
+    x0: number,
+    y0: number,
+    z0: number,
+    x1: number,
+    y1: number,
+    z1: number,
+    quem: Jogador,
+    semQuem = false,
+  ): Corpo[] {
+    const amigos: Telemetria[] = [];
+    for (const o of jogadores.values()) if (o !== quem) amigos.push(o.tel);
+    const todos = corposDoRetrato(semQuem ? null : quem.tel, amigos, populacao.lista);
+    return corposNaRegiao(todos, x0, y0, z0, x1, y1, z1);
   }
 
   function perto(j: Jogador, x: number, y: number, z: number, raio: number): boolean {
@@ -1517,11 +1559,6 @@ export function criarNucleo(op: OpcoesNucleo) {
         metade[0].z === z &&
         y + 1 < ALTURA &&
         substituivel(mundo.bloco(x, y + 1, z)));
-    const ocupado =
-      !!def?.solido &&
-      [...jogadores.values()].some((o) =>
-        colocacaoBloqueada({ x, y, z }, { x: o.tel.x, y: o.tel.y, z: o.tel.z }),
-      );
     if (
       !def ||
       !constroiAgora(j) ||
@@ -1532,7 +1569,6 @@ export function criarNucleo(op: OpcoesNucleo) {
       !extrasOk ||
       !plantavel ||
       !temItem ||
-      ocupado ||
       !perto(j, x, y, z, ALCANCE_REGRAS) ||
       j.sobrevivencia.estado.morto
     ) {
@@ -1545,6 +1581,19 @@ export function criarNucleo(op: OpcoesNucleo) {
       (metade ? recusaColocar(regra, j.id, x, y + 1, z, bloco) : null);
     if (protegido) {
       recusar(j, c.id, 'colocar', celulas, protegido);
+      return;
+    }
+    // spec 037: nunca em cima de um corpo, e o bloco novo encosta num sólido ou no chão (a
+    // planta da obra e do bolo segue a própria planta; a recusa da proteção vem antes)
+    const naoEntra = recusaConstruir({
+      bloco,
+      celulas: metade ? [c, { x, y: y + 1, z }] : [c],
+      planejada: !!plano && plano.bloco === bloco,
+      ler: mundo.bloco,
+      corpos: corposPerto(x, y, z, x, metade ? y + 1 : y, z, j),
+    });
+    if (naoEntra) {
+      recusar(j, c.id, 'colocar', celulas);
       return;
     }
     // spec 016: o bloco guarda quem o colocou
@@ -1582,6 +1631,25 @@ export function criarNucleo(op: OpcoesNucleo) {
     // (e a tela é corrigida). Sem isso, milhares de pés no ar faziam o crescer pesar.
     const plantas: typeof c.lote = [];
     let primeira: RecusaProtecao | null = null;
+    // spec 037: o lote não prende amigo nem bicho (quem manda o lote, sim: são as ferramentas
+    // do computador e os ganchos dos testes); sem a regra de apoio
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let z0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    let z1 = -Infinity;
+    for (const e of c.lote) {
+      if (!blocoOcupa(e.v & 255)) continue;
+      x0 = Math.min(x0, e.x);
+      y0 = Math.min(y0, e.y);
+      z0 = Math.min(z0, e.z);
+      x1 = Math.max(x1, e.x);
+      y1 = Math.max(y1, e.y);
+      z1 = Math.max(z1, e.z);
+    }
+    const corpos = x0 <= x1 ? corposPerto(x0, y0, z0, x1, y1, z1, j, true) : [];
+    let prendia = false;
     for (const e of c.lote) {
       // spec 016: cada célula segue a regra de quebrar (o que sai) e de colocar (o que entra);
       // a igual não muda nada (nem o dono), a lavoura do mundo só se colhe
@@ -1595,6 +1663,11 @@ export function criarNucleo(op: OpcoesNucleo) {
       }
       const b = d.v & 255;
       const meta = (d.v >> 8) & 255;
+      if (corpos.length && blocoOcupa(b) && corpos.some((k) => corpoNaCelula(e, k))) {
+        prendia = true;
+        corrigir(j, e.x, e.y, e.z);
+        continue;
+      }
       if (d.manterDono) {
         // colheita da lavoura do mundo: entra de novo na lista que cresce, do começo
         lavoura.delete(`${e.x},${e.y},${e.z}`);
@@ -1604,6 +1677,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
     if (primeira)
       j.eventos.push({ e: 'recusa', comando: c.id, motivo: 'editar', protecao: primeira });
+    else if (prendia) j.eventos.push({ e: 'recusa', comando: c.id, motivo: 'editar' });
     for (const e of plantas) {
       if (mundo.bloco(e.x, e.y - 1, e.z) === Bloco.TERRA_ARADA)
         editar(e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255, j.id);
@@ -1969,6 +2043,21 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
   }
 
+  /**
+   * Spec 037: fechar a porta ou a porteira aberta em (x, y, z) prenderia um corpo (a criança,
+   * um amigo, um bicho)? As duas metades da porta contam.
+   */
+  function fechariaEmCima(j: Jogador, x: number, y: number, z: number): boolean {
+    const b = mundo.bloco(x, y, z);
+    if (!blocoOcupa(alternado(b))) return false;
+    const celulas = [{ x, y, z }];
+    if (ehPorta(b))
+      for (const dy of [-1, 1])
+        if (mundo.bloco(x, y + dy, z) === Bloco.PORTA_ABERTA) celulas.push({ x, y: y + dy, z });
+    const corpos = corposPerto(x, y - 1, z, x, y + 1, z, j);
+    return corpos.some((k) => celulas.some((c) => corpoNaCelula(c, k)));
+  }
+
   let aberturas = 0;
   function usar(j: Jogador, c: Extract<Comando, { t: 'usar' }>): void {
     const { x, y, z } = c;
@@ -1979,7 +2068,11 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
     const abertura = c.id ?? 1_000_000 + ++aberturas;
     const b = mundo.bloco(x, y, z);
-    if (abreEFecha(b)) {
+    if (abreEFecha(b) && fechariaEmCima(j, x, y, z)) {
+      // spec 037: fechar a porta (ou a porteira) em cima de alguém o prenderia: fica aberta
+      if (c.id !== undefined) recusar(j, c.id, 'usar', [c, { x, y: y - 1, z }, { x, y: y + 1, z }]);
+      else j.eventos.push({ e: 'recusa', comando: 0, motivo: 'usar' });
+    } else if (abreEFecha(b)) {
       alternarPorta(x, y, z);
       for (const o of jogadores.values()) o.eventos.push({ e: 'porta', x, y, z });
     } else if (

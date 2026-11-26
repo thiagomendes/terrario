@@ -186,6 +186,57 @@ function colide(s: Solido, x: number, y: number, z: number): boolean {
   return colideCorpo(s, x, y, z, MEIA_LARGURA, ALTURA_JOGADOR);
 }
 
+/** Spec 037: até onde o soltar procura de lado (na mesma altura) e para cima. */
+export const SOLTAR_LADO = 1;
+export const SOLTAR_CIMA = 6;
+/** Os passos de lado, do mais perto para o mais longe (os 4 lados antes das quinas). */
+const PASSOS_LADO: readonly (readonly [number, number])[] = (() => {
+  const r: [number, number][] = [];
+  for (const d of [0.25, 0.5, 0.75, 1])
+    for (const [dx, dz] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+      [1, 1],
+      [-1, 1],
+      [1, -1],
+      [-1, -1],
+    ])
+      r.push([dx * d, dz * d]);
+  return r
+    .filter(([dx, dz]) => Math.hypot(dx, dz) <= SOLTAR_LADO + 1e-9)
+    .sort((a, b) => Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]));
+})();
+
+/**
+ * Spec 037: quem começa o passo dentro de um bloco (um bloco posto em cima de alguém com a
+ * posição atrasada, o andaime da obra seguinte, um mundo salvo) vai para o lugar livre mais
+ * perto: primeiro na mesma altura, a até 1 bloco; depois subindo, até 6 blocos (no topo de
+ * cada meio bloco, como as lajes), primeiro onde está e depois nos lados. `s` são só os blocos
+ * do mundo (os bichos e os carrinhos, macios, têm o desencostar deles). Devolve se soltou.
+ */
+export function soltarDoBloco(e: EstadoJogador, s: Solido): boolean {
+  if (!colide(s, e.x, e.y, e.z)) return false;
+  const ir = (x: number, y: number, z: number): boolean => {
+    if (colide(s, x, y, z)) return false;
+    e.x = x;
+    e.y = y;
+    e.z = z;
+    e.vy = 0;
+    e.noChao = false;
+    e.topoQueda = undefined;
+    e.embalo = undefined;
+    return true;
+  };
+  for (const [dx, dz] of PASSOS_LADO) if (ir(e.x + dx, e.y, e.z + dz)) return true;
+  const base = Math.floor(e.y * 2) / 2;
+  for (const [dx, dz] of [[0, 0] as const, ...PASSOS_LADO])
+    for (let dy = 0.5; dy <= SOLTAR_CIMA + 1e-9; dy += 0.5)
+      if (base + dy > e.y && ir(e.x + dx, base + dy, e.z + dz)) return true;
+  return false;
+}
+
 /** Altura do chão sob o jogador ao cair (considera blocos parciais). */
 function topoAbaixo(s: Solido, x: number, alvo: number, z: number, atual: number): number {
   let topo = Math.floor(alvo) + 1;

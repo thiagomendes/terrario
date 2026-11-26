@@ -13,7 +13,7 @@ import type { Scene } from '@babylonjs/core/scene';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
-import { Matrix } from '@babylonjs/core/Maths/math.vector';
+import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
@@ -48,6 +48,65 @@ const COR_BLOCO: Record<number, [number, number, number]> = {
   [Bloco.TERRA_NEVADA]: [1, 0.88, 0.92],
   [Bloco.TOCHA]: [1, 0.55, 0.7],
 };
+/**
+ * Spec 037: de dentro, o fantasma a menos que isto dos olhos (até o cubo, em blocos) some, e a
+ * partir daquilo fica inteiro; no meio, vai clareando. O contorno do da mira não fica mais
+ * apagado que ALFA_MIRA_PERTO.
+ */
+const PERTO_SOME = 0.2;
+const PERTO_INTEIRO = 1.5;
+const ALFA_MIRA_PERTO = 0.55;
+/**
+ * Spec 037 (o revisor: a obra de dentro, a um ou dois passos, vira uma grade branca que cobre a
+ * tela e, de noite, é a coisa mais clara dela). Só de dentro: o miolo da camada da vez fica a 0,45
+ * do de fora (0,17 a 0,3), o contorno dela a 0,7; as camadas de cima ficam só com o contorno, a
+ * 0,45 (0,25). O contorno fica fino (0,035 em vez de 0,07), e de noite tudo segue a luz do lugar,
+ * sem passar de metade abaixo dela.
+ */
+const MIOLO_DENTRO_DA_VEZ = 0.45;
+// (portão, 3ª rodada: em pé, as muitas camadas de contorno branco ainda pesavam por cima)
+const CONTORNO_DENTRO_DA_VEZ = 0.5;
+const CONTORNO_DENTRO_CIMA = 0.3;
+const PISO_LUZ_DENTRO = 0.5;
+/**
+ * De dentro, a marca do próximo bloco: o miolo amarelo claro, mais forte que o dos outros e que
+ * clareia de perto como eles (portão, 3ª rodada: em pé, a caixa da vez, a um passo, ocupava quase
+ * a tela e deixava o céu amarelo). A cor do vértice multiplica o azul do material: 3,1 × 0,32,
+ * 1,3 × 0,6 e 0,15 × 1 dão o amarelo; de noite, ela se divide pela luz do lugar (o material
+ * segue a luz), e o amarelo continua amarelo.
+ */
+const MIOLO_MARCA = 0.6;
+const COR_MARCA: [number, number, number] = [3.1, 1.3, 0.15];
+const COR_MARCA_CONTORNO: [number, number, number] = [1.1, 0.82, 0.15];
+/** Em pé, de dentro, a marca vira as quinas com o próximo bloco a menos disto dos olhos (até a caixa). */
+const QUINAS_ATE = 1.5;
+/**
+ * Portão, 5ª rodada: bem perto, as quinas saíam pela borda da tela e caíam embaixo do joystick e do
+ * botão de pular (barrinhas soltas). Com um canto fora da área livre (a borda, os botões, a barra,
+ * o mapinha, o controle de andar: os mesmos retângulos que o braço evita), fica só o bloquinho.
+ * Para voltar, os cantos têm de estar esta folga (px) para dentro (sem piscar no limite).
+ */
+const QUINAS_FOLGA_VOLTA = 10;
+/** A área livre da tela para as quinas: o tamanho (px CSS) e os retângulos da interface. */
+export interface TelaLivre {
+  w: number;
+  h: number;
+  obstaculos: readonly (readonly [number, number, number, number])[];
+}
+
+/** De dentro, quanto de um fantasma aparece pela distância dos olhos até o cubo (0 some, 1 inteiro). */
+function aparecePerto(
+  olho: { x: number; y: number; z: number },
+  f: { x: number; y: number; z: number },
+  some = PERTO_SOME,
+  inteiro = PERTO_INTEIRO,
+): number {
+  const dx = Math.max(0, Math.abs(olho.x - (f.x + 0.5)) - 0.47);
+  const dy = Math.max(0, Math.abs(olho.y - (f.y + 0.5)) - 0.47);
+  const dz = Math.max(0, Math.abs(olho.z - (f.z + 0.5)) - 0.47);
+  const t = Math.max(0, Math.min(1, (Math.hypot(dx, dy, dz) - some) / (inteiro - some)));
+  return t * t * (3 - 2 * t);
+}
 /** A base é branca: o azul vem da textura, e a cor do bloco tinge por cima. */
 const AZUL: [number, number, number] = [1, 1, 1];
 /** Quanto da cor do bloco vai por cima do azul. */
@@ -123,40 +182,211 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
     excluirDoGlow(m);
     return m;
   };
+  /** Spec 037: de dentro, o contorno mais fino (o de fora, 0,07, a um passo vira uma grade branca). */
+  const finas: Mesh[] = [];
   for (const [k, c] of camadas.entries()) {
     c.malha = preparar(MeshBuilder.CreateBox(`fantasmas-obra-${k}`, { size: 0.94 }, scene), c.mat);
     c.moldura = preparar(malhaDaMoldura(scene, `fantasmas-moldura-${k}`), c.matMoldura);
     c.moldura.name = `fantasmas-moldura-${k}`;
+    const fina = preparar(malhaDaMoldura(scene, `fantasmas-moldura-fina-${k}`, 0.95, 0.035), c.matMoldura);
+    fina.name = `fantasmas-moldura-fina-${k}`;
+    finas.push(fina);
   }
+  /**
+   * Spec 037 (portão, 4ª rodada): em pé, de dentro, o próximo bloco a menos de 1,5 dos olhos virava
+   * uma moldura na tela inteira (ou sumia colado). Aí a marca vira só as quinas: três tracinhos
+   * amarelos em cada um dos 8 cantos do bloco, com o bloquinho girando no meio. As quinas à vista
+   * ficam na tela, curtas, e dizem "um bloco ali".
+   */
+  const quinas = (() => {
+    const h = 0.47;
+    // (finas e curtas: as do canto perto dos olhos já ficam grandes na tela; 5ª rodada: o dono
+    // achou que as de 0,18 por 0,03 lembravam o visor de uma câmera)
+    const L = 0.14;
+    const g = 0.022;
+    const barras: Mesh[] = [];
+    for (const sx of [-1, 1])
+      for (const sy of [-1, 1])
+        for (const sz of [-1, 1])
+          for (const eixo of [0, 1, 2]) {
+            const tam = [g, g, g];
+            tam[eixo] = L;
+            const b = MeshBuilder.CreateBox('fantasma-quina', { width: tam[0], height: tam[1], depth: tam[2] }, scene);
+            const pos = [sx * h, sy * h, sz * h];
+            pos[eixo] -= [sx, sy, sz][eixo] * (L / 2 - g / 2);
+            b.position.set(pos[0], pos[1], pos[2]);
+            barras.push(b);
+          }
+    const m = Mesh.MergeMeshes(barras, true, true)!;
+    m.name = 'fantasmas-quinas';
+    const mat = new StandardMaterial('fantasmas-quinas', scene);
+    mat.disableLighting = true;
+    mat.diffuseColor = Color3.Black();
+    mat.specularColor = Color3.Black();
+    mat.emissiveColor = new Color3(1, 0.8, 0.15);
+    mat.fogEnabled = false;
+    m.material = mat;
+    m.isPickable = false;
+    m.receiveShadows = false;
+    m.setEnabled(false);
+    excluirDoGlow(m);
+    return m;
+  })();
+  /** As quinas no lugar da marca agora (o fantasma da mira, de dentro, em pé, perto). */
+  let soQuinas = false;
+  /** As quinas cabem na área livre da tela (senão, só o bloquinho). */
+  let quinasCabem = false;
+  const cantoQuina = new Vector3();
+  /** Todos os cantos das quinas na área livre, `folga` px para dentro (e na frente dos olhos). */
+  function quinasNaAreaLivre(
+    c: { x: number; y: number; z: number },
+    olho: { x: number; y: number; z: number },
+    tela: TelaLivre,
+    folga: number,
+  ): boolean {
+    const cam = scene.activeCamera;
+    if (!cam) return false;
+    const m = scene.getTransformMatrix();
+    const frente = cam.getDirection(Vector3.Forward());
+    const r = 0.48;
+    for (const sx of [-r, r])
+      for (const sy of [-r, r])
+        for (const sz of [-r, r]) {
+          cantoQuina.set(c.x + sx, c.y + sy, c.z + sz);
+          // (um canto atrás dos olhos sai da tela de qualquer jeito)
+          const dx = cantoQuina.x - olho.x;
+          const dy = cantoQuina.y - olho.y;
+          const dz = cantoQuina.z - olho.z;
+          if (dx * frente.x + dy * frente.y + dz * frente.z < 0.05) return false;
+          const p = Vector3.TransformCoordinates(cantoQuina, m);
+          const x = ((p.x + 1) / 2) * tela.w;
+          const y = ((1 - p.y) / 2) * tela.h;
+          if (x < folga || y < folga || x > tela.w - folga || y > tela.h - folga) return false;
+          for (const q of tela.obstaculos)
+            if (x > q[0] - folga && x < q[2] + folga && y > q[1] - folga && y < q[3] + folga) return false;
+        }
+    return true;
+  }
+  /** De dentro agora (o contorno fino, o miolo mais leve, a luz do lugar). */
+  let deDentro = false;
+  const corBase = camadas.map((c) => ({ mat: c.mat.emissiveColor.clone(), mo: c.matMoldura.emissiveColor.clone() }));
   /** O que está desenhado agora (para refazer só quando muda). */
   let chave = '';
   let lista: FantasmaVisto[] = [];
   const tremendo = new Map<string, number>();
+  /** Spec 037: os fantasmas de cada camada e o alfa de cada um (o de perto dos olhos some). */
+  const porCamada: FantasmaVisto[][] = [[], []];
+  const coresCamada: (Float32Array | null)[] = [null, null];
+  const coresMoldura: (Float32Array | null)[] = [null, null];
+  let olhoVisto = '';
 
   function montar(): void {
     for (const [k, c] of camadas.entries()) {
       const deles = lista.filter((f) => (k === 0) === f.pulsa);
+      porCamada[k] = deles;
       const m = c.malha!;
       const mo = c.moldura!;
+      const fina = finas[k];
       if (!deles.length) {
-        for (const x of [m, mo]) {
+        for (const x of [m, mo, fina]) {
           x.setEnabled(false);
           x.thinInstanceCount = 0;
         }
+        coresCamada[k] = coresMoldura[k] = null;
         continue;
       }
       const mats = new Float32Array(16 * deles.length);
       const cores = new Float32Array(4 * deles.length);
+      const coresMo = new Float32Array(4 * deles.length).fill(1);
       deles.forEach((f, i) => {
         Matrix.Translation(f.x + 0.5, f.y + 0.5, f.z + 0.5).copyToArray(mats, i * 16);
         const [r, g, b] = corDoFantasma(f.bloco);
         cores.set([r, g, b, 1], i * 4);
       });
       m.thinInstanceSetBuffer('matrix', mats, 16, false);
-      m.thinInstanceSetBuffer('color', cores, 4, true);
+      m.thinInstanceSetBuffer('color', cores, 4, false);
       m.setEnabled(true);
       mo.thinInstanceSetBuffer('matrix', mats.slice(), 16, false);
-      mo.setEnabled(true);
+      mo.thinInstanceSetBuffer('color', coresMo, 4, false);
+      mo.setEnabled(!deDentro);
+      fina.thinInstanceSetBuffer('matrix', mats.slice(), 16, false);
+      fina.thinInstanceSetBuffer('color', coresMo, 4, false);
+      fina.setEnabled(deDentro);
+      coresCamada[k] = cores;
+      coresMoldura[k] = coresMo;
+    }
+    olhoVisto = '';
+  }
+
+  /**
+   * Spec 037 (portão): de dentro, o fantasma encostado na câmera virava uma névoa branca que
+   * cobria até 40% da tela. Pela distância dos olhos até o cubo, o de perto fica transparente e,
+   * colado, some; o da mira (o que o dedo ou a mira vai preencher) fica sempre à vista.
+   */
+  function apagarPerto(
+    olho: { x: number; y: number; z: number } | null,
+    mira: { x: number; y: number; z: number } | null,
+    /** A luz do lugar com que o material está aceso (a cor da marca se divide por ela). */
+    luzMaterial = 1,
+  ): void {
+    const k0 = olho
+      ? `${olho.x.toFixed(2)},${olho.y.toFixed(2)},${olho.z.toFixed(2)}|${mira ? `${mira.x},${mira.y},${mira.z}` : ''}|${luzMaterial.toFixed(2)}|${soQuinas}`
+      : '-';
+    if (k0 === olhoVisto) return;
+    olhoVisto = k0;
+    for (let k = 0; k < camadas.length; k++) {
+      const cores = coresCamada[k];
+      const coresMo = coresMoldura[k];
+      if (!cores || !coresMo) continue;
+      let mudou = false;
+      // de dentro, a obra fica mais leve: a camada da vez com o miolo a menos da metade, as de
+      // cima só com o contorno, fraquinho (a um passo, a grade inteira cobria a tela)
+      const miolo = olho ? (k === 0 ? MIOLO_DENTRO_DA_VEZ : 0) : 1;
+      const traco = olho ? (k === 0 ? CONTORNO_DENTRO_DA_VEZ : CONTORNO_DENTRO_CIMA) : 1;
+      porCamada[k].forEach((f, i) => {
+        const perto = olho ? aparecePerto(olho, f) : 1;
+        // o contorno some mais devagar que o miolo e, no da mira, fica aceso: mostra onde o
+        // bloco vai sem a névoa do miolo colado nos olhos
+        const naMira = !!mira && mira.x === f.x && mira.y === f.y && mira.z === f.z;
+        // de dentro, o próximo bloco (o da mira) é o único com o miolo cheio, em amarelo claro:
+        // a marca se vê sem procurar no meio da grade leve
+        // (em pé, perto, a marca vira só as quinas: o cubo dela some)
+        if (naMira && soQuinas) {
+          if (cores[i * 4 + 3] !== 0 || coresMo[i * 4 + 3] !== 0) {
+            cores[i * 4 + 3] = 0;
+            coresMo[i * 4 + 3] = 0;
+            mudou = true;
+          }
+          return;
+        }
+        const marca = naMira && !!olho;
+        // (a marca colada nos olhos também clareia: a faixa da beira dela cruzava o céu)
+        const colado = olho ? aparecePerto(olho, f, 0.02, 0.35) : 1;
+        const a = marca ? perto * MIOLO_MARCA : perto * miolo;
+        const contorno = marca
+          ? Math.max(Math.min(1, perto * 1.6), ALFA_MIRA_PERTO * colado)
+          : Math.min(1, perto * 1.6) * traco;
+        const k = marca ? 1 / Math.max(PISO_LUZ_DENTRO, luzMaterial) : 1;
+        const cor = marca ? [COR_MARCA[0] * k, COR_MARCA[1] * k, COR_MARCA[2] * k] : corDoFantasma(f.bloco);
+        const corMo = marca ? [COR_MARCA_CONTORNO[0] * k, COR_MARCA_CONTORNO[1] * k, COR_MARCA_CONTORNO[2] * k] : [1, 1, 1];
+        if (
+          cores[i * 4 + 3] !== a ||
+          coresMo[i * 4 + 3] !== contorno ||
+          cores[i * 4] !== cor[0] ||
+          cores[i * 4 + 1] !== cor[1] ||
+          cores[i * 4 + 2] !== cor[2] ||
+          coresMo[i * 4] !== corMo[0]
+        ) {
+          cores.set([cor[0], cor[1], cor[2], a], i * 4);
+          coresMo.set([corMo[0], corMo[1], corMo[2], contorno], i * 4);
+          mudou = true;
+        }
+      });
+      if (mudou) {
+        camadas[k].malha!.thinInstanceBufferUpdated('color');
+        camadas[k].moldura!.thinInstanceBufferUpdated('color');
+        finas[k].thinInstanceBufferUpdated('color');
+      }
     }
   }
 
@@ -236,8 +466,53 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
     get quantos(): number {
       return lista.length;
     },
-    /** A cada quadro: o pulso, o tremidinho, o bloco da mira e o balão. */
-    quadro(tempo: number, mira: { x: number; y: number; z: number; bloco: number } | null): void {
+    /**
+     * A cada quadro: o pulso, o tremidinho, o bloco da mira e o balão. `olho`: a câmera de
+     * dentro (a primeira pessoa), onde os fantasmas colados nela somem.
+     */
+    quadro(
+      tempo: number,
+      mira: { x: number; y: number; z: number; bloco: number } | null,
+      olho: { x: number; y: number; z: number } | null = null,
+      /** A luz do lugar (1 de dia, menos de noite e na caverna): de dentro, a obra segue ela. */
+      luz = 1,
+      /** A tela em pé (mais alta que larga): de dentro, o próximo bloco perto vira só as quinas. */
+      emPe = false,
+      /** A área livre da tela (as quinas só aparecem inteiras dentro dela). */
+      tela: TelaLivre | null = null,
+    ): void {
+      // em pé, de dentro, o próximo bloco a menos de 1,5 dos olhos (até a caixa dele): as quinas
+      let distMira = Infinity;
+      if (olho && mira) {
+        const dx = Math.max(0, Math.abs(olho.x - (mira.x + 0.5)) - 0.47);
+        const dy = Math.max(0, Math.abs(olho.y - (mira.y + 0.5)) - 0.47);
+        const dz = Math.max(0, Math.abs(olho.z - (mira.z + 0.5)) - 0.47);
+        distMira = Math.hypot(dx, dy, dz);
+      }
+      soQuinas = emPe && distMira < QUINAS_ATE;
+      if (soQuinas && mira && olho) {
+        const c = { x: mira.x + 0.5, y: mira.y + 0.5, z: mira.z + 0.5 };
+        quinas.position.set(c.x, c.y, c.z);
+        // (fora da área livre, só o bloquinho; para voltar, com folga)
+        quinasCabem = !tela || quinasNaAreaLivre(c, olho, tela, quinasCabem ? 0 : QUINAS_FOLGA_VOLTA);
+      } else quinasCabem = false;
+      quinas.setEnabled(soQuinas && quinasCabem);
+      // de dentro: o contorno fino no lugar do grosso, e a cor na luz do lugar
+      const dentro = !!olho;
+      if (dentro !== deDentro) {
+        deDentro = dentro;
+        for (let k = 0; k < camadas.length; k++) {
+          const tem = !!coresCamada[k];
+          camadas[k].moldura!.setEnabled(tem && !dentro);
+          finas[k].setEnabled(tem && dentro);
+        }
+      }
+      const f = dentro ? Math.max(PISO_LUZ_DENTRO, Math.min(1, luz)) : 1;
+      camadas.forEach((c, k) => {
+        c.mat.emissiveColor.copyFrom(corBase[k].mat).scaleInPlace(f);
+        c.matMoldura.emissiveColor.copyFrom(corBase[k].mo).scaleInPlace(f);
+      });
+      apagarPerto(olho, mira, f);
       const pulso = 0.5 + 0.5 * Math.sin(tempo * 3.2);
       camadas[0].mat.alpha = 0.38 + 0.3 * pulso;
       camadas[0].matMoldura.alpha = 0.7 + 0.3 * pulso;
@@ -259,6 +534,7 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
             const mt = Matrix.Translation(f.x + 0.5 + dx, f.y + 0.5, f.z + 0.5);
             m[k].thinInstanceSetMatrixAt(i, mt, i === deles.length - 1);
             mo[k].thinInstanceSetMatrixAt(i, mt, i === deles.length - 1);
+            finas[k].thinInstanceSetMatrixAt(i, mt, i === deles.length - 1);
           });
         }
       }
@@ -266,14 +542,18 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
       if (naMira && naMira !== alvo) naMira.no.setEnabled(false);
       naMira = alvo;
       if (alvo && mira) {
-        alvo.no.setEnabled(true);
+        // spec 037: de dentro, colado nos olhos, o bloquinho girando encolhe até sumir (de perto
+        // ele tapava meia tela); o contorno do fantasma continua mostrando onde o bloco vai
+        // (só bem colado: no alcance de pôr, ele fica do tamanho de sempre)
+        const perto = olho ? aparecePerto(olho, mira, 0.02, 0.35) : 1;
+        alvo.no.setEnabled(perto > 0.05);
         alvo.no.position.set(
           mira.x + 0.5,
           mira.y + 0.45 + Math.sin(tempo * 2.4) * 0.05,
           mira.z + 0.5,
         );
         alvo.no.rotation.y = tempo * 1.8;
-        alvo.no.scaling.setAll(0.75);
+        alvo.no.scaling.setAll(0.75 * perto);
       }
       if (balao.isEnabled() && tempo > balaoAte) {
         balao.setEnabled(false);

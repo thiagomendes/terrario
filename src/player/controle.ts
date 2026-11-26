@@ -16,6 +16,7 @@ import {
   dentroDaCaixa,
   passoFisica,
   posicaoInicial,
+  soltarDoBloco,
   type CaixaSolida,
 } from './fisica';
 import { criarMundoSolido } from '../world/solido';
@@ -41,11 +42,9 @@ export function criarControle(
    * já está dentro (mundo salvo antes, pulo para perto) não segura: ele sai andando.
    */
   const dentroDasPecas = new Set<CaixaSolida>();
-  const solidoMundo = comPecasDaVila(
-    criarMundoSolido(semente, gerar, edicoes),
-    semente,
-    () => dentroDasPecas,
-  );
+  /** Spec 037: só os blocos do mundo (o que o soltar confere). */
+  const soBlocos = criarMundoSolido(semente, gerar, edicoes);
+  const solidoMundo = comPecasDaVila(soBlocos, semente, () => dentroDasPecas);
   /**
    * Spec 014 (T14): caixas sólidas que não são blocos (os carrinhos e ônibus da cidade), em
    * coordenadas do mundo. A caixa em que o boneco já está dentro não segura (nunca prende).
@@ -153,6 +152,9 @@ export function criarControle(
       camera.rotation.y = yaw;
       return;
     }
+    // spec 037: dentro de um bloco (posto em cima dela, o andaime da obra seguinte, um mundo
+    // salvo), ela sai para o lugar livre mais perto antes de andar
+    soltarDoBloco(jogador, soBlocos);
     extras = fonteExtras ? fonteExtras().filter((c) => !dentroDaCaixa(c, jogador)) : [];
     dentroDasPecas.clear();
     for (const c of caixasDaVilaPerto(semente, jogador.x, jogador.y, jogador.z))

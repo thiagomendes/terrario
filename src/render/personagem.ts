@@ -62,6 +62,8 @@ export interface Personagem {
   festaPremium?(): void;
   /** Spec 023: o bichinho premium que segue (testes). */
   bichoPremium?(): ReturnType<RegistroPremium['bicho']>;
+  /** Spec 037: de dentro, a mão da frente (as bolhas da varinha saem do aro dela). */
+  maoDeDentro?(f: (() => TransformNode | null) | null): void;
 }
 
 /**
@@ -88,6 +90,7 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
       efeitos.definirVisivel(v);
     },
     festaPremium: () => efeitos.festa(),
+    maoDeDentro: (f) => efeitos.maoDeDentro(f),
     bichoPremium: () => efeitos.bicho(),
     descartar() {
       efeitos.soltar();

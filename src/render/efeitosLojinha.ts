@@ -229,7 +229,8 @@ export function efeitosLojinha(scene: Scene): EfeitosLojinha {
         }
       }
       // as bolhas da varinha: saem do aro de tempos em tempos, para a frente e um tico para cima
-      if (premium.mao === 'varinha-bolhas' && nos.maoE) {
+      // (spec 037: com o braço de verdade escondido, de dentro, o tesouro não solta nada no ar)
+      if (premium.mao === 'varinha-bolhas' && nos.maoE?.isEnabled()) {
         e.bolha -= dt;
         if (e.bolha <= 0) {
           e.bolha = 0.42 + sorteio(e) * 0.12;
@@ -246,7 +247,7 @@ export function efeitosLojinha(scene: Scene): EfeitosLojinha {
         }
       }
       // as gotinhas do guarda-chuva: das pontinhas por fora da criança, dos lados e de trás
-      if (premium.mao === 'guarda-chuva-gotinhas' && nos.guarda) {
+      if (premium.mao === 'guarda-chuva-gotinhas' && nos.guarda?.isEnabled()) {
         e.gota -= dt;
         if (e.gota <= 0) {
           e.gota = 0.12;
@@ -281,7 +282,7 @@ export function efeitosLojinha(scene: Scene): EfeitosLojinha {
         }
       }
       // a linha da pipa: da mão até a ponta de baixo da pipa
-      if (premium.mao === 'pipa-lacinhos' && nos.maoE && nos.pipa) {
+      if (premium.mao === 'pipa-lacinhos' && nos.maoE?.isEnabled() && nos.pipa?.isEnabled()) {
         atualizar(nos.maoE);
         atualizar(nos.pipa);
         const a = mundo(nos.maoE, 0, -0.06, 0, new Vector3());

@@ -1,0 +1,25 @@
+{
+ "deFora": {
+  "toques": 20,
+  "certos": 20,
+  "porFace": {
+   "parede": 10,
+   "chão": 10
+  },
+  "erros": []
+ },
+ "deDentro": {
+  "toques": 20,
+  "certos": 20,
+  "porFace": {
+   "parede": 11,
+   "chão": 9
+  },
+  "erros": []
+ },
+ "mira": [
+  50,
+  65,
+  85
+ ]
+}

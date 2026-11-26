@@ -1,7 +1,7 @@
 ---
 id: 037-construir-melhor
 title: 'Construir melhor: primeira pessoa num botão, bloco nunca em cima de ninguém e bloco só encostado'
-status: APPROVED
+status: DONE
 base_branch: main
 branch: feat/037-construir-melhor
 created_at: 2026-11-25T09:00:00Z

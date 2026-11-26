@@ -1,0 +1,12 @@
+Spec 037, T00 (main de7ccd3) e T05 (feat/037-construir-melhor c55fc51), 25 nov 2026, na placa.
+Suíte: e2e/desempenho-037.spec.ts (MEDIR_DESEMPENHO=1, E2E_SEM_VSYNC=1). Vila Neon de dia, celular em pé 390x844, CPU 4x,
+distância e qualidade de fábrica. fps e chamadas em 8 s girando a câmera devagar (3 rodadas alternadas); entrada e saída
+da primeira pessoa (do pedido até a câmera chegar, e o maior quadro); giro = meia volta da câmera em 0,5 s, ida e volta
+(o maior quadro); tela = em pé, deitado e em pé (o maior quadro). Parede: Doce Reino criativo, 5 tábuas no chão com a
+raposa domada seguindo.
+
+== T00 (main)
+cena {"pp":false,"medidas":{"terceira":[{"fps":56.8,"p95ms":23.2,"maxMs":51,"desenhos":140},{"fps":61.8,"p95ms":21.4,"maxMs":30,"desenhos":141},{"fps":61,"p95ms":20.7,"maxMs":127,"desenhos":141}],"primeira":[]},"entrada":[],"saida":[],"giro":{"terceira":[157,31,26],"primeira":[]},"tela":{"terceira":94}}
+== T05 (ramo)
+cena {"pp":true,"medidas":{"terceira":[{"fps":55.4,"p95ms":23.8,"maxMs":66,"desenhos":141},{"fps":61.3,"p95ms":20.3,"maxMs":28,"desenhos":141},{"fps":62.5,"p95ms":20.4,"maxMs":44,"desenhos":141}],"primeira":[{"fps":61.4,"p95ms":21.6,"maxMs":29,"desenhos":122},{"fps":68.3,"p95ms":18.2,"maxMs":35,"desenhos":123},{"fps":67.6,"p95ms":18.4,"maxMs":40,"desenhos":131}]},"entrada":[{"ms":720,"maior":82},{"ms":705,"maior":23},{"ms":701,"maior":19}],"saida":[{"ms":699,"maior":24},{"ms":708,"maior":22},{"ms":705,"maior":18}],"giro":{"terceira":[166,24,25],"primeira":[26,24,22]},"tela":{"terceira":104,"primeira":92}}
+parede {"recusas":0,"parede":[{"x":48,"ok":true,"tentativas":1},{"x":49,"ok":true,"tentativas":1},{"x":50,"ok":true,"tentativas":1},{"x":51,"ok":true,"tentativas":1},{"x":52,"ok":true,"tentativas":1}],"raposaPerto":[2,2.2,2.8,3.6,2.1],"presa":false}

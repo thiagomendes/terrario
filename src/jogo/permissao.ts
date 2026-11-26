@@ -271,7 +271,7 @@ export function avisoDaRecusa(r: RecusaProtecao): string {
 
 /** Nome curto do bloco que a obra pede ("tijolo", "vidro"): o do tema, em minúsculas. */
 function nomeDoBlocoCerto(b: number): string {
-  return (obterBloco(b)?.nome ?? 'o bloco azul').toLowerCase();
+  return (obterBloco(b)?.nome ?? 'o bloco marcado').toLowerCase();
 }
 
 /** O aviso discreto do dono do mundo ao desfazer a construção de um amigo. */
