@@ -88,6 +88,9 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
   - a câmera de fora entra na grade dos blocos-guia da obra (eles não têm colisão desde a 014);
   - a tocha do Doce Reino parece um palito laranja da cor do chão;
   - a placa da obra, vista de trás em cima do tapume, parece um caixote solto flutuando.
+- **Achados pelo filho do dono (26 nov, à noite; "deixa no radar, encaixa no momento certo"):**
+  - **Primeira pessoa no carro e nos brinquedos de andar:** ao montar, o jogo volta para a terceira pessoa (regra da 037: montado é lugar com câmera própria). Ele quer andar de carro vendo de dentro. É pedido novo, e não defeito: olhar dos olhos com o volante ou o guidão na frente, e as mãos no lugar.
+  - **A nuvem fofa some no modo de voo:** montado na nuvem, ao ligar o voo, o brinquedo some. É defeito: conferir se o voo desmonta (o `montado`) ou só esconde o brinquedo, e decidir se a nuvem pode voar junto (ela já flutua).
 - **Defeitos antigos vistos na 038** (26 nov):
   - a ponta do sapato fura a barra do vestido com a menina parada (o vestido de 14 lados);
   - com a fantasia da Roqueira e o tênis-cometa, os dois tênis ficam um dentro do outro (o cometa só tira o sapato e a bota);
