@@ -82,6 +82,26 @@ export const CELULAS: Record<TipoMovel, [number, number, number]> = {
   'criado-mudo': [1, 1, 1],
 };
 
+/**
+ * A escala de cada móvel na segunda volta (a conta de proporção com o boneco, no estudo): x, y, z
+ * sobre o desenho da primeira volta. Cabe sempre nas células do móvel.
+ */
+export const ESCALA: Record<TipoMovel, [number, number, number]> = {
+  sofa: [1, 1.3, 1.1],
+  tv: [1.05, 1.25, 1.1],
+  som: [1.15, 1.2, 1.15],
+  tapete: [1, 1, 1],
+  abajur: [1.2, 1.25, 1.2],
+  fogao: [1.1, 1.15, 1.1],
+  geladeira: [1.08, 1.07, 1.05],
+  pia: [1.05, 1.15, 1.05],
+  mesa: [1.05, 1.2, 1.1],
+  cadeira: [1.2, 1.2, 1.2],
+  cama: [1, 1.25, 1.03],
+  'guarda-roupa': [1.05, 1, 1.1],
+  'criado-mudo': [1.2, 1.3, 1.2],
+};
+
 export function desenharMovel(o: Oficina, tipo: TipoMovel, versao: 'a' | 'b'): void {
   switch (tipo) {
     case 'sofa':
@@ -356,27 +376,30 @@ function geladeira(o: Oficina): void {
   r.caixa(W - 0.13, 1.24, 0.02, 0, 0.11, -D / 2 + 0.06, M.branco, 0);
   o.parte('luzDentro', [0, 0.11, -D / 2 + 0.072], (p) => p.luz(W - 0.16, 1.22, 0.005, 0, 0, 0, '#eef8ff'));
   for (const y of [0.52, 0.94]) r.caixa(W - 0.13, 0.025, D - 0.14, 0, y, -0.02, M.branco, 0.005);
-  // prateleira de baixo: a garrafa de leite e a caixinha de suco
-  r.prisma(8, 0.07, 0.26, -0.22, 0.27, -0.05, M.branco, 'y');
-  r.prisma(8, 0.05, 0.06, -0.22, 0.42, -0.05, M.azulEscuro, 'y');
-  r.caixa(0.14, 0.22, 0.1, 0.0, 0.14, -0.06, '#f29a3a', 0.02);
-  r.caixa(0.14, 0.05, 0.101, 0.0, 0.24, -0.06, M.branco, 0);
-  r.prisma(8, 0.05, 0.16, 0.22, 0.22, -0.04, M.coral, 'y');
-  // do meio: a fatia de bolo e as frutinhas
-  r.caixa(0.2, 0.12, 0.16, -0.18, 0.545, -0.04, M.creme, 0.02);
-  r.caixa(0.2, 0.035, 0.16, -0.18, 0.665, -0.04, '#f2a6b8', 0.015);
-  r.caixa(0.04, 0.04, 0.04, -0.18, 0.7, -0.04, M.coralEscuro, 0.015);
-  for (const [x, z] of [
-    [0.12, -0.02],
-    [0.2, -0.08],
-    [0.24, 0.02],
-    [0.16, 0.06],
-  ] as const)
-    r.prisma(8, 0.045, 0.07, x, 0.58, z, '#d8343a', 'y');
-  // de cima: a manteiga e os ovinhos
-  r.caixa(0.22, 0.04, 0.14, 0.12, 0.965, -0.04, M.branco, 0.015);
-  for (const x of [0.06, 0.12, 0.18]) r.prisma(8, 0.03, 0.07, x, 1.03, -0.04, M.creme, 'y');
-  r.caixa(0.16, 0.08, 0.1, -0.18, 0.965, -0.04, M.manteiga, 0.02);
+  // a comidinha desenhada (some quando a geladeira mostra a comida guardada de verdade)
+  o.parte('comidinha', [0, 0, 0], (r) => {
+    // prateleira de baixo: a garrafa de leite e a caixinha de suco
+    r.prisma(8, 0.07, 0.26, -0.22, 0.27, -0.05, M.branco, 'y');
+    r.prisma(8, 0.05, 0.06, -0.22, 0.42, -0.05, M.azulEscuro, 'y');
+    r.caixa(0.14, 0.22, 0.1, 0.0, 0.14, -0.06, '#f29a3a', 0.02);
+    r.caixa(0.14, 0.05, 0.101, 0.0, 0.24, -0.06, M.branco, 0);
+    r.prisma(8, 0.05, 0.16, 0.22, 0.22, -0.04, M.coral, 'y');
+    // do meio: a fatia de bolo e as frutinhas
+    r.caixa(0.2, 0.12, 0.16, -0.18, 0.545, -0.04, M.creme, 0.02);
+    r.caixa(0.2, 0.035, 0.16, -0.18, 0.665, -0.04, '#f2a6b8', 0.015);
+    r.caixa(0.04, 0.04, 0.04, -0.18, 0.7, -0.04, M.coralEscuro, 0.015);
+    for (const [x, z] of [
+      [0.12, -0.02],
+      [0.2, -0.08],
+      [0.24, 0.02],
+      [0.16, 0.06],
+    ] as const)
+      r.prisma(8, 0.045, 0.07, x, 0.58, z, '#d8343a', 'y');
+    // de cima: a manteiga e os ovinhos
+    r.caixa(0.22, 0.04, 0.14, 0.12, 0.965, -0.04, M.branco, 0.015);
+    for (const x of [0.06, 0.12, 0.18]) r.prisma(8, 0.03, 0.07, x, 1.03, -0.04, M.creme, 'y');
+    r.caixa(0.16, 0.08, 0.1, -0.18, 0.965, -0.04, M.manteiga, 0.02);
+  });
   // as portas: a do congelador (fica fechada) e a grande, com o pivô na dobradiça da direita
   r.caixa(W, 0.46, 0.08, 0, 1.4, D / 2 + 0.04, M.menta, 0.05);
   r.barra([-W / 2 + 0.1, 1.48, D / 2 + 0.1], [-W / 2 + 0.1, 1.72, D / 2 + 0.1], 0.04, M.cromo);
@@ -527,23 +550,25 @@ function camaDoIcone(o: Oficina): void {
 }
 
 /**
- * O edredom de quando a criança deita: dois montinhos fofos (o do corpo, mais alto, e o das
- * pernas), a dobra do lençol perto do queixo e a beirada caindo até o colchão. Só a cabeça fica de
- * fora, no travesseiro. Os enfeites de cima (retalhos, estrelinhas) vêm de `enfeitar`.
+ * O edredom de quando a criança deita: uma peça só, fofa e baixa, do queixo até os pés (nada do
+ * corpo aparece no meio), a dobra do lençol perto do queixo e a beirada caindo até o colchão. A
+ * cabeça fica de fora, no travesseiro. O palco ajusta a altura ao corpo deitado. Os enfeites de
+ * cima (retalhos, estrelinhas) vêm de `enfeitar`.
  */
+export const EDREDOM = { altura: 0.42, beirada: 0.12, inicio: -0.24, fim: 0.95 } as const;
 function edredom(
   o: Oficina,
   colchao: number,
   cor: string,
   enfeitar: (p: Ref, alturas: readonly number[], zs: readonly number[]) => void,
 ): void {
-  const H1 = 0.62;
-  const H2 = 0.6;
+  const { altura: H, beirada: B, inicio: z0, fim: z1 } = EDREDOM;
   o.parte('edredom', [0, colchao, 0], (p) => {
-    p.caixa(1.0, H1, 0.8, 0, -0.12, -0.01, cor, 0.12);
-    p.caixa(0.98, H2, 0.62, 0, -0.12, 0.61, cor, 0.11);
-    p.caixa(0.98, 0.09, 0.14, 0, H1 - 0.16, -0.38, '#ffffff', 0.04);
-    enfeitar(p, [H1 - 0.12, H2 - 0.12, H2 - 0.12], [-0.08, 0.38, 0.7]);
+    p.caixa(1.0, H, z1 - z0, 0, -B, (z0 + z1) / 2, cor, 0.1);
+    // o lombinho do corpo, mansinho (a perna fica um tico mais baixa)
+    p.caixa(0.84, 0.04, 0.5, 0, H - B - 0.02, z0 + 0.36, cor, 0.02);
+    p.caixa(0.98, 0.08, 0.14, 0, H - B - 0.05, z0 + 0.04, '#ffffff', 0.04);
+    enfeitar(p, [H - B + 0.02, H - B, H - B], [z0 + 0.36, z0 + 0.72, z0 + 1.0]);
   });
 }
 

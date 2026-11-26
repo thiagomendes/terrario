@@ -26,6 +26,7 @@ import { aparenciaPadrao, normalizarAparencia, type Aparencia } from '../persona
 import type { PlanoBoneco } from '../personagem/boneco';
 import { calcularPose } from '../personagem/poses';
 import { criarBoneco } from '../render/boneco';
+import { modeloNaMao, type ModeloItem } from '../render/itensBrinquedo';
 import { criarPlasticos } from '../render/formas';
 import { fovDeDentro } from '../render/primeiraPessoa';
 import type { Personagem } from '../render/personagem';
@@ -35,7 +36,7 @@ import { pintarCanal } from '../render/vila/desenhosTv';
 import { Ref, type Desenho } from '../render/vila/ref';
 import type { PecaVila } from '../world/vilaNeon';
 import { Bloco } from '../world/blocks';
-import { desenharMovel, type TipoMovel } from './moveisPecas';
+import { EDREDOM, ESCALA, desenharMovel, type TipoMovel } from './moveisPecas';
 
 /** As versões de estilo (a recomendada primeiro). */
 export interface Versoes {
@@ -59,6 +60,8 @@ export interface Toques {
   pratos: boolean;
   guarda: number;
   carrinho: boolean;
+  /** A comidinha desenhada na geladeira (desligada, a geladeira mostra só a comida guardada). */
+  comidinha: boolean;
 }
 
 /** Onde e como a criança está (coordenadas da casa; yaw 0 olha para +z, o fundo da casa). */
@@ -71,7 +74,18 @@ export interface Onde {
   assento?: number;
   /** Os olhos fechados (dormindo). */
   dormindo?: boolean;
+  /** Deitada: o alto do travesseiro acima do colchão (a nuca encosta nele). */
+  travesseiro?: number;
+  /** Sentada: leva o lanche à boca. */
+  come?: boolean;
+  /** O item do jogo na mão (o lanche). */
+  segura?: string;
+  /** Outra roupa (o estilo de roupa da aparência), para a troca no guarda-roupa. */
+  roupa?: number;
 }
+
+/** Só na cama: quanto o corpo deitado achata de frente para trás (o edredom fica baixo). */
+const ACHATA_DEITADA = 0.6;
 
 /** A câmera: em volta de um alvo (cabendo `largura` × `altura`) ou nos olhos de quem olha. */
 export type Camera =
@@ -82,13 +96,20 @@ export interface EsbocoMoveis {
   montar(): V3;
   versao(v: Partial<Versoes>): void;
   tocar(t: Partial<Toques>): void;
-  crianca(o: Onde): void;
+  /** Põe a criança `i` (0 a menina; 1 o menino, só para a mesa). */
+  crianca(o: Onde, i?: number): void;
+  /** Liga ou desliga a escala nova dos móveis (a da conta de proporção). */
+  escala(nova: boolean): void;
+  /** Itens do jogo soltos na cena (a comida no fogão, na geladeira, nos pratos). */
+  itens(lista: Array<{ item: string; em: V3; giro?: number; tamanho?: number }>): void;
   enquadrar(c: Camera | null): void;
   hora(h: number): void;
   tempo(t: number): void;
   esconder(sim: boolean): void;
   /** O custo de cada móvel (as malhas acesas e os triângulos) e o total. */
   custo(): Record<string, { malhas: number; triangulos: number }>;
+  /** As medidas do boneco em pé (do chão): a altura, os olhos, a mão, o quadril, o ombro... */
+  medidas(): Record<string, number>;
 }
 
 declare global {
@@ -99,6 +120,7 @@ declare global {
 
 /** A criança das fotos (a mesma menina das capturas da 036 e da 038). */
 const MENINA: Partial<Aparencia> = { corpo: 'feminino', cabeloEstilo: 5, rosto: 1, cabeloCor: 1, pele: 1, roupaEstilo: 6 };
+const MENINO: Partial<Aparencia> = { corpo: 'masculino', cabeloEstilo: 0, rosto: 0, cabeloCor: 0, pele: 2, roupaEstilo: 0 };
 
 /** Onde cada móvel fica (coordenadas da casa: o meio do pé; dir 0 +z, 1 +x, 2 -z, 3 -x). */
 interface Lugar {
@@ -155,6 +177,40 @@ function desenhoNoMundo(): Desenho {
 }
 const peca = (x: number, y: number, z: number, dir: number): PecaVila => ({ tipo: 'banco', x, y, z, dir });
 
+/**
+ * O `Ref` com a escala do móvel em cada eixo (a conta de proporção): as caixas e as barras crescem
+ * em cada eixo, e o redondo (os prismas: botões, rolos, alto-falantes) cresce por igual, sem
+ * virar oval.
+ */
+class RefEscala extends Ref {
+  constructor(
+    d: Desenho,
+    p: PecaVila,
+    readonly esc: V3,
+  ) {
+    super(d, p);
+  }
+  override caixa(w: number, h: number, d: number, x: number, y: number, z: number, cor: string, b = 0.03, luz = false): void {
+    const [a, c, e] = this.esc;
+    super.caixa(w * a, h * c, d * e, x * a, y * c, z * e, cor, b, luz);
+  }
+  override barra(p: V3, q: V3, lado: number, cor: string, luz = false): void {
+    const [a, c, e] = this.esc;
+    super.barra([p[0] * a, p[1] * c, p[2] * e], [q[0] * a, q[1] * c, q[2] * e], lado * Math.min(a, e), cor, luz);
+  }
+  override prisma(n: number, r: number, larg: number, x: number, y: number, z: number, cor: string, eixo: 'x' | 'y' | 'z' = 'z', luz = false): void {
+    const [a, c, e] = this.esc;
+    const raio = eixo === 'y' ? Math.min(a, e) : eixo === 'z' ? Math.min(a, c) : Math.min(c, e);
+    const comp = eixo === 'x' ? a : eixo === 'y' ? c : e;
+    super.prisma(n, r * raio, larg * comp, x * a, y * c, z * e, cor, eixo, luz);
+  }
+  override placa(perfil: Array<[number, number]>, esp: number, x: number, y: number, z: number, cor: string, luz = false): void {
+    const [a, c, e] = this.esc;
+    const k = Math.min(a, c);
+    super.placa(perfil.map(([u, v]) => [u * k, v * k] as [number, number]), esp, x * a, y * c, z * e, cor, luz);
+  }
+}
+
 interface Parte {
   no: TransformNode;
   malhas: Mesh[];
@@ -168,6 +224,7 @@ interface Montado {
   malhas: Mesh[];
   partes: Record<string, Parte>;
   tela?: { malha: Mesh; tex: DynamicTexture };
+  E: V3;
 }
 
 function ligar(scene: Scene): void {
@@ -190,9 +247,13 @@ function ligar(scene: Scene): void {
     pratos: false,
     guarda: 0,
     carrinho: false,
+    comidinha: true,
   };
   let tempo = 0;
   let montados: Montado[] = [];
+  /** A escala da conta de proporção (a segunda volta); desligada, os móveis da primeira volta. */
+  let escalaNova = true;
+  const soltos: ModeloItem[] = [];
 
   const malhaDe = (nome: string, d: Pecas, luz: boolean, mat?: StandardMaterial): Mesh | null => {
     if (!d.partes.length) return null;
@@ -210,7 +271,8 @@ function ligar(scene: Scene): void {
   function montarMovel(l: Lugar): Montado {
     const giro = (l.dir & 3) * (Math.PI / 2);
     const d = desenhoNoMundo();
-    const ref = new Ref(d, peca(O[0] + l.x, O[1], O[2] + l.z, l.dir));
+    const E: V3 = escalaNova ? ESCALA[l.tipo] : [1, 1, 1];
+    const ref = new RefEscala(d, peca(O[0] + l.x, O[1], O[2] + l.z, l.dir), E);
     const partes: Record<string, Parte> = {};
     const malhas: Mesh[] = [];
     let tela: Montado['tela'];
@@ -221,9 +283,9 @@ function ligar(scene: Scene): void {
         r: ref,
         parte(np, pivo, desenhar, op) {
           const dp = desenhoNoMundo();
-          desenhar(new Ref(dp, peca(0, 0, 0, 0)));
+          desenhar(new RefEscala(dp, peca(0, 0, 0, 0), E));
           const no = new TransformNode(`${nome}-${np}`, scene);
-          const [px, py, pz] = ref.mundo(pivo[0], pivo[1], pivo[2]);
+          const [px, py, pz] = ref.mundo(pivo[0] * E[0], pivo[1] * E[1], pivo[2] * E[2]);
           no.position.set(px, py, pz);
           no.rotation.y = giro;
           const ms: Mesh[] = [];
@@ -237,7 +299,10 @@ function ligar(scene: Scene): void {
             }
           partes[np] = { no, malhas: ms, pivo: new Vector3(px, py, pz), giro };
         },
-        tela(meio, w, h) {
+        tela(meio0, w0, h0) {
+          const meio: V3 = [meio0[0] * E[0], meio0[1] * E[1], meio0[2] * E[2]];
+          const w = w0 * E[0];
+          const h = h0 * E[1];
           const W = 128;
           const H = Math.round((128 * h) / w);
           const tex = new DynamicTexture(`${nome}-tela`, { width: W, height: H }, scene, false);
@@ -270,7 +335,7 @@ function ligar(scene: Scene): void {
     );
     for (const m of [malhaDe(nome, d.corpo, false), malhaDe(`${nome}-luz`, d.luz, true)]) if (m) malhas.push(m);
     if (tela) malhas.push(tela.malha);
-    return { lugar: l, ref, giro, malhas, partes, tela };
+    return { lugar: l, ref, giro, malhas, partes, tela, E };
   }
 
   function descartarMovel(m: Montado): void {
@@ -421,6 +486,7 @@ function ligar(scene: Scene): void {
         case 'geladeira': {
           const k = suave(toques.geladeira);
           if (P.porta) P.porta.no.rotation.y = m.giro + k * 1.95;
+          ver(P.comidinha, toques.comidinha);
           ver(P.luzDentro, k > 0.04);
           break;
         }
@@ -476,7 +542,7 @@ function ligar(scene: Scene): void {
           const th = Math.PI / 2 + (toques.carrinho ? (tempo / 6) * Math.PI * 2 : 0);
           const [x, z] = ponto(th);
           const [x2, z2] = ponto(th + 0.01);
-          const [wx, wy, wz] = m.ref.mundo(x, 0.02, z);
+          const [wx, wy, wz] = m.ref.mundo(x * m.E[0], 0.02, z * m.E[2]);
           n.no.position.set(wx, wy, wz);
           n.no.rotation.y = m.giro + Math.atan2(-(z2 - z), x2 - x);
           break;
@@ -487,6 +553,12 @@ function ligar(scene: Scene): void {
             const deitada = onde.pose === 'deitada';
             ver(P.cobertor, !deitada);
             ver(P.edredom, deitada);
+            // a altura do edredom segue o corpo deitado (uns 3 cm por cima)
+            if (P.edredom && deitada && topoCorpo > 0) {
+              const topo = (EDREDOM.altura - EDREDOM.beirada) * m.E[1];
+              const quer = topoCorpo + 0.03 - P.edredom.pivo.y;
+              P.edredom.no.scaling.y = Math.max(0.5, quer / topo);
+            }
           }
           break;
       }
@@ -496,22 +568,48 @@ function ligar(scene: Scene): void {
     if (montados.length) animar();
   });
 
-  // ---------------------------------------------------------------- a criança
-  let boneco: Personagem | null = null;
-  let juntas: Record<string, TransformNode> = {};
-  /** Deitada: o alto do corpo (para o edredom cobrir); 0 quando não está deitada. */
+  // ---------------------------------------------------------------- as crianças
+  interface Crianca {
+    p: Personagem;
+    juntas: Record<string, TransformNode>;
+    /** A aparência de agora (troca no guarda-roupa). */
+    chave: string;
+    /** O que ela segura na mão (o item do jogo), ou null. */
+    mao: ModeloItem | null;
+    maoItem: string | null;
+    /** Onde a cabeça fica no corpo (deitada, ela desce até o travesseiro; depois volta). */
+    cabecaPos: Vector3;
+  }
+  const criancas: Crianca[] = [];
+  /** Deitada: o alto do corpo (para o edredom cobrir); 0 quando ninguém está deitado. */
   let topoCorpo = 0;
   let onde: Onde = { x: -7, z: 0, yaw: 0, pose: 'pe' };
-  function montarCrianca(): void {
-    boneco?.descartar();
-    const ap = normalizarAparencia({ ...aparenciaPadrao(), ...MENINA, nome: 'esboco' });
-    boneco = criarBoneco(scene, ap, PREFIXO, (p: PlanoBoneco) => p, true, false);
-    juntas = {};
-    for (const n of boneco.raiz.getChildTransformNodes(false)) {
+  function aparenciaDe(i: number, roupa?: number): Aparencia {
+    const base = i === 0 ? MENINA : MENINO;
+    return normalizarAparencia({ ...aparenciaPadrao(), ...base, ...(roupa !== undefined ? { roupaEstilo: roupa, roupaCor: 3 } : {}), nome: 'esboco' });
+  }
+  function montarCrianca(i: number, roupa?: number): Crianca {
+    const chave = `${i}:${roupa ?? '-'}`;
+    const velha = criancas[i];
+    if (velha && velha.chave === chave) return velha;
+    velha?.mao?.no.dispose();
+    velha?.p.descartar();
+    const p = criarBoneco(scene, aparenciaDe(i, roupa), `${PREFIXO}-${i}`, (pl: PlanoBoneco) => pl, true, false);
+    const juntas: Record<string, TransformNode> = {};
+    for (const n of p.raiz.getChildTransformNodes(false)) {
       const k = /-junta-(\w+)$/.exec(n.name);
       if (k) juntas[k[1]] = n;
     }
-    for (const m of boneco.raiz.getChildMeshes(false)) m.isPickable = false;
+    for (const m of p.raiz.getChildMeshes(false)) m.isPickable = false;
+    const c: Crianca = { p, juntas, chave, mao: null, maoItem: null, cabecaPos: juntas.cabeca.position.clone() };
+    criancas[i] = c;
+    return c;
+  }
+  /** Um item do jogo (o mesmo modelinho da mão e do chão), solto na cena. */
+  function itemDoJogo(item: string, nome: string): ModeloItem | null {
+    const m = modeloNaMao(scene, pl, null, item, `${PREFIXO}-item-${nome}`);
+    if (m) for (const ms of m.malhas) ms.isPickable = false;
+    return m;
   }
   function minimoY(no: TransformNode): number {
     let y = Infinity;
@@ -539,18 +637,32 @@ function ligar(scene: Scene): void {
     no.computeWorldMatrix(true);
     for (const n of no.getChildTransformNodes(false)) n.computeWorldMatrix(true);
   }
-  function porCrianca(o: Onde): void {
-    onde = o;
-    if (!boneco) montarCrianca();
-    const b = boneco!;
+  /**
+   * Põe a criança `i` (0 a menina, 1 o menino). Deitada, `o.x` e `o.z` são o meio da cabeceira por
+   * dentro (o alto da cabeça encosta nela) e `o.assento` o alto do colchão; a cama olha para -z.
+   */
+  function porCrianca(o: Onde, i = 0): void {
+    if (i === 0) onde = o;
+    const c = montarCrianca(i, o.roupa);
+    const b = c.p;
     b.raiz.setEnabled(o.pose !== 'fora');
-    if (o.pose === 'fora') return;
+    if (c.mao && c.maoItem !== (o.segura ?? null)) {
+      c.mao.no.dispose();
+      c.mao = null;
+      c.maoItem = null;
+    }
+    if (o.pose === 'fora') {
+      if (i === 0) topoCorpo = 0;
+      return;
+    }
     const pose = calcularPose({ andando: false, correndo: false, noAr: false, minerando: false, colocando: false, tempo: 1.2 });
     pose.tempo = 1.2;
     pose.piscar = !!o.dormindo;
-    for (let i = 0; i < 90; i++) b.aplicarPose(pose);
-    const j = juntas;
+    for (let k = 0; k < 90; k++) b.aplicarPose(pose);
+    const j = c.juntas;
+    j.cabeca.position.copyFrom(c.cabecaPos);
     b.raiz.rotation.x = 0;
+    b.raiz.scaling.setAll(1);
     b.posicionar(O[0] + o.x, O[1], O[2] + o.z, o.yaw);
     if (o.pose === 'toca') {
       j.bracoD.rotation.set(-1.45, 0, 0.08);
@@ -561,38 +673,64 @@ function ligar(scene: Scene): void {
       j.pernaD.rotation.x = -1.45;
       j.bracoE.rotation.set(-0.35, 0, -0.12);
       j.bracoD.rotation.set(-0.35, 0, 0.12);
+      // comendo: a mão direita leva o lanche à boca
+      if (o.come) {
+        j.bracoD.rotation.set(-2.35, 0, 0.42);
+        j.cabeca.rotation.x = -0.08;
+      }
       atualizar(b.raiz);
       const baixo = Math.min(minimoY(j.pernaE), minimoY(j.pernaD));
       b.raiz.position.y += O[1] + (o.assento ?? 0.48) - baixo;
     }
-    topoCorpo = 0;
+    if (i === 0) topoCorpo = 0;
     if (o.pose === 'deitada') {
-      j.bracoE.rotation.set(0, 0, -0.08);
-      j.bracoD.rotation.set(0, 0, 0.08);
+      j.bracoE.rotation.set(0, 0, -0.05);
+      j.bracoD.rotation.set(0, 0, 0.05);
       j.cabeca.rotation.set(0, 0, 0);
       // (os pés deitam um tico para a ponta da cama: as pontas dos sapatos não espetam o edredom)
-      j.pernaE.rotation.x = 0.25;
-      j.pernaD.rotation.x = 0.25;
+      j.pernaE.rotation.x = 0.3;
+      j.pernaD.rotation.x = 0.3;
+      // só na cama, o corpo achata no fundo (o boneco de brinquedo é gordinho de frente para trás):
+      // o edredom fica baixo. De cima, a cara e o corpo continuam do mesmo tamanho.
+      b.raiz.scaling.set(1, 1, ACHATA_DEITADA);
       b.raiz.rotation.x = -Math.PI / 2;
       atualizar(b.raiz);
-      // o meio da cabeça no meio do travesseiro (x, z); as costas no colchão (a cabeça, mais
-      // funda que o corpo, afunda no travesseiro) e o edredom por cima do corpo
+      // o alto da cabeça encosta na cabeceira, no meio da cama
       const cab = caixaDe(b.raiz, (m) => m.isDescendantOf(j.cabeca));
       b.raiz.position.x += O[0] + o.x - (cab.min.x + cab.max.x) / 2;
-      b.raiz.position.z += O[2] + o.z - (cab.min.z + cab.max.z) / 2;
+      b.raiz.position.z += O[2] + o.z - cab.max.z;
       atualizar(b.raiz);
+      // as costas no colchão
       const corpo = caixaDe(b.raiz, (m) => !m.isDescendantOf(j.cabeca));
-      const dy = O[1] + (o.assento ?? 0.44) - corpo.min.y;
-      b.raiz.position.y += dy;
-      // o edredom passa por cima do tronco (sem a cabeça e os braços)
-      const tronco = caixaDe(
-        b.raiz,
-        (m) => m.isDescendantOf(j.tronco) && !m.isDescendantOf(j.cabeca) && !m.isDescendantOf(j.bracoE) && !m.isDescendantOf(j.bracoD),
+      b.raiz.position.y += O[1] + (o.assento ?? 0.44) - corpo.min.y;
+      atualizar(b.raiz);
+      // a nuca no travesseiro, sem afundar: a cabeça sobe (ou desce) até encostar nele
+      const cab2 = caixaDe(b.raiz, (m) => m.isDescendantOf(j.cabeca));
+      const quer = O[1] + (o.assento ?? 0.44) + (o.travesseiro ?? 0.12);
+      j.cabeca.setAbsolutePosition(j.cabeca.getAbsolutePosition().add(new Vector3(0, quer - cab2.min.y, 0)));
+      atualizar(b.raiz);
+      const corpo2 = caixaDe(b.raiz, (m) => !m.isDescendantOf(j.cabeca));
+      if (i === 0) topoCorpo = corpo2.max.y;
+      const cab3 = caixaDe(b.raiz, (m) => m.isDescendantOf(j.cabeca));
+      console.log(
+        `esboco deitada corpo ${(corpo2.max.y - corpo2.min.y).toFixed(2)} comprimento ${(cab3.max.z - corpo2.min.z).toFixed(2)} pes ${(corpo2.min.z - O[2]).toFixed(2)}`,
       );
-      topoCorpo = tronco.max.y;
-      console.log(`esboco deitada corpo ${(corpo.max.y - corpo.min.y).toFixed(2)} tronco ${(tronco.max.y - corpo.min.y - dy).toFixed(2)}`);
     }
     atualizar(b.raiz);
+    // o lanche na mão (o mesmo item do jogo), encostado na palma
+    if (o.segura) {
+      if (!c.mao) {
+        c.mao = itemDoJogo(o.segura, `mao${i}`);
+        c.maoItem = o.segura;
+      }
+      if (c.mao) {
+        const mao = caixaDe(b.raiz, (m) => m.isDescendantOf(j.bracoD));
+        const ponta = o.come ? new Vector3((mao.min.x + mao.max.x) / 2, mao.max.y + 0.02, (mao.min.z + mao.max.z) / 2) : new Vector3((mao.min.x + mao.max.x) / 2, mao.min.y, (mao.min.z + mao.max.z) / 2);
+        c.mao.no.position.copyFrom(ponta);
+        c.mao.no.rotation.set(0, o.yaw, 0);
+        c.mao.no.scaling.setAll(1.3);
+      }
+    }
     animar();
   }
 
@@ -708,7 +846,26 @@ function ligar(scene: Scene): void {
       Object.assign(toques, t);
       animar();
     },
-    crianca: porCrianca,
+    crianca(o, i = 0) {
+      porCrianca(o, i);
+      // a segunda criança só aparece quando pedida (a mesa); some quando a primeira muda de cena
+      if (i === 0 && criancas[1]) criancas[1].p.raiz.setEnabled(false);
+    },
+    escala(nova) {
+      escalaNova = nova;
+      montarMoveis();
+    },
+    itens(lista) {
+      for (const s of soltos.splice(0)) s.no.dispose();
+      lista.forEach((it, k) => {
+        const m = itemDoJogo(it.item, `solto${k}`);
+        if (!m) return;
+        m.no.position.set(O[0] + it.em[0], O[1] + it.em[1], O[2] + it.em[2]);
+        m.no.rotation.y = it.giro ?? 0;
+        m.no.scaling.setAll(it.tamanho ?? 1.3);
+        soltos.push(m);
+      });
+    },
     enquadrar(c) {
       camera = c;
     },
@@ -742,6 +899,34 @@ function ligar(scene: Scene): void {
       }
       r.total = total;
       return r;
+    },
+    medidas() {
+      porCrianca({ x: 0, z: -2, yaw: Math.PI, pose: 'pe' });
+      const b = criancas[0];
+      const j = b.juntas;
+      const chao = O[1];
+      const tudo = caixaDe(b.p.raiz, () => true);
+      const cab = caixaDe(b.p.raiz, (m) => m.isDescendantOf(j.cabeca));
+      const olho = caixaDe(b.p.raiz, (m) => /olho/i.test(m.name));
+      const mao = caixaDe(b.p.raiz, (m) => m.isDescendantOf(j.bracoD));
+      const tronco = caixaDe(
+        b.p.raiz,
+        (m) => m.isDescendantOf(j.tronco) && !m.isDescendantOf(j.cabeca) && !m.isDescendantOf(j.bracoE) && !m.isDescendantOf(j.bracoD),
+      );
+      const r = (v: number) => Math.round(v * 1000) / 1000;
+      return {
+        altura: r(tudo.max.y - chao),
+        olhos: r((olho.min.y + olho.max.y) / 2 - chao),
+        cabecaBase: r(cab.min.y - chao),
+        cabecaLargura: r(cab.max.x - cab.min.x),
+        cabecaFundo: r(cab.max.z - cab.min.z),
+        ombro: r(j.bracoD.getAbsolutePosition().y - chao),
+        mao: r(mao.min.y - chao),
+        quadril: r(j.pernaD.getAbsolutePosition().y - chao),
+        troncoBase: r(tronco.min.y - chao),
+        corpoLargura: r(tudo.max.x - tudo.min.x),
+        corpoFundo: r(tronco.max.z - tronco.min.z),
+      };
     },
   };
   window.__moveis = api;

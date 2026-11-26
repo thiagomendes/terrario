@@ -115,8 +115,114 @@ A casinha do esboço tem os 13 móveis, com três cadeiras. Com tudo ligado, ela
   - uma casa cheia (os 13 móveis) soma no máximo 4 chamadas de desenho paradas e uns 16 mil triângulos. O esboço mediu 15.678 com tudo ligado. Os prismas facetados e o bisel de cada caixa são o que mais pesa; é por aí que se corta, se a medida na placa pedir;
   - medido na placa (`scripts/e2e-gpu.sh`), sem perder quadro no celular.
 
-## 6. O que fica para a spec (perguntas ao dono)
-1. A regra de cada toque que liga com o jogo: o fogão cozinha? A geladeira guarda comida? O guarda-roupa abre o provador? A mesa junta todos para comer?
-2. De onde vêm os móveis: a banca de cada mundo com moedinhas e o criativo (recomendado), a mesa de montar ou só o criativo.
-3. Os estilos: a cama, o sofá e a TV (A recomendados).
-4. As camas que já estão nos mundos: viram a de dois blocos onde couber (recomendado) ou ficam curtinhas.
+## 6. O que o dono decidiu (26 nov, depois da primeira volta)
+1. **Os estilos:** os recomendados, que são a cama do ícone, o sofá gordinho coral e a TV de rack azul.
+2. **De onde vêm:**
+   - no criativo, os móveis aparecem no inventário;
+   - na sobrevivência, a criança monta cada um na mesa de montar, com receita;
+   - não custam moedinhas. Isso substitui a recomendação da banca, na seção 3.
+3. **Os quatro toques com regra valem:**
+   - o fogão cozinha como a fornalha;
+   - a geladeira guarda comida;
+   - o guarda-roupa abre a troca de roupa;
+   - a mesa junta todos para comer.
+4. **Fica para a spec:** as camas de um bloco que já estão nos mundos. A recomendação continua a da seção 4: viram a de dois blocos onde couber.
+
+## 7. A conta de proporção (a segunda volta)
+Medi o boneco do jogo em pé, a menina das fotos, com `__moveis.medidas()`. É a mesma conta do braço da 037: tudo do chão, em blocos.
+
+| Medida | Altura |
+|---|---|
+| Altura (o alto do cabelo) | 1,76 |
+| Olhos | 1,20 |
+| Queixo (a base da cabeça) | 0,86 |
+| Ombro | 0,79 |
+| Quadril (o comprimento da perna) | 0,39 |
+| Mão, com o braço solto | 0,37 |
+| Largura da cabeça | 0,96 (quase um bloco) |
+| Fundo do corpo, de frente para trás | 0,58 |
+| Deitada, do alto da cabeça ao pé | 1,77 |
+
+**O que a conta diz.** A cabeça é metade do boneco: o queixo fica a 0,86. Por isso, perto da cara, tudo parece pequeno. Mas as pernas (0,39) e os braços são curtos. Subir muito a altura não resolve: a mesa passaria do queixo, e a bancada esconderia o fogão dos olhos. A regra que segui:
+- **o que a criança usa em pé** (bancada, pia, fogão) fica entre o queixo e os olhos (0,86 a 1,20). Ela "vê" a boca do fogão e a cuba;
+- **a mesa** fica um tico acima do queixo de quem está em pé, e na altura do peito de quem está sentado;
+- **os assentos** (cadeira, sofá, cama) ficam acima do quadril (0,39), na altura em que as perninhas esticadas passam por cima do chão;
+- **o que é alto** (geladeira, guarda-roupa) vai até os dois blocos. A porta de dois blocos (2,0) é mais alta que a criança (1,76);
+- **o resto do "aumentar"** é massa: mais largo e mais fundo até a borda das células, os encostos e as cabeceiras mais altos e os detalhes (botões, travesseiro, almofadas) maiores junto.
+
+| Móvel | Antes (1ª volta) | Agora | Escala (largura, altura, fundo) |
+|---|---|---|---|
+| Assento do sofá | 0,49 | 0,64 | 1 × 1,3 × 1,1 |
+| Encosto do sofá | 1,04 | 1,35 | |
+| Assento da cadeira | 0,53 | 0,64 | 1,2 × 1,2 × 1,2 |
+| Mesa | 0,79 | 0,95 | 1,05 × 1,2 × 1,1 |
+| Bancada da pia | 0,92 | 1,06 | 1,05 × 1,15 × 1,05 |
+| Boca do fogão | 0,92 | 1,06 | 1,1 × 1,15 × 1,1 |
+| Colchão da cama | 0,44 | 0,55 | 1 × 1,25 × 1,03 |
+| Cabeceira | 1,08 | 1,35 | |
+| Geladeira | 1,86 | 1,99 | 1,08 × 1,07 × 1,05 |
+| Guarda-roupa | 1,98 | 1,98 (já estava nos dois blocos) | 1,05 × 1 × 1,1 |
+| Rack da TV / meio da tela | 0,54 / 1,07 | 0,68 / 1,34 | 1,05 × 1,25 × 1,1 |
+| Aparelho de som (a alça) | 1,19 | 1,43 | 1,15 × 1,2 × 1,15 |
+| Abajur | 1,42 | 1,78 | 1,2 × 1,25 × 1,2 |
+| Criado-mudo | 0,54 | 0,70 | 1,2 × 1,3 × 1,2 |
+
+**A cama de dois blocos.** A criança deitada mede 1,77 do alto da cabeça ao pé, e a cama tem 1,87 por dentro, da cabeceira à pezeira. Ela cabe inteira: a cabeça encosta na cabeceira e os pés ficam 0,1 antes da pezeira (`volta2/*/cama-a-deitada-lado.jpg`).
+
+**A criança deitada, só na cama:**
+- o corpo achata para 60% de frente para trás. O boneco é gordinho (0,58 de fundo), e de cima a cara e o corpo continuam do mesmo tamanho;
+- a nuca encosta no travesseiro, sem afundar;
+- o edredom é uma peça só, do queixo ao pé, 3 cm acima do corpo (uns 0,38 acima do colchão), então nada do corpo aparece no meio;
+- no jogo, isso entra na pose de dormir.
+
+## 8. As receitas (sobrevivência)
+A criança não lê, então a receita tem de funcionar só pelos ícones da mesa de montar de hoje (`ui/criacao.ts`):
+- o livro de receitas mostra o ícone do móvel e os ícones dos materiais;
+- o que dá para fazer vem primeiro, e um toque no móvel já arruma a grade (`preencher`);
+- outro toque no resultado faz o móvel.
+
+Por isso a regra é poucos materiais, todos que ela já junta, e a forma da grade lembrando o móvel (ajuda quem monta à mão). Todas na mesa de trabalho (`mesa: true`), numa categoria nova do livro, **Casa**, com o ícone da casinha.
+
+Os materiais: T = tábuas (qualquer madeira), L = lã (qualquer cor), F = lingote de ferro, V = vidro, P = pedra, G = graveto, mais blocos que ela já faz (tocha, baú, fornalha).
+
+| Móvel | Grade | Por quê |
+|---|---|---|
+| Cama (a nova) | `LLL` / `TTT` | a mesma receita de hoje; agora dá a cama de dois blocos |
+| Sofá | `L L` / `LLL` / `TTT` | os braços e o assento de lã na base de madeira |
+| Cadeira | `T  ` / `TTT` / `T T` | o desenho de uma cadeira de lado |
+| Mesa | `TTT` / `G G` | o tampo de tábua e os pés de graveto |
+| Tapete | `LLL` | uma fileira de lã, rente como o tapete |
+| Abajur | `L` / tocha / `T` | a cúpula de lã, a luz (a tocha) e o pé |
+| Criado-mudo | `T` / baú | um baú pequeno com o tampo |
+| Guarda-roupa | `TT` / baú baú / `TT` | dois baús em pé, as duas portas |
+| Geladeira | `FF` / `F`baú / `FF` | o baú de guardar no ferro |
+| Fogão | `FFF` / `F`fornalha`F` | a fornalha (que já cozinha) no ferro |
+| Pia | ` F ` / `PPP` | a torneira de ferro em cima da bancada de pedra |
+| TV | `FVF` / `TTT` | a tela de vidro com moldura no rack de madeira |
+| Aparelho de som | `TFT` / `TFT` | os dois alto-falantes de ferro na caixa de madeira |
+
+Nenhuma grade repete outra receita de hoje. Na spec, conferir isso no teste das receitas (o `encontrarReceita` não pode achar duas). O ferro aparece em cinco (geladeira, fogão, pia, TV e som), que só saem depois da primeira caverna. Se o dono quiser a casa inteira logo no começo, troca-se F por pedra.
+
+## 9. O criativo: os móveis sem encher a tela
+Hoje o catálogo do criativo (`ui/inventario.ts`) é uma grade só, com a busca por texto, que a criança não usa. Somar os 13 móveis empurra os blocos para baixo.
+1. **Recomendado: uma fileira de abas de ícone em cima do catálogo,** todas com ícone e sem texto:
+   - "tudo";
+   - "blocos";
+   - "casa" (o ícone do sofá);
+   - "comida";
+   - "ferramentas";
+   - "luz".
+
+   A aba "casa" mostra só os 13 móveis numa tela, sem rolar no celular em pé. As mesmas categorias do livro de receitas viram as abas: a criança aprende um ícone só para os dois lugares.
+2. **Outra: uma "caixa da mudança",** um item só no catálogo (a caixa de papelão com o sofá desenhado). Ao toque, ela abre os 13 móveis no lugar da grade, e "voltar" fecha. Não mexe no resto do catálogo, mas é um toque a mais e um gesto novo.
+3. **Outra: os móveis no fim da grade, juntos.** Não muda nada na tela, mas no celular a criança tem de rolar até eles.
+
+## 10. O que fica para a spec
+1. A regra fina de cada toque com regra:
+   - o fogão sem carvão;
+   - a geladeira com 9 lugares só de comida, que não estraga;
+   - o guarda-roupa abre a troca de roupa direto na aba das roupas;
+   - a mesa: quanto a comida rende quando há mais de uma criança sentada.
+2. As camas de um bloco que já estão nos mundos (seção 4).
+3. As abas do criativo (seção 9).
+4. O ferro nas receitas (seção 8).
