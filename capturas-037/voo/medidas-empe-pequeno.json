@@ -1,0 +1,20 @@
+{
+ "noChao": {
+  "menor": 0.9999987217121072,
+  "maoPx": 58,
+  "quadros": 37
+ },
+ "voando": {
+  "menor": 0.9999999996116403,
+  "maoPx": 58,
+  "quadros": 149
+ },
+ "subiu": 8.41396424987171,
+ "descer": true,
+ "caindo": {
+  "menor": 0.9999999999999999,
+  "maoPx": 58,
+  "quadros": 91
+ },
+ "pulando": 0.9999999999999999
+}

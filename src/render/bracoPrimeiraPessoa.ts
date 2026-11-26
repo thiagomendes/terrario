@@ -123,6 +123,8 @@ export interface OpcoesBraco {
 const GRUPO = 2;
 /** Olhando mais para baixo que isto, a mão sai de vista (o corpo aparece). */
 const PITCH_SEM_MAO = 0.85;
+/** Voando, o balanço calmo da mão (rad no ombro, uns 4 px na tela em pé). */
+const BALANCO_VOO = 0.02;
 /** O golpe dura um intervalo de golpe do jogo; o empurrão de colocar, 0,3 s. */
 const DURACAO_GOLPE = PERIODO_MINERAR;
 const DURACAO_EMPURRAO = 0.3;
@@ -228,9 +230,26 @@ const aproximar = (a: number, b: number, taxa: number, dt: number) =>
  * o bloco ficam acima), e os retângulos dos botões, da barra, do mapinha e do controle de andar
  * (a mão e o item ficam fora deles). Pela área visível, sem olhar o aparelho.
  */
-function medirInterface(w: number, h: number): { botoes: number; obstaculos: Retangulo[] } {
-  let botoes = h;
-  const obstaculos: Retangulo[] = [];
+interface InterfaceMedida {
+  botoes: number;
+  obstaculos: Retangulo[];
+  /**
+   * A mesma conta sem os botões que só aparecem de passagem (o de descer, só voando), ou null
+   * quando nenhum está à vista: sem lugar para a mão com eles, vale o lugar de sem eles.
+   */
+  semPassageiros: { botoes: number; obstaculos: Retangulo[] } | null;
+}
+/**
+ * Os botões que só aparecem de passagem. O de descer só aparece voando, em cima do de pular: num
+ * celular em pé menor (360 × 640), com ele não sobrava lugar para a mão, e a mão e o item sumiam
+ * o voo inteiro (o dono, 26 nov). Aí a mão fica no lugar de sem ele.
+ */
+const PASSAGEIROS = '.toque .descer';
+
+function medirInterface(w: number, h: number): InterfaceMedida {
+  const todos = { botoes: h, obstaculos: [] as Retangulo[] };
+  const fixos = { botoes: h, obstaculos: [] as Retangulo[] };
+  let passageiro = false;
   for (const el of document.querySelectorAll<HTMLElement>('button, .barra, .minimapa, .area-mapa, .joystick')) {
     const r = el.getBoundingClientRect();
     if (!r.width || !r.height || r.right <= 0 || r.bottom <= 0 || r.left >= w || r.top >= h) continue;
@@ -240,10 +259,14 @@ function medirInterface(w: number, h: number): { botoes: number; obstaculos: Ret
     // (a roleta fechada guarda os botões dela invisíveis por cima da barra; aberta, ela é
     // passageira: a mão não muda de lugar por causa dela)
     if (el.closest('.roleta')) continue;
-    obstaculos.push([r.left, r.top, r.right, r.bottom]);
-    if (el.matches('button, .barra') && r.top >= h * 0.55 && r.right >= w * 0.5) botoes = Math.min(botoes, r.top);
+    const dePassagem = el.matches(PASSAGEIROS);
+    passageiro ||= dePassagem;
+    for (const m of dePassagem ? [todos] : [todos, fixos]) {
+      m.obstaculos.push([r.left, r.top, r.right, r.bottom]);
+      if (el.matches('button, .barra') && r.top >= h * 0.55 && r.right >= w * 0.5) m.botoes = Math.min(m.botoes, r.top);
+    }
   }
-  return { botoes, obstaculos };
+  return { ...todos, semPassageiros: passageiro ? fixos : null };
 }
 
 /**
@@ -441,8 +464,10 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
   // ---------------------------------------------------------------- o ombro desta tela
   const cache = criarCacheOmbro((f) => setTimeout(f, 0));
   let achado: ResultadoOmbro | null | undefined;
-  let interfaceMedida: { botoes: number; obstaculos: Retangulo[] } = { botoes: 0, obstaculos: [] };
+  let interfaceMedida: InterfaceMedida = { botoes: 0, obstaculos: [], semPassageiros: null };
   let botoesEm = -Infinity;
+  /** O último ombro achado e a tela dele (enquanto a conta de uma interface nova sai). */
+  let ultimo: { w: number; h: number; ombro: ResultadoOmbro } | null = null;
   const ombroDaTela = (agora: number): ResultadoOmbro | null | undefined => {
     if (!canvas) return null;
     const r = canvas.getBoundingClientRect();
@@ -451,7 +476,15 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
       interfaceMedida = medirInterface(r.width, r.height);
       botoesEm = agora;
     }
-    return cache.obter({ w: r.width, h: r.height, ...interfaceMedida });
+    const { semPassageiros, ...tela } = interfaceMedida;
+    let o = cache.obter({ w: r.width, h: r.height, ...tela });
+    // sem lugar com o botão de passagem (o de descer, voando): o lugar de sem ele
+    if (o === null && semPassageiros) o = cache.obter({ w: r.width, h: r.height, ...semPassageiros });
+    // (o botão de descer aparece ao ligar o voo: enquanto a conta nova sai, a mão fica onde
+    // estava, na mesma tela, em vez de piscar)
+    if (o === undefined && ultimo && ultimo.w === r.width && ultimo.h === r.height) return ultimo.ombro;
+    if (o) ultimo = { w: r.width, h: r.height, ombro: o };
+    return o;
   };
   addEventListener('resize', () => {
     botoesEm = -Infinity;
@@ -767,6 +800,8 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     molaVel += ((alvoMola - mola) * 70 - molaVel * 11) * dt;
     mola += molaVel * dt;
     x += mola;
+    // voando, um balanço calmo, no tempo do corpo que flutua (o dono, 26 nov: a mão à vista no voo)
+    if (j.voando && !j.noChao) x += Math.sin(agora * 1.8) * BALANCO_VOO;
     // o "não": a mão e o item vão de lado a lado, três vezes, e param (o balanço some no fim)
     // (começa depressa e vai parando; para dentro da tela, a mão nunca sai pela beira)
     const envNao = naoT >= 0 ? Math.min(1, naoT * 6) * (1 - naoT) : 0;
