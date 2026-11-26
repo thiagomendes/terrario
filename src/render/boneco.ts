@@ -45,6 +45,13 @@ import { SAIA_DA_ROUPA, medidaDaPerna, pernaNoPedal, type MedidaPerna } from '..
  * por cima das coxas (rad), mais curta e sem abrir.
  */
 const SAIA_MONTADA = { giro: -0.55, altura: 0.7, largura: 0.96 };
+/**
+ * O vestido de baile (a saia larga, como o da realeza): inclinado como a saia, ele baixava atrás
+ * até a roda de trás; ele inclina menos, encurta mais e fecha um tico.
+ */
+const SAIA_LARGA_MONTADA = { giro: -0.3, altura: 0.42, largura: 0.86 };
+/** A partir de que raio (no pé da saia) ela é um vestido de baile. */
+const RAIO_SAIA_LARGA = 0.35;
 import { luzPremium, texturaAquario } from './premiumLuzes';
 import type { Pose } from '../personagem/poses';
 import {
@@ -436,6 +443,7 @@ export function criarBoneco(
   let medidaPerna: MedidaPerna | null = null;
   /** Spec 038 (portão): a saia da roupa passou do tronco para a junta da saia. */
   let saiaDaRoupa = false;
+  let saiaLarga = false;
   let quadrilDoPlano = 0.34;
   let pesoPes = 0;
   /** Spec 023: os nós próprios dos premium (as asas do dragão). */
@@ -699,6 +707,7 @@ export function criarBoneco(
     quadrilDoPlano = plano.juntas.pernaE.pos[1];
     medidaPerna = subjuntas.joelhoE && subjuntas.joelhoD ? medidaDaPerna(plano) : null;
     saiaDaRoupa = plano.pecas.some((p) => p.nome === SAIA_DA_ROUPA);
+    saiaLarga = plano.pecas.some((p) => p.junta === 'saia' && p.forma === 'cilindro' && p.tamanho[1] > RAIO_SAIA_LARGA);
     pesoPes = montado && medidaPerna ? 1 : 0;
   }
 
@@ -1101,13 +1110,14 @@ export function criarBoneco(
     const w = pesoPes;
     if (w <= 0) return;
     const mistura = (a: number, b: number) => a + (b - a) * w;
-    j.saia.rotation.x = mistura(j.saia.rotation.x, SAIA_MONTADA.giro);
+    const alvo = saiaLarga ? SAIA_LARGA_MONTADA : SAIA_MONTADA;
+    j.saia.rotation.x = mistura(j.saia.rotation.x, alvo.giro);
     j.saia.rotation.y = mistura(j.saia.rotation.y, 0);
     j.saia.rotation.z = mistura(j.saia.rotation.z, 0);
     j.saia.scaling.set(
-      mistura(j.saia.scaling.x, SAIA_MONTADA.largura),
-      mistura(j.saia.scaling.y, SAIA_MONTADA.altura),
-      mistura(j.saia.scaling.z, SAIA_MONTADA.largura),
+      mistura(j.saia.scaling.x, alvo.largura),
+      mistura(j.saia.scaling.y, alvo.altura),
+      mistura(j.saia.scaling.z, alvo.largura),
     );
   }
 
