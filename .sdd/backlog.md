@@ -73,6 +73,14 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
   - **c6 no celular em pé:** a mãozinha da obra não aparece; a criança chega pela trilha de lado e os blocos azuis de baixo ficam fora da tela ou atrás do boneco.
   - **c3, a conferir:** às vezes a criança para na porta da padaria, o cliente diz que chegou, o ✓ do núcleo não vem e ela fica sem pegadas.
   - **`cidade-grande:242`:** os 12 tijolos soltos não voltam para a mochila (o concreto e o asfalto voltam); 2 de 3 na `main` (achado na 027).
+- **Defeitos visuais antigos, vistos pelo revisor das fotos na 037** (25 nov; não vêm da 037):
+  - a agulha laranja da bússola passa por cima do "S" e forma um "$", e a casinha cruza o meio da bússola, no celular deitado e no computador;
+  - com o celular em pé, a pílula da estrela com as moedinhas tapa a casinha;
+  - visto de cima, com a câmera olhando para baixo, o boneco fica translúcido, com dois olhos escuros, como um vulto sob o chão;
+  - o ícone da colher do pedreiro na barra parece machadinha ou cutelo;
+  - a dica "Toque para comer" cai em cima da cabeça do boneco;
+  - a câmera de fora entra na grade dos blocos-guia da obra (eles não têm colisão desde a 014);
+  - a tocha do Doce Reino parece um palito laranja da cor do chão.
 - **Consertado:** a velocidade do carrinho de quem guia o bate-bate dobrava sem controle para refazer (`src/cliente/bate.ts`); vai ao ar com a próxima publicação.
 - **A página deitada perde o contexto WebGL** na ponte da placa do WSL (a placa trava uns 2 min). Esses testes só rodam no `--tudo`; conferir no aparelho de verdade.
 
