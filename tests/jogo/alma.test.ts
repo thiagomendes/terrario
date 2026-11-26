@@ -387,7 +387,7 @@ describe('alma: banca e premium', () => {
     // sem bicho que não exista no tema
     expect(BANCA.some((b) => /gato|ponei/.test(b.id))).toBe(false);
   });
-  it('lojinha: os 6 de lançamento e os 12 da 036, com os preços do dono; nada de missão nem de nível', () => {
+  it('lojinha: os 6 de lançamento, os 12 da 036 e a moto da 038, com os preços do dono; nada de missão nem de nível', () => {
     expect(PREMIUM.map((p) => [p.id, p.categoria, p.preco])).toEqual([
       ['camiseta-aquario', 'roupa', 15],
       ['tenis-cometa', 'roupa', 20],
@@ -400,6 +400,8 @@ describe('alma: banca e premium', () => {
       ['carrinho-pedal', 'andar', 140],
       ['bicicletinha', 'andar', 120],
       ['nuvem-fofa', 'andar', 150],
+      // spec 038: a moto dourada, depois da nuvem
+      ['motoquinha-dourada', 'andar', 140],
       ['passarinho-ombro', 'bicho', 45],
       ['bone-helice', 'chapeu', 30],
       ['pijama-nuvem', 'roupa', 35],

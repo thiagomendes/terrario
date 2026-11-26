@@ -1252,6 +1252,17 @@ export const PREMIUM: readonly ItemPremium[] = [
     efeito: 'sentada, flutua baixinho balançando devagar e deixa nuvenzinhas para trás',
     desenho: 'premium:nuvem-fofa',
   },
+  // spec 038 (o pedido do filho do dono, 25 nov 2026): a moto dourada, na aba dos de andar,
+  // depois da nuvem. Só enfeite, como os outros de andar. A rede continua 18: o servidor e o
+  // site de antes a tiram sem quebrar (`tests/rede/versao-038.test.ts`)
+  {
+    id: 'motoquinha-dourada',
+    categoria: 'andar',
+    nome: 'Motoquinha dourada',
+    preco: 140,
+    efeito: 'sentada na motoquinha, com farol que acende de noite e rodinhas de apoio',
+    desenho: 'premium:motoquinha-dourada',
+  },
   {
     id: 'passarinho-ombro',
     categoria: 'bicho',

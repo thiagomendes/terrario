@@ -26,8 +26,14 @@ import { perfilEstrela, perfilFolha } from './bonecoFantasia';
 
 type V3 = [number, number, number];
 
-/** Os brinquedos de andar da 036 (os ids do catálogo, categoria `andar`). */
-export const IDS_ANDAR = ['patinete-luz', 'carrinho-pedal', 'bicicletinha', 'nuvem-fofa'] as const;
+/** Os brinquedos de andar da 036 e a moto da 038 (os ids do catálogo, categoria `andar`). */
+export const IDS_ANDAR = [
+  'patinete-luz',
+  'carrinho-pedal',
+  'bicicletinha',
+  'nuvem-fofa',
+  'motoquinha-dourada',
+] as const;
 export type IdAndar = (typeof IDS_ANDAR)[number];
 
 export const ehBrinquedoAndar = (id: unknown): id is IdAndar =>
@@ -64,6 +70,9 @@ export const MONTARIA: Readonly<Record<IdAndar, Montaria>> = {
   'carrinho-pedal': { corpoY: 0.025, sentada: true, bracoX: -0.85, bracoAbre: -0.16, perna: -1.05, pedal: 0.1, troncoX: 0.04, raioRoda: 0.13 },
   bicicletinha: { corpoY: 0.3 + 0.47 * (BICI - 1), sentada: true, bracoX: -1.05, bracoAbre: -0.05, perna: -0.62, pedal: 0.3, troncoX: 0.42, raioRoda: 0.2 * BICI },
   'nuvem-fofa': { corpoY: 0.36, sentada: true, bracoX: -0.25, bracoAbre: 0.35, perna: -1.3, pedal: 0, troncoX: 0, raioRoda: 0, flutua: 0.035 },
+  // spec 038 (T01): provisória, igual à do carrinho, só para o catálogo e a rede; a T03 acerta a
+  // pose da motoquinha (sentada, as mãos no guidão alto e os pés nos apoios)
+  'motoquinha-dourada': { corpoY: 0.025, sentada: true, bracoX: -0.85, bracoAbre: -0.16, perna: -1.05, pedal: 0.1, troncoX: 0.04, raioRoda: 0.13 },
 };
 
 /**
@@ -80,6 +89,8 @@ export const GUIDAO: Readonly<Record<IdAndar, { E: V3; D: V3; folga: number }>> 
     folga: 0.07,
   },
   'nuvem-fofa': { E: [-0.37, 0.8, 0.1], D: [0.37, 0.8, 0.1], folga: 0.07 },
+  // spec 038 (T01): provisório, igual ao do carrinho; a T03 acerta os punhos do guidão da moto
+  'motoquinha-dourada': { E: [-0.13, 0.57, 0.15], D: [0.13, 0.57, 0.15], folga: 0.07 },
 };
 
 // ------------------------------------------------------------------ o estado do andar
@@ -367,7 +378,9 @@ export function vestirBrinquedoAndar(id: string, lista: Peca[]): void {
   const antes = lista.length;
   const P = new Pecas(lista);
   if (id === 'patinete-luz') patinete(P);
-  else if (id === 'carrinho-pedal') carrinho(P);
+  // spec 038 (T01): a motoquinha usa o desenho do carrinho, provisório, para casar com a pose e
+  // o guidão provisórios dela; a T03 troca pelo modelo da moto
+  else if (id === 'carrinho-pedal' || id === 'motoquinha-dourada') carrinho(P);
   else if (id === 'bicicletinha') bicicleta(P);
   else nuvem(P);
   // desempenho (T05, a meta da spec: no máximo +20 chamadas de desenho com 4 amigos montados):
