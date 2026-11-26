@@ -1,0 +1,10 @@
+0
+main 1 saida=0 107s carga-antes=1.16 carga-depois=1.86 gpu=56, 210 MHz
+ramo 1 saida=0 104s carga-antes=1.86 carga-depois=1.67 gpu=56, 210 MHz
+main 2 saida=0 105s carga-antes=1.67 carga-depois=1.88 gpu=57, 210 MHz
+ramo 2 saida=0 106s carga-antes=1.88 carga-depois=1.80 gpu=56, 210 MHz
+main 3 saida=0 107s carga-antes=1.80 carga-depois=1.70 gpu=56, 210 MHz
+ramo 3 saida=0 106s carga-antes=1.70 carga-depois=1.65 gpu=56, 210 MHz
+fim 635s
+
+[exited with code 0]

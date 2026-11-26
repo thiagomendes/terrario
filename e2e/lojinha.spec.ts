@@ -168,8 +168,9 @@ for (const t of TAMANHOS) {
       expect(abriuEm).toBeLessThan(1000);
       expect(figurasEm).toBeLessThan(3000);
       await expect(page.locator('[data-alma-aba="andar"]')).toHaveAttribute('aria-selected', 'true');
-      // os novos com a estrelinha (no cartão e na aba)
-      await expect(page.locator('.alma-lcard [data-alma-novo]')).toHaveCount(4);
+      // os novos com a estrelinha (no cartão e na aba): na aba de andar, os 4 da 036 e a
+      // motoquinha dourada (038)
+      await expect(page.locator('.alma-lcard [data-alma-novo]')).toHaveCount(5);
       await expect(page.locator('[data-alma-aba="andar"] [data-alma-novo]')).toHaveCount(1);
       await page.waitForTimeout(900);
       // spec 036: uma aba por lugar do corpo, só desenho; em cada aba, todos os cartões à vista
