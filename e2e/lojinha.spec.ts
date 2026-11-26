@@ -175,7 +175,8 @@ for (const t of TAMANHOS) {
       // spec 036: uma aba por lugar do corpo, só desenho; em cada aba, todos os cartões à vista
       // sem rolar (a prateleira não rola, nada sai da tela) e nada de relógio, contagem ou "só
       // restam": só números de preço e da carteira
-      const POR_ABA: Record<string, number> = { andar: 4, roupa: 3, costas: 3, mao: 3, chapeu: 1, bicho: 3, fantasia: 1 };
+      // (spec 038: a motoquinha dourada é o quinto da aba de andar)
+      const POR_ABA: Record<string, number> = { andar: 5, roupa: 3, costas: 3, mao: 3, chapeu: 1, bicho: 3, fantasia: 1 };
       expect(await page.locator('[data-alma-aba]').evaluateAll((bs) => bs.map((b) => b.textContent?.trim() ?? ''))).toEqual(
         Array(7).fill(''),
       );

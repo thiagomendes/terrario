@@ -372,8 +372,6 @@
         "src/render/efeitosLojinha.ts",
         "src/render/seguirVoando.ts",
         "src/ui/alma/lojaNovidades.ts",
-        "src/esboco/retoques.ts",
-        "src/esboco/retoquesPecas.ts",
         "src/personagem/joelho.ts"
       ],
       "suites": [
@@ -381,10 +379,10 @@
         "capturas-036.spec.ts",
         "capturas-038.spec.ts",
         "capturas-premium.spec.ts",
-        "esboco-retoques.spec.ts",
         "lojinha.spec.ts",
         "meus-tesouros.spec.ts",
         "montar-036.spec.ts",
+        "moto-038.spec.ts",
         "premium-presentes.spec.ts",
         "tesouro-fantasia.spec.ts"
       ]

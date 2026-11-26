@@ -65,12 +65,14 @@ export type EventoSom =
   /**
    * Spec 036 (T04): o som de cada brinquedo de andar ao montar (o puf vem junto): o "zum" das
    * rodinhas do patinete, a buzininha fofa do carrinho, a campainha da bicicletinha e o "fuf" da
-   * nuvem.
+   * nuvem. Spec 038 (T05): o "vrum" de brinquedo da motoquinha dourada (curto e baixo, sem
+   * ronco).
    */
   | 'zum'
   | 'buzininha'
   | 'campainha'
   | 'fuf'
+  | 'vrum'
   /**
    * Spec 036 (T07): os tesouros brincando (`somItens.ts`): as rodinhas rolando, o pedal, a hélice
    * do boné, a bolha que estoura, a fumacinha do foguete, a gotinha e a pipa no vento.
@@ -130,6 +132,7 @@ export const EVENTOS_SOM: readonly EventoSom[] = [
   'buzininha',
   'campainha',
   'fuf',
+  'vrum',
   'rodinha',
   'pedal',
   'helice',
@@ -237,6 +240,8 @@ const BASE_EVENTO: Record<EventoSom, BaseEvento> = {
   buzininha: { ganho: 0.14, duracao: 0.36, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
   campainha: { ganho: 0.12, duracao: 0.7, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
   fuf: { ganho: 0.2, duracao: 0.4, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
+  // spec 038 (T05): a motoquinha, um "vrum" de brinquedo baixinho (abaixo da buzininha)
+  vrum: { ganho: 0.13, duracao: 0.5, ruido: 0.3, escalaTom: 1, grupoAudio: 'efeitos' },
   // spec 036 (T07): os tesouros brincando, abaixo dos passos (0,25): se ouvem sem virar barulho
   rodinha: { ganho: 0.1, duracao: 0.22, ruido: 0.7, escalaTom: 1, grupoAudio: 'passos' },
   pedal: { ganho: 0.09, duracao: 0.12, ruido: 0.3, escalaTom: 1, grupoAudio: 'passos' },
@@ -288,6 +293,7 @@ const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
   buzininha: { frequencia: 523.25, filtroHz: 2400 },
   campainha: { frequencia: 1318.5, filtroHz: 6000 },
   fuf: { frequencia: 300, filtroHz: 900 },
+  vrum: { frequencia: 150, filtroHz: 700 },
   rodinha: { frequencia: 180, filtroHz: 1400 },
   pedal: { frequencia: 900, filtroHz: 3000 },
   helice: { frequencia: 260, filtroHz: 1800 },
@@ -1040,6 +1046,16 @@ function desenharNovo(
       pecas.push(ruido(ctx, out, t0, 'lowpass', par.filtroHz, 0.7, 0.65, 0.34, 0.05));
       pecas.push(tom(ctx, out, t0 + 0.1, 'sine', f * 3, f * 3.4, 0.06, 0.22, 0.03));
       break;
+    case 'vrum':
+      // spec 038 (T05): a motoquinha de brinquedo: "vrum" de boca, macio e grave, em cinco
+      // pulsinhos de triângulo que sobem e descem um pouco (o "rr" de criança imitando a moto),
+      // com um sopro abafado embaixo. Nada de ronco nem de motor de corrida.
+      for (let i = 0; i < 5; i++) {
+        const sobe = 1 + Math.sin((i / 4) * Math.PI) * 0.35;
+        pecas.push(tom(ctx, out, t0 + i * 0.075, 'triangle', f * sobe, f * sobe * 1.04, 0.42 - i * 0.04, 0.07, 0.012));
+      }
+      pecas.push(ruido(ctx, out, t0, 'lowpass', par.filtroHz, 0.7, 0.25, 0.34, 0.04));
+      break;
     // spec 036 (T07): os tesouros brincando (macios e curtos)
     case 'rodinha':
       // as rodinhas rolando no chão: um "rrr" grave e curtinho
@@ -1136,6 +1152,8 @@ export const SONS_NOVOS_019: readonly EventoSom[] = [
   'buzininha',
   'campainha',
   'fuf',
+  // (spec 038, T05: a motoquinha)
+  'vrum',
   // (spec 036, T07: os tesouros brincando)
   'rodinha',
   'pedal',

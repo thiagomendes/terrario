@@ -159,7 +159,7 @@ export function corDoCometa(t: number, out: Color3): void {
 export const AQUARIO = { largura: 512, altura: 136, quadrosPorSegundo: 24 } as const;
 
 type Rgb = string;
-/** (spec 038, esboço: exportado para o esboço desenhar o aquário com outros peixinhos) */
+/** Um peixinho do aquário da camiseta. */
 export interface Peixe {
   /** Onde começa na volta (0 a 1) e a altura (0 em cima, na gola; 1 na barra). */
   x0: number;

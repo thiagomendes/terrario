@@ -401,7 +401,7 @@ import {
   type MotivoSemMontar,
   type SituacaoMontar,
 } from '../personagem/montar';
-import { quadroSomItens, type RelogiosSomItens } from '../audio/somItens';
+import { SOM_DO_BRINQUEDO, quadroSomItens, type RelogiosSomItens } from '../audio/somItens';
 import type { Pose } from '../personagem/poses';
 import { criarPersonagem } from './personagem';
 import { criarBracoPrimeiraPessoa, criarNaoNaMao, type BracoPrimeiraPessoa } from './bracoPrimeiraPessoa';
@@ -4735,13 +4735,6 @@ export function criarCena(
     void _mao;
     return { ...a, premium };
   }
-  /** O som curto de cada brinquedo ao montar (o puf vem junto). */
-  const SOM_DO_BRINQUEDO: Readonly<Record<string, EventoSom>> = {
-    'patinete-luz': 'zum',
-    'carrinho-pedal': 'buzininha',
-    bicicletinha: 'campainha',
-    'nuvem-fofa': 'fuf',
-  };
   /** O puf de montar e de descer: um anel de fumacinha clara em volta dos pés (e brilhinhos ao montar). */
   function pufDoBrinquedo(x: number, y: number, z: number, montou: boolean): void {
     const cores: [number, number, number][] = montou

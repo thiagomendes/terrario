@@ -237,6 +237,8 @@ body.alma-provando .painel-foto, body.alma-provando .grade-foto, body.alma-prova
   .alma-loja .topo { padding: 8px 2px 4px; }
   .alma-loja .placa > .alma-svg { width: 36px; height: 36px; }
   .alma-prateleira { grid-template-columns: repeat(4, minmax(0, 190px)); gap: 12px 16px; padding: 14px clamp(16px, 5vw, 60px) 12px; --h: min(262px, calc(100vh - 126px)); }
+  /* (spec 038: a aba de andar, com 5 cartões, numa fileira só) */
+  .alma-prateleira[data-cartoes='5'] { grid-template-columns: repeat(5, minmax(0, 170px)); gap: 12px; }
   .alma-abas { gap: 6px; }
   .alma-aba { width: 46px; height: 46px; padding: 6px; }
   .alma-fita { font-size: 1.1rem; padding: 2px 16px 2px 11px; }
@@ -263,6 +265,9 @@ body.alma-provando .painel-foto, body.alma-provando .grade-foto, body.alma-prova
   .alma-loja .placa { padding-right: 12px; }
   .alma-loja .placa .coroa { display: none; }
   .alma-prateleira { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 16px; padding: 16px 14px 14px; --h: min(250px, calc((100vh - 250px) / 2)); }
+  /* (spec 038: a aba de andar tem 5 cartões; as três fileiras cabem sem rolar no celular em pé,
+     e o cartão nunca fica menor que 170 px, o toque da criança; numa tela mais baixa, rola) */
+  .alma-prateleira:is([data-cartoes='5'], [data-cartoes='6']) { --h: max(170px, min(250px, calc((100vh - 272px) / 3))); }
   .alma-loja .topo { padding-bottom: 2px; }
   /* (a aba escolhida cresce: as 7 com folga dentro dos 370 px, sem passar da beira) */
   .alma-abas { order: 9; flex-basis: 100%; justify-content: center; gap: 4px; }
@@ -411,7 +416,10 @@ export function criarLoja(op: OpcoesLoja) {
   function encherPrateleira(): void {
     if (!prat || !aba) return;
     prat.dataset.aba = aba;
-    prat.replaceChildren(...PREMIUM.filter((p) => p.categoria === aba).map((p, i) => cartao(p, i)));
+    const itens = PREMIUM.filter((p) => p.categoria === aba);
+    // (spec 038: a aba com 5 cartões, a de andar, se arruma para caber sem rolar)
+    prat.dataset.cartoes = String(itens.length);
+    prat.replaceChildren(...itens.map((p, i) => cartao(p, i)));
     prat.scrollTop = 0;
     marcarAbas();
   }

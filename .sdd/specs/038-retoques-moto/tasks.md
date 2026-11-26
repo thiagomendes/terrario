@@ -24,6 +24,19 @@
 | T03 A motoquinha dourada | **feita (26 nov)**, pelo `artista-voxel`. Os detalhes abaixo |
 | T02, acerto da bandeirinha | **feito (26 nov)**, pedido do filho do dono ("a bandeira não mexe quando o carro anda"). Os detalhes abaixo |
 | T04 A camiseta e o tênis | **feita (26 nov)**, pelo `artista-voxel`. Os detalhes abaixo |
+| T05 O som e a ligação | **feita (26 nov)**, pelo `desenvolvedor-jogo`. Os detalhes abaixo |
+
+### T05 (26 nov 2026, `desenvolvedor-jogo`)
+- **O "vrum"** (`sons.ts`): cinco pulsinhos de triângulo graves (150 Hz) que sobem e descem um pouco, com um sopro abafado embaixo; 0,4 s, ganho 0,13 (abaixo da buzininha do carrinho), na lista da 019 (`somResto.test.ts`: curto e abaixo do golpe). Só ao montar; andando, só as rodinhas. O `SOM_DO_BRINQUEDO` saiu da cena para `somItens.ts`, para o teste conferir que cada brinquedo de andar tem nome, ícone e som (`somItens.test.ts`: os `Record<string>` não avisam a falta).
+- **A ligação:** o nome e o ícone da roda, a figura, a vitrine e "Meus tesouros" já estavam ligados pela T03; comprar já monta, os 2 toques da roda e os amigos funcionam sem mudança, pelo `IDS_ANDAR`.
+- **Achar a moto:** com 5 cartões, a aba de andar rolava em pé (a moto 79% à vista, embaixo; a contar a rolagem, a criança que voltava de outra aba levava 3 toques). O ajuste: a prateleira marca quantos cartões tem (`data-cartoes`); em pé, com 5 ou 6, os cartões ficam com 191 px (o mínimo é 170, o toque da criança) e as três fileiras cabem; deitado, os 5 numa fileira. No computador já cabia. Medido: **1 toque** na primeira visita (a vitrine abre na aba de andar) e **2** voltando da aba de roupa, com o cartão 100% à vista.
+- **Os testes:**
+  - `e2e/moto-038.spec.ts` (área da lojinha), no celular em pé: achar; comprar pela vitrine já monta, com o "vrum"; descer e montar pela roda; andando, só as rodinhas; "Meus tesouros"; recarregar com a moto comprada; recarregar com a camiseta e depois com o tênis (os dois são da aba de roupa, então um de cada vez), com o desenho novo conferido na cena (a faixa do tênis sem azul; o aquário sem o peixe laranja). E duas crianças no servidor local do e2e: a Bia vê a Ana na moto e a pé, e a camiseta e o tênis continuam depois de a Ana recarregar a sala. 2 de 2;
+  - `e2e/lojinha.spec.ts`: a aba de andar com 5; as três telas passaram;
+  - `e2e-nuvem/retoques-038.spec.ts`, **rodado na sala de teste da nuvem** (autorizado pelo dono; sala GIZ-COELHO-74, criada pelo teste, no site publicado): a camiseta e o tênis continuam depois de recarregar, também na tela da amiga. 1 de 1. Como o site e o servidor no ar ainda são os de antes da 038, ele só anotou o desenho de antes, que serviu de régua: o peixe laranja deu 605 casas (no ramo, 18) e a faixa do tênis chegou a 4,5 de azul por vermelho (no ramo, 0,46). Com `NUVEM_038=publicada`, depois de publicar, ele confere o desenho novo e a moto (a Bia vê a Ana montada, e depois de recarregar a moto continua).
+- **O esboço saiu do código** (`src/esboco/retoques.ts`, `retoquesPecas.ts`, a ligação no `main.ts`, o e2e e as entradas do mapa), com a medida pé–pedal já no `tests/render/pePedal.test.ts`. As fotos de `capturas-038/esboco/` ficam.
+- **As fotos:** `capturas-038/t05-ligacao/` (a vitrine nas três telas, a festa, montada, a roda, andando, "Meus tesouros", recarregada, e as da nuvem).
+- **O que ficou fraco:** a moto não tem a estrelinha de "novo" (a lista é a dos itens da 036), e a vitrine abre na última aba visitada: o filho do dono, que já abriu a lojinha, acha a moto em 2 toques, sem nada chamando a atenção para ela.
 
 ### T02 (26 nov 2026, `artista-voxel`)
 - **O joelho** (`src/personagem/joelho.ts`, sem Babylon):
