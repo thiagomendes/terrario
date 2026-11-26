@@ -98,6 +98,11 @@ export interface BracoPrimeiraPessoa {
    * do boneco: o aro fica no mesmo lugar); null sem ela.
    */
   varinhaDeDentro(): TransformNode | null;
+  /**
+   * Os retângulos da interface na tela (px CSS: botões, barra, mapinha, controle de andar), os
+   * mesmos que a mão evita, medidos de vez em quando. Portão, 5ª rodada: as quinas da obra também.
+   */
+  obstaculos(): readonly Retangulo[];
   descartar(): void;
 }
 
@@ -889,6 +894,16 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     },
     varinhaDeDentro: () =>
       tesouroId === 'varinha-bolhas' && peso > 0.5 && osso.isEnabled() && noTesouro.isEnabled() ? noTesouro : null,
+    obstaculos() {
+      // (sem a mão na tela a medida pode ter ficado velha: mede de novo, no máximo uma vez por s)
+      const agora = performance.now() / 1000;
+      if (canvas && agora - botoesEm > 1) {
+        const r = canvas.getBoundingClientRect();
+        interfaceMedida = medirInterface(r.width, r.height);
+        botoesEm = agora;
+      }
+      return interfaceMedida.obstaculos;
+    },
     custo() {
       const malhas = [...osso.getChildMeshes(false), ...noPipa.getChildMeshes(false), ...noMundo.getChildMeshes(false), fio, sombra].filter((m) => m.isEnabled());
       let tri = 0;

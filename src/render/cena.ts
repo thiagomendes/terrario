@@ -466,6 +466,14 @@ const RAIO_SOMBRA_CELULAR = 1;
 const ALCANCE_VER_LONGE = 48;
 /** No computador, quanto tempo o cadeado fica depois do clique no que não quebra (ms). */
 const CADEADO_DEPOIS_DO_CLIQUE_MS = 1500;
+/**
+ * Spec 037 (portão, 5ª rodada), de dentro: o morador colado nos olhos (a menos disto até a caixa
+ * dele) some inteiro; o sumiço e a volta levam este tempo (s), em linha reta, e terminam de
+ * verdade (0 ou 1); quem sumiu atrás da mão só volta com esta folga (px) fora da caixa dela.
+ */
+const SOME_COLADO = 1;
+const TEMPO_SUMIR_MORADOR = 0.12;
+const FOLGA_VOLTA_MORADOR = 16;
 
 export interface EstadoDepuracao {
   ready: boolean;
@@ -6370,8 +6378,8 @@ export function criarCena(
   // parte 3: lá dentro da Casa anos 80, o morador colado na câmera (a vovó no sofá, atrás de
   // quem assiste à TV no tapete) ou entre ela e a criança vira um vulto
   // spec 037 (o revisor: o cozinheiro cortado ao meio e o rosto enorme colado na câmera): de
-  // dentro, o morador muito perto dos olhos some com suavidade, pela distância dos olhos até a
-  // caixa dele (colado, 0,3, some; a 1,2, inteiro)
+  // dentro, o morador muito perto dos olhos some num instante, pela distância dos olhos até a
+  // caixa dele (`SOME_COLADO`)
   const opacidadeCasa = casaCena?.opacidadeDeMorador ?? null;
   /** A caixa da mão e do item na tela (px), uma vez por quadro, para todos os moradores. */
   const maoDoQuadro: { quadro: number; caixa: [number, number, number, number] | null } = { quadro: -1, caixa: null };
@@ -6389,9 +6397,10 @@ export function criarCena(
     const dy = Math.max(0, Math.abs(v.y - (y + 0.85)) - 0.85);
     const dz = Math.max(0, Math.abs(v.z - z) - 0.45);
     const d = Math.hypot(dx, dy, dz);
-    // colado nos olhos, ele some (de 0,3 a 1,2)
-    const t = Math.max(0, Math.min(1, (d - 0.3) / 0.9));
-    let alvo = t * t * (3 - 2 * t);
+    // colado nos olhos (a menos de 1 até a caixa dele), ele some inteiro (portão, 5ª rodada: a
+    // regra de antes ia clareando de 0,3 a 1,2, e quem ficava ali ficava meio transparente)
+    let alvo = d < SOME_COLADO ? 0 : 1;
+    const escondido = (alfaDeDentro.get(id) ?? 1) < 0.5;
     // (portão, 4ª rodada: de dia, na cena de comer, o punho com o balde caía no rosto de um morador
     // a 2 ou 3 blocos. A regra de antes olhava só o meio da cabeça e ia clareando até 2,2: a 1,5
     // ele ainda ficava a 70%.) Agora: o morador cuja caixa na tela cruza a caixa da mão e do item,
@@ -6434,12 +6443,15 @@ export function criarCena(
             y0 = Math.min(y0, ((1 - p.y) / 2) * r.height);
             y1 = Math.max(y1, ((1 - p.y) / 2) * r.height);
           }
-      if (!atras && x0 < caixa[2] && x1 > caixa[0] && y0 < caixa[3] && y1 > caixa[1]) alvo = 0;
+      // (quem já sumiu só volta com uma folga: andando na beirada da mão, ele não pisca)
+      const f = escondido ? FOLGA_VOLTA_MORADOR : 0;
+      if (!atras && x0 < caixa[2] + f && x1 > caixa[0] - f && y0 < caixa[3] + f && y1 > caixa[1] - f) alvo = 0;
     }
-    // vai e volta com suavidade (uns 0,2 s)
+    // vai e volta num instante, em linha reta até o fim (portão, 5ª rodada: a conta que ia se
+    // aproximando nunca chegava a 0 nem a 1, e o morador ficava meio transparente, um vulto)
     const antes = alfaDeDentro.get(id) ?? alvo;
-    const k = Math.min(1, engine.getDeltaTime() / 1000 / 0.2);
-    const agora = antes + (alvo - antes) * k;
+    const passo = engine.getDeltaTime() / 1000 / TEMPO_SUMIR_MORADOR;
+    const agora = alvo < antes ? Math.max(alvo, antes - passo) : Math.min(alvo, antes + passo);
     alfaDeDentro.set(id, agora);
     return Math.min(a, agora);
   });
@@ -7589,13 +7601,18 @@ export function criarCena(
     // tela), o próximo bloco é marcado: o da camada da vez mais perto do meio da vista, ao alcance
     const deDentroObra = primeiraPessoa.fracao() > 0.5;
     const m = podeEncherObra() ? (fantasmaNaMira() ?? (deDentroObra ? proximoBlocoDaObra() : null)) : null;
+    const emPeObra = canvas.clientHeight > canvas.clientWidth;
     fantasmas.quadro(
       tempo,
       m,
       deDentroObra ? cameraVisao.globalPosition : null,
       luzJogador * (0.45 + 0.55 * luzDia),
       // (em pé: a tela mais alta que larga; o próximo bloco perto vira as quinas)
-      canvas.clientHeight > canvas.clientWidth,
+      emPeObra,
+      // (portão, 5ª rodada: as quinas só inteiras na área livre, longe dos botões e da borda)
+      deDentroObra && emPeObra && m
+        ? { w: canvas.clientWidth, h: canvas.clientHeight, obstaculos: bracoPP?.obstaculos() ?? [] }
+        : null,
     );
     // o coreto feito toca a musiquinha quando alguém entra nele (uma vez a cada 20 s)
     if (cidadeObra && situacaoDoCanteiro(6) === 'feita') {

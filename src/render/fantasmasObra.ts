@@ -13,7 +13,7 @@ import type { Scene } from '@babylonjs/core/scene';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
-import { Matrix } from '@babylonjs/core/Maths/math.vector';
+import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
@@ -80,6 +80,19 @@ const COR_MARCA: [number, number, number] = [3.1, 1.3, 0.15];
 const COR_MARCA_CONTORNO: [number, number, number] = [1.1, 0.82, 0.15];
 /** Em pé, de dentro, a marca vira as quinas com o próximo bloco a menos disto dos olhos (até a caixa). */
 const QUINAS_ATE = 1.5;
+/**
+ * Portão, 5ª rodada: bem perto, as quinas saíam pela borda da tela e caíam embaixo do joystick e do
+ * botão de pular (barrinhas soltas). Com um canto fora da área livre (a borda, os botões, a barra,
+ * o mapinha, o controle de andar: os mesmos retângulos que o braço evita), fica só o bloquinho.
+ * Para voltar, os cantos têm de estar esta folga (px) para dentro (sem piscar no limite).
+ */
+const QUINAS_FOLGA_VOLTA = 10;
+/** A área livre da tela para as quinas: o tamanho (px CSS) e os retângulos da interface. */
+export interface TelaLivre {
+  w: number;
+  h: number;
+  obstaculos: readonly (readonly [number, number, number, number])[];
+}
 
 /** De dentro, quanto de um fantasma aparece pela distância dos olhos até o cubo (0 some, 1 inteiro). */
 function aparecePerto(
@@ -187,9 +200,10 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
    */
   const quinas = (() => {
     const h = 0.47;
-    // (finas e curtas: as do canto perto dos olhos já ficam grandes na tela)
-    const L = 0.18;
-    const g = 0.03;
+    // (finas e curtas: as do canto perto dos olhos já ficam grandes na tela; 5ª rodada: o dono
+    // achou que as de 0,18 por 0,03 lembravam o visor de uma câmera)
+    const L = 0.14;
+    const g = 0.022;
     const barras: Mesh[] = [];
     for (const sx of [-1, 1])
       for (const sy of [-1, 1])
@@ -220,6 +234,39 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
   })();
   /** As quinas no lugar da marca agora (o fantasma da mira, de dentro, em pé, perto). */
   let soQuinas = false;
+  /** As quinas cabem na área livre da tela (senão, só o bloquinho). */
+  let quinasCabem = false;
+  const cantoQuina = new Vector3();
+  /** Todos os cantos das quinas na área livre, `folga` px para dentro (e na frente dos olhos). */
+  function quinasNaAreaLivre(
+    c: { x: number; y: number; z: number },
+    olho: { x: number; y: number; z: number },
+    tela: TelaLivre,
+    folga: number,
+  ): boolean {
+    const cam = scene.activeCamera;
+    if (!cam) return false;
+    const m = scene.getTransformMatrix();
+    const frente = cam.getDirection(Vector3.Forward());
+    const r = 0.48;
+    for (const sx of [-r, r])
+      for (const sy of [-r, r])
+        for (const sz of [-r, r]) {
+          cantoQuina.set(c.x + sx, c.y + sy, c.z + sz);
+          // (um canto atrás dos olhos sai da tela de qualquer jeito)
+          const dx = cantoQuina.x - olho.x;
+          const dy = cantoQuina.y - olho.y;
+          const dz = cantoQuina.z - olho.z;
+          if (dx * frente.x + dy * frente.y + dz * frente.z < 0.05) return false;
+          const p = Vector3.TransformCoordinates(cantoQuina, m);
+          const x = ((p.x + 1) / 2) * tela.w;
+          const y = ((1 - p.y) / 2) * tela.h;
+          if (x < folga || y < folga || x > tela.w - folga || y > tela.h - folga) return false;
+          for (const q of tela.obstaculos)
+            if (x > q[0] - folga && x < q[2] + folga && y > q[1] - folga && y < q[3] + folga) return false;
+        }
+    return true;
+  }
   /** De dentro agora (o contorno fino, o miolo mais leve, a luz do lugar). */
   let deDentro = false;
   const corBase = camadas.map((c) => ({ mat: c.mat.emissiveColor.clone(), mo: c.matMoldura.emissiveColor.clone() }));
@@ -431,6 +478,8 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
       luz = 1,
       /** A tela em pé (mais alta que larga): de dentro, o próximo bloco perto vira só as quinas. */
       emPe = false,
+      /** A área livre da tela (as quinas só aparecem inteiras dentro dela). */
+      tela: TelaLivre | null = null,
     ): void {
       // em pé, de dentro, o próximo bloco a menos de 1,5 dos olhos (até a caixa dele): as quinas
       let distMira = Infinity;
@@ -441,8 +490,13 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
         distMira = Math.hypot(dx, dy, dz);
       }
       soQuinas = emPe && distMira < QUINAS_ATE;
-      quinas.setEnabled(soQuinas);
-      if (soQuinas && mira) quinas.position.set(mira.x + 0.5, mira.y + 0.5, mira.z + 0.5);
+      if (soQuinas && mira && olho) {
+        const c = { x: mira.x + 0.5, y: mira.y + 0.5, z: mira.z + 0.5 };
+        quinas.position.set(c.x, c.y, c.z);
+        // (fora da área livre, só o bloquinho; para voltar, com folga)
+        quinasCabem = !tela || quinasNaAreaLivre(c, olho, tela, quinasCabem ? 0 : QUINAS_FOLGA_VOLTA);
+      } else quinasCabem = false;
+      quinas.setEnabled(soQuinas && quinasCabem);
       // de dentro: o contorno fino no lugar do grosso, e a cor na luz do lugar
       const dentro = !!olho;
       if (dentro !== deDentro) {
