@@ -224,23 +224,41 @@ export function avancarAndar(e: EstadoAndar, id: string, dt: number, vel: number
   e.vel += (vel - e.vel) * Math.min(1, dt * 8);
   e.andando += ((e.vel > 0.4 ? 1 : 0) - e.andando) * Math.min(1, dt * 6);
   // (o vento chega e vai embora devagar: a bandeirinha nunca dá tranco ao arrancar ou parar)
-  e.vento += Math.max(-dt * 1.2, Math.min(dt * 1.2, Math.min(1, e.vel / 3.2) - e.vento));
+  e.vento += Math.max(-dt * VENTO_POR_SEGUNDO, Math.min(dt * VENTO_POR_SEGUNDO, Math.min(1, e.vel / 3.2) - e.vento));
   if (m.raioRoda > 0) e.roda = (e.roda + (e.vel / (m.raioRoda * ESCALA)) * dt) % (Math.PI * 2);
   if (id === 'bicicletinha') e.pedal = (e.pedal + (e.vel / (m.raioRoda * ESCALA)) * dt * 0.55) % (Math.PI * 2);
   if (id === 'carrinho-pedal') e.pedal = (e.pedal + e.vel * dt * 2.2) % (Math.PI * 2);
 }
 
 /**
- * Spec 038 (T02): a bandeirinha do carrinho, em volta do mastro (rad, somado ao rumo dela, para
- * trás). A força vem da velocidade suavizada: parado, quase nada; andando, um balanço lento de
- * até uns 20° (0,55 Hz) com um tremular pequeno de até uns 5° (2 Hz). Tudo por senos que andam
- * com o tempo: a 20 quadros por segundo, nada salta mais que 0,15 rad de um quadro para o outro.
+ * A altura do meio da bandeirinha no mastro do carrinho (na 036, 0,98): alta como a bandeirinha
+ * de bicicleta de criança, acima das asas de borboleta (o pano parado, para o lado, encostava nelas).
+ */
+const MASTRO_Y = 1.36;
+/**
+ * O pé do mastro, na quina de trás do carrinho (na 036, 0,28 e -0,52): um tico mais para o lado e
+ * para trás, longe das asas do dragãozinho batendo.
+ */
+const MASTRO_XZ: [number, number] = [0.32, -0.56];
+
+/** Quanto o vento da bandeirinha muda por segundo (0 a 1): leva ~1,1 s para o pano ir para trás. */
+const VENTO_POR_SEGUNDO = 0.9;
+
+/**
+ * Spec 038 (T02, acerto do filho do dono: "a bandeira não mexe quando o carro anda"): a
+ * bandeirinha do carrinho em volta do mastro (rad; 0 é o pano apontando para trás).
+ * - **Parada:** o pano aponta para o lado de fora (-90°) e quase não mexe.
+ * - **Andando:** o vento leva o pano para trás, contra o movimento, até 90°: quanto mais rápido,
+ *   mais para trás; por cima, o tremular pequeno (uns 5°, 2 Hz).
+ * A força vem da velocidade suavizada e muda devagar (`VENTO_POR_SEGUNDO`): a 20 quadros por
+ * segundo, nada salta mais que 0,15 rad de um quadro para o outro.
  */
 export function bandeiraNoVento(e: EstadoAndar): number {
   const forca = e.vento;
-  const balanco = Math.sin(e.t * Math.PI * 2 * 0.55) * (0.04 + 0.3 * forca);
+  const rumo = -(Math.PI / 2) * (1 - forca);
+  const quieta = Math.sin(e.t * Math.PI * 2 * 0.55) * 0.04 * (1 - forca);
   const tremula = Math.sin(e.t * Math.PI * 2 * 2 + 1.3) * 0.08 * forca;
-  return balanco + tremula;
+  return rumo + quieta + tremula;
 }
 
 /** A nuvem sobe e desce devagar (o nó dela e o corpo da criança, juntos). */
@@ -349,8 +367,10 @@ function carrinho(P: Pecas): void {
   P.anel('andar-carrinho-volante', J, undefined, 0.27, 0.04, [0, 0.61, 0.19], '#3c3a48', { rot: [-0.95, 0, 0], lados: 16, ...NO });
   P.bola('andar-carrinho-buzina', J, undefined, 0.045, [0, 0.615, 0.195], AMARELO, [1, 0.55, 1], { rot: [-0.95, 0, 0], gomos: 8, ...NO });
   // a bandeirinha laranja atrás; spec 038 (T02, pedido do filho): num nó próprio no alto do
-  // mastro, tremulando com o vento do andar (`bandeiraNoVento`)
-  tubo(P, 'andar-carrinho-mastro', [0.28, 0.44, -0.52], [0.28, 1.05, -0.52], 0.012, CINZA, 6);
+  // mastro, que vai para trás com o vento do andar (`bandeiraNoVento`). O mastro mais alto:
+  // parada, o pano para o lado passa por cima das asas de borboleta
+  const [mx, mz] = MASTRO_XZ;
+  tubo(P, 'andar-carrinho-mastro', [mx, 0.44, mz], [mx, MASTRO_Y + 0.07, mz], 0.012, CINZA, 6);
   P.placa(
     'andar-carrinho-bandeira',
     J,
@@ -363,7 +383,7 @@ function carrinho(P: Pecas): void {
     0.012,
     [0, 0, 0],
     LARANJA,
-    { rot: [0, Math.PI / 2, 0], ...giro('andarBandeira', [0.28, 0.98, -0.52]) },
+    { rot: [0, Math.PI / 2, 0], ...giro('andarBandeira', [mx, MASTRO_Y, mz]) },
   );
   // spec 038 (T02): os pedais de verdade embaixo do painel: o eixo e os mancais, e no nó que gira
   // a pedivela e o pedal redondo de cada lado (os pés giram com eles)

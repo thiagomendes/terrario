@@ -89,35 +89,96 @@ describe('spec 038 (T02): a pé com o brinquedo vestido, nada muda', () => {
 });
 
 describe('spec 038 (T02): a bandeirinha do carrinho', () => {
-  it('tremula andando e quase não mexe parada; a 20 quadros por segundo, nada salta mais que 0,15 rad', () => {
+  /** Anda o carrinho quadro a quadro: parada, arranca, anda, corre, freia e para de novo. */
+  const passadaNo = (i: number) => (i < 60 ? 0 : i < 160 ? 1 : i < 240 ? 1.5 : i < 260 ? 0.3 : 0);
+  const quadro = (b: ReturnType<typeof criarBoneco>, i: number, dt: number) => {
+    const t = i * dt;
+    const passada = passadaNo(i);
+    b.aplicarPose(calcularPose({ andando: passada > 0, correndo: false, noAr: false, minerando: false, colocando: false, tempo: t }), {
+      dt,
+      olhar: 0,
+      vista: { tempo: t, passada, golpe: null, colocar: null, noAr: 0, comer: null },
+    });
+  };
+
+  it('parada, aponta para o lado e quase não mexe; andando, o pano vai para trás e tremula; a 20 quadros por segundo, nada salta mais que 0,15 rad', () => {
     const scene = new Scene(new NullEngine());
     const b = criarBoneco(scene, normalizarAparencia({ premium: { andar: 'carrinho-pedal' }, montado: true }), 'p', undefined, true, true);
     const bandeira = no(scene, 'p-junta-andarBandeira')!;
     expect(bandeira).not.toBeNull();
     let antes: number | null = null;
     let maiorSalto = 0;
-    const amplitude = { parada: 0, andando: 0 };
+    const parada = { min: Infinity, max: -Infinity };
+    const andando = { min: Infinity, max: -Infinity };
     const dt = 1 / 20;
     for (let i = 0; i < 400; i++) {
-      const t = i * dt;
-      // parada, arranca, anda, corre, freia e para de novo
-      const passada = i < 60 ? 0 : i < 160 ? 1 : i < 240 ? 1.5 : i < 260 ? 0.3 : 0;
-      b.aplicarPose(calcularPose({ andando: passada > 0, correndo: false, noAr: false, minerando: false, colocando: false, tempo: t }), {
-        dt,
-        olhar: 0,
-        vista: { tempo: t, passada, golpe: null, colocar: null, noAr: 0, comer: null },
-      });
+      quadro(b, i, dt);
       const y = bandeira.rotation.y;
       if (antes !== null) maiorSalto = Math.max(maiorSalto, Math.abs(y - antes));
       antes = y;
-      if (i >= 30 && i < 60) amplitude.parada = Math.max(amplitude.parada, Math.abs(y));
-      if (i >= 120 && i < 240) amplitude.andando = Math.max(amplitude.andando, Math.abs(y));
+      const faixa = i >= 30 && i < 60 ? parada : i >= 120 && i < 240 ? andando : null;
+      if (faixa) {
+        faixa.min = Math.min(faixa.min, y);
+        faixa.max = Math.max(faixa.max, y);
+      }
     }
     expect(maiorSalto).toBeLessThanOrEqual(0.15);
-    expect(amplitude.parada).toBeLessThan(0.08);
-    expect(amplitude.andando).toBeGreaterThan(0.25);
-    expect(amplitude.andando).toBeLessThan(0.5);
+    // parada: para o lado (-90°), quase quieta
+    expect(Math.abs((parada.min + parada.max) / 2 + Math.PI / 2)).toBeLessThan(0.05);
+    expect(parada.max - parada.min).toBeLessThan(0.1);
+    // andando: o pano girou de 70° a 90° para trás e tremula um pouco por cima
+    const giro = (andando.min + andando.max) / 2 + Math.PI / 2;
+    expect(giro).toBeGreaterThan((70 * Math.PI) / 180);
+    expect(giro).toBeLessThan((95 * Math.PI) / 180);
+    expect(andando.max - andando.min).toBeGreaterThan(0.08);
+    expect(andando.max - andando.min).toBeLessThan(0.3);
     scene.dispose();
+  });
+
+  it.each(['capa-estrelas', 'asas-borboleta', 'mochila-foguete', 'dragao'])('o pano não encosta na cabeça nem no tesouro das costas (%s), parada e andando', (costas) => {
+    const ruins: string[] = [];
+    for (const corpo of ['feminino', 'masculino'] as const) {
+      const scene = new Scene(new NullEngine());
+      const cat = costas === 'dragao' ? 'fantasia' : 'costas';
+      const b = criarBoneco(scene, normalizarAparencia({ corpo, premium: { andar: 'carrinho-pedal', [cat]: costas }, montado: true }), 'p', undefined, true, true);
+      const pano = scene.meshes.filter((m) => /^p-andarBandeira-fundida$/.test(m.name));
+      expect(pano.length).toBe(1);
+      // tudo o que é do boneco: a cabeça, o cabelo, o tronco, a capa, as asas e a mochila
+      const doBoneco = b.raiz.getChildMeshes(false).filter((m) => m.isEnabled() && !/(andar|brinquedo|joelho|perna|prancha)/.test(m.name));
+      for (let i = 0; i < 300; i += 1) {
+        quadro(b, i, 1 / 20);
+        if (i % 10) continue;
+        const pts = (m: (typeof pano)[number]) => {
+          atualizar(m);
+          const pos = m.getVerticesData('position')!;
+          const r: Vector3[] = [];
+          for (let k = 0; k < pos.length; k += 3) r.push(Vector3.TransformCoordinates(new Vector3(pos[k], pos[k + 1], pos[k + 2]), m.getWorldMatrix()));
+          return r;
+        };
+        // (a caixa do pano no espaço dele mesmo: fina e do tamanho dele, girando junto)
+        const flag = pano[0];
+        atualizar(flag);
+        const paraPano = flag.getWorldMatrix().clone().invert();
+        const local = flag.getVerticesData('position')!;
+        const mn = new Vector3(Infinity, Infinity, Infinity);
+        const mx = new Vector3(-Infinity, -Infinity, -Infinity);
+        for (let k = 0; k < local.length; k += 3) {
+          const v = new Vector3(local[k], local[k + 1], local[k + 2]);
+          mn.minimizeInPlace(v);
+          mx.maximizeInPlace(v);
+        }
+        const folga = 0.02;
+        for (const m of doBoneco) {
+          const q = pts(m as (typeof pano)[number]).map((v) => Vector3.TransformCoordinates(v, paraPano));
+          const dentro = q.some(
+            (v) => v.x > mn.x - folga && v.x < mx.x + folga && v.y > mn.y - folga && v.y < mx.y + folga && v.z > mn.z - folga && v.z < mx.z + folga,
+          );
+          if (dentro) ruins.push(`${corpo} quadro ${i}: ${m.name}`);
+        }
+      }
+      scene.dispose();
+    }
+    expect([...new Set(ruins)].slice(0, 6)).toEqual([]);
   });
 });
 
