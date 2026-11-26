@@ -209,6 +209,15 @@ test('030: o quadro nunca abre sozinho; vem pela roda; o selinho guarda a missã
       await page.waitForTimeout(4000);
       expect(await page.locator('[data-alma-quadro]').count()).toBe(0);
       expect(await page.locator('[data-alma-missao]:not([hidden])').count()).toBe(0);
+      // spec 038: o convite (aqui em 2 s; no jogo, 2 min) aparece, some sozinho uns 8 s depois e,
+      // nem com ele nem depois dele, o quadro abre sozinho
+      await page.waitForFunction(() => !!window.__guia, undefined, { timeout: 30_000 });
+      await page.evaluate(() => window.__guia!.conviteEm(2));
+      await expect(page.locator('[data-alma-missao].convite:not([hidden])')).toHaveCount(1, { timeout: 20_000 });
+      expect(await page.locator('[data-alma-quadro]').count()).toBe(0);
+      await expect(page.locator('[data-alma-missao]:not([hidden])')).toHaveCount(0, { timeout: 12_000 });
+      await page.waitForTimeout(1500);
+      expect(await page.locator('[data-alma-quadro]').count()).toBe(0);
       await abrirQuadro(page, tamanho !== 'pc');
       // o prêmio grande e as moedinhas à vista
       await expect(page.locator('[data-alma-quadro] .premio .alma-moedas').first()).toBeVisible();

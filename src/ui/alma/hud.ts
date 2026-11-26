@@ -84,6 +84,15 @@ body.toque-ativo .alma-carteira kbd, body.sem-teclas .alma-carteira kbd { displa
 .alma-missao.convite { padding: 1px; box-shadow: 0 0 0 3px #e0a83a, 0 0 0 6px #fff, 0 4px 0 6px rgba(168, 116, 26, 0.35), 0 8px 14px rgba(40, 25, 10, 0.35); }
 .alma-missao.convite.brilha { animation: alma-convite 1.2s ease-in-out; }
 @keyframes alma-convite { 0%, 50%, 100% { transform: scale(1); } 25%, 75% { transform: scale(1.25); } }
+/* spec 038 (o dono, deitado: "fica ali em cima das outras coisas"): na paisagem baixa a 037
+   levou o mapinha e a mochila para a esquerda, embaixo da estrela; o selinho e o convite vão
+   para o lado da mochila, longe do mapinha, da mochila e da estrela (que abre para a direita) */
+@media (orientation: landscape) and (max-height: 500px) {
+  .alma-missao { top: calc(62px + env(safe-area-inset-top)); left: calc(max(10px, env(safe-area-inset-left)) + 168px); }
+}
+/* spec 038: uns 8 s depois, o convite encolhe e apaga (volta mais tarde, sem pressa) */
+.alma-missao.convite.some { animation: alma-convite-some 0.4s ease-in forwards; pointer-events: none; }
+@keyframes alma-convite-some { to { transform: scale(0.4); opacity: 0; } }
 .alma-brilho { position: fixed; z-index: 8; width: 12px; height: 12px; margin: -6px; pointer-events: none;
   background: radial-gradient(circle, #fffbe0 0 30%, rgba(255, 226, 122, 0.9) 45%, rgba(255, 226, 122, 0) 72%);
   animation: alma-brilho 0.9s ease-out forwards; }
@@ -471,9 +480,22 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
     renderCartao(false);
   }
 
-  /** O convite aparece (pulsa duas vezes, estrelinhas e o "plim") ou some. */
+  /** Spec 038: o sumiço do convite em andamento (ele encolhe e apaga antes de sair). */
+  let sumindo = 0;
+  /** O convite aparece (pulsa duas vezes, estrelinhas e o "plim") ou some (encolhendo, sem som). */
   function definirConvite(mostra: boolean, brilha: boolean): void {
+    clearTimeout(sumindo);
+    cartao.classList.remove('some');
     if (mostra === convite && !brilha) return;
+    if (!mostra && convite && chaveCartao === 'convite' && !cartao.hidden) {
+      cartao.classList.add('some');
+      sumindo = window.setTimeout(() => {
+        cartao.classList.remove('some');
+        convite = false;
+        renderCartao(false);
+      }, 400);
+      return;
+    }
     convite = mostra;
     renderCartao(false);
     if (!brilha || cartao.hidden) return;

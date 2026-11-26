@@ -1328,18 +1328,35 @@ export function ondaNaPegada(i: number, t: number, forteDesde = -Infinity): numb
 // ------------------------------------------------------------------ o convite
 /** Segundos brincando (com o jogo à vista) sem missão até o convite. */
 export const CONVITE_S = 120;
+/** Spec 038 (dono: "deveria aparecer um pouco e sumir"): quanto tempo o convite fica à vista. */
+export const CONVITE_VISIVEL_S = 8;
+/** Spec 038: depois de aparecer, ele só volta depois de tanto tempo brincando sem missão. */
+export const CONVITE_REPETE_S = 300;
 
 /**
  * O relógio do convite: conta só com o jogo à vista e sem missão; com missão volta a zero (e
  * quando a missão acaba, recomeça do zero). `passo` devolve se o convite está à vista e se
- * acabou de aparecer (o brilho é uma vez só).
+ * acabou de aparecer (o brilho é uma vez por aparição).
+ *
+ * Spec 038 (pedido do dono, 26 nov 2026: o baú ficava parado em cima das outras coisas): o
+ * convite aparece, fica `visivel` segundos (no relógio de verdade, mesmo com uma tela por cima:
+ * tocar nele abre o quadro, e ao voltar ele já foi) e some. Ele volta no máximo uma vez a cada
+ * `repete` segundos brincando, enquanto ela segue sem missão.
  *
  * `nova` (dono, 16 nov 2026: "o jogo ficou oferecendo as missões que eu já tinha feito"): há
  * missão que a criança ainda não fez neste mundo (`temMissaoNova`)? Sem missão nova o convite
  * nunca aparece e o relógio fica em zero: com tudo feito, o jogo não oferece nada.
  */
-export function criarRelogioConvite(limite = CONVITE_S) {
+export function criarRelogioConvite(
+  limite = CONVITE_S,
+  visivel = CONVITE_VISIVEL_S,
+  repete = CONVITE_REPETE_S,
+) {
+  /** Brincando sem missão desde o zero, ou desde que o convite apareceu da última vez. */
   let brincando = 0;
+  /** Quanto falta para o convite sumir (0: escondido). */
+  let aVista = 0;
+  let jaApareceu = false;
   let antes = false;
   return {
     passo(
@@ -1347,16 +1364,36 @@ export function criarRelogioConvite(limite = CONVITE_S) {
       op: { missao: boolean; noJogo: boolean; nova?: boolean },
     ): { mostra: boolean; acendeu: boolean } {
       const nova = op.nova !== false;
-      if (op.missao || !nova) brincando = 0;
-      else if (op.noJogo) brincando += Math.max(0, Math.min(0.25, dt));
-      const mostra = !op.missao && nova && brincando >= limite;
+      const d = Math.max(0, Math.min(0.25, dt));
+      if (op.missao || !nova) {
+        brincando = 0;
+        aVista = 0;
+        jaApareceu = false;
+      } else {
+        if (aVista > 0) aVista = Math.max(0, aVista - d);
+        else if (op.noJogo) {
+          brincando += d;
+          if (brincando >= (jaApareceu ? repete : limite)) {
+            aVista = visivel;
+            brincando = 0;
+            jaApareceu = true;
+          }
+        }
+      }
+      const mostra = aVista > 0;
       const acendeu = mostra && !antes;
       antes = mostra;
       return { mostra, acendeu };
     },
     zerar() {
       brincando = 0;
+      aVista = 0;
+      jaApareceu = false;
       antes = false;
+    },
+    /** Quanto falta para o convite sumir (testes). */
+    get aVista() {
+      return aVista;
     },
     get segundos() {
       return brincando;
