@@ -631,7 +631,8 @@ test('T09: os consertos do portão visual (celular em pé)', async ({ browser })
   // as pegadas (o rastro) de noite, a pé
   await page.evaluate((h) => (window.__brumaluz!.hora = h), NOITE);
   await noMeio(page, O, 0, 4.4, 0.5);
-  await page.evaluate(() => window.__brumaluz!.personagem!.definir({ corpo: 'masculino', cabeloEstilo: 0, premium: { roupa: 'tenis-cometa' } } as never));
+  // (sem a fantasia de uma foto de antes: a Roqueira tem o tênis de cano dela, que fica junto)
+  await page.evaluate((base) => window.__brumaluz!.personagem!.definir({ ...base, fantasia: null, premium: { roupa: 'tenis-cometa' } } as never), MENINO);
   await page.waitForTimeout(800);
   await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(1, 0));
   await page.waitForTimeout(1600);
@@ -665,7 +666,8 @@ test('T09: os consertos do portão visual (celular em pé)', async ({ browser })
   }
   // 4. a sola do tênis de perto, em pé (a pé)
   await noMeio(page, O, 0, 5);
-  await page.evaluate(() => window.__brumaluz!.personagem!.definir({ corpo: 'masculino', cabeloEstilo: 0, premium: { roupa: 'tenis-cometa' } } as never));
+  // (sem a fantasia de uma foto de antes: a Roqueira tem o tênis de cano dela, que fica junto)
+  await page.evaluate((base) => window.__brumaluz!.personagem!.definir({ ...base, fantasia: null, premium: { roupa: 'tenis-cometa' } } as never), MENINO);
   await page.waitForTimeout(1200);
   for (const [vista, giro] of [
     ['frente', 0.35],

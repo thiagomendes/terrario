@@ -27,7 +27,9 @@ fica por dentro da saia: a cintura fica lisa. Sem saia, a barra fica como antes.
   barra escura é a barra da jaqueta; ver o relatório).
 
 ## 4. A sola do tênis numa peça só
-- `4-tenis-sola-frente.jpg`, `-lado.jpg`, `-costas.jpg`: a pé, de perto.
+- `4-tenis-sola-frente.jpg`, `-lado.jpg`, `-costas.jpg`: a pé, de perto, o menino só com o
+  tênis-cometa (refeitas: as de antes saíram com a fantasia da Roqueira da foto anterior, e o
+  tênis de cano vermelho dela aparecia junto, dentro do cometa; isso já era assim na `main`).
 
 ## 5. A bandeirinha com a câmera da criança
 - `bandeira/5-bandeira-camera-da-crianca.jpg`: a prancha (parada 1 e 2, andando 3 a 12).
