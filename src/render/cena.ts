@@ -6373,37 +6373,75 @@ export function criarCena(
   // dentro, o morador muito perto dos olhos some com suavidade, pela distância dos olhos até a
   // caixa dele (colado, 0,3, some; a 1,2, inteiro)
   const opacidadeCasa = casaCena?.opacidadeDeMorador ?? null;
-  const maoDoQuadro: { quadro: number; mao: { mao: [number, number]; maoPx: number } | null } = { quadro: -1, mao: null };
+  /** A caixa da mão e do item na tela (px), uma vez por quadro, para todos os moradores. */
+  const maoDoQuadro: { quadro: number; caixa: [number, number, number, number] | null } = { quadro: -1, caixa: null };
+  /** O alfa de cada morador de dentro, que vai e volta com suavidade (sem piscar). */
+  const alfaDeDentro = new Map<number, number>();
+  const cantoMorador = new Vector3();
   renderCriaturas.definirOpacidadeDeMorador((id, x, y, z) => {
     const a = opacidadeCasa ? opacidadeCasa(id, x, y, z) : 1;
-    if (primeiraPessoa.fracao() <= 0.5) return a;
+    if (primeiraPessoa.fracao() <= 0.5) {
+      alfaDeDentro.delete(id);
+      return a;
+    }
     const v = cameraVisao.globalPosition;
     const dx = Math.max(0, Math.abs(v.x - x) - 0.45);
     const dy = Math.max(0, Math.abs(v.y - (y + 0.85)) - 0.85);
     const dz = Math.max(0, Math.abs(v.z - z) - 0.45);
     const d = Math.hypot(dx, dy, dz);
-    // (portão, 3ª rodada: na cena de comer, quem estava a 1 ou 2 blocos, bem atrás da mão, ficava
-    // com o balde em cima do rosto): quem cai atrás da mão e do item na tela some mais longe, até
-    // 2,2; os outros, como antes, até 1,2
-    let ate = 1.2;
-    // (a mão na tela uma vez por quadro, para todos os moradores)
+    // colado nos olhos, ele some (de 0,3 a 1,2)
+    const t = Math.max(0, Math.min(1, (d - 0.3) / 0.9));
+    let alvo = t * t * (3 - 2 * t);
+    // (portão, 4ª rodada: de dia, na cena de comer, o punho com o balde caía no rosto de um morador
+    // a 2 ou 3 blocos. A regra de antes olhava só o meio da cabeça e ia clareando até 2,2: a 1,5
+    // ele ainda ficava a 70%.) Agora: o morador cuja caixa na tela cruza a caixa da mão e do item,
+    // a até 3 blocos, some inteiro; os outros continuam à vista
     if (maoDoQuadro.quadro !== scene.getFrameId()) {
       maoDoQuadro.quadro = scene.getFrameId();
-      const t = bracoPP && bracoPP.peso() > 0.5 ? bracoPP.tela() : null;
-      maoDoQuadro.mao = t ? { mao: t.mao, maoPx: t.maoPx } : null;
+      const tl = bracoPP && bracoPP.peso() > 0.5 ? bracoPP.tela() : null;
+      if (tl && tl.maoPx > 0) {
+        const r = tl.maoPx / 2;
+        const [mx, my] = tl.mao;
+        const c: [number, number, number, number] = [mx - r, my - r, mx + r, my + r];
+        if (tl.item) {
+          c[0] = Math.min(c[0], tl.item[0]);
+          c[1] = Math.min(c[1], tl.item[1]);
+          c[2] = Math.max(c[2], tl.item[2]);
+          c[3] = Math.max(c[3], tl.item[3]);
+        }
+        maoDoQuadro.caixa = c;
+      } else maoDoQuadro.caixa = null;
     }
-    const mao = maoDoQuadro.mao;
-    if (mao && d < 2.2 && mao.maoPx > 0) {
-      const p = Vector3.TransformCoordinates(new Vector3(x, y + 1.25, z), scene.getTransformMatrix());
+    const caixa = maoDoQuadro.caixa;
+    if (caixa && d < 3) {
       const r = canvas.getBoundingClientRect();
-      const sx = ((p.x + 1) / 2) * r.width;
-      const sy = ((1 - p.y) / 2) * r.height;
-      const raio = mao.maoPx / 2;
-      const [mx, my] = mao.mao;
-      if (sx > mx - 4 * raio && sx < mx + 4 * raio && sy > my - 6 * raio && sy < my + 2 * raio) ate = 2.2;
+      const m = scene.getTransformMatrix();
+      let x0 = Infinity;
+      let y0 = Infinity;
+      let x1 = -Infinity;
+      let y1 = -Infinity;
+      let atras = false;
+      const frente = cameraVisao.getDirection(Vector3.Forward());
+      for (const cx of [x - 0.45, x + 0.45])
+        for (const cy of [y, y + 1.75])
+          for (const cz of [z - 0.45, z + 0.45]) {
+            cantoMorador.set(cx, cy, cz);
+            // (um canto atrás dos olhos não se projeta direito: aí vale só a distância)
+            if ((cx - v.x) * frente.x + (cy - v.y) * frente.y + (cz - v.z) * frente.z < 0.1) atras = true;
+            const p = Vector3.TransformCoordinates(cantoMorador, m);
+            x0 = Math.min(x0, ((p.x + 1) / 2) * r.width);
+            x1 = Math.max(x1, ((p.x + 1) / 2) * r.width);
+            y0 = Math.min(y0, ((1 - p.y) / 2) * r.height);
+            y1 = Math.max(y1, ((1 - p.y) / 2) * r.height);
+          }
+      if (!atras && x0 < caixa[2] && x1 > caixa[0] && y0 < caixa[3] && y1 > caixa[1]) alvo = 0;
     }
-    const t = Math.max(0, Math.min(1, (d - 0.3) / (ate - 0.3)));
-    return Math.min(a, t * t * (3 - 2 * t));
+    // vai e volta com suavidade (uns 0,2 s)
+    const antes = alfaDeDentro.get(id) ?? alvo;
+    const k = Math.min(1, engine.getDeltaTime() / 1000 / 0.2);
+    const agora = antes + (alvo - antes) * k;
+    alfaDeDentro.set(id, agora);
+    return Math.min(a, agora);
   });
   // os pilotos ficam onde o carrinho deles está na tela (o mesmo lugar do desenho do carrinho);
   // a vovó, no assento dela do sofá (parte 3)
