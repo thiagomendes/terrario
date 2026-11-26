@@ -120,7 +120,7 @@ Continuam valendo as regras da 036:
   As cores e os detalhes ficam iguais.
 - **O carrinho** ganha os pedais embaixo do painel, girando com os pés num nó próprio, com o capô um tico mais curto e o volante um tico mais alto. Os sapatos não saem mais pelo capô.
 - **A bandeirinha do carrinho** sai para um nó próprio (+1 malha, dentro da régua de +8 do carrinho).
-  - Ela gira em volta do mastro com a amplitude pela velocidade suavizada (`e.vel`): parado, quase nada; andando, um balanço lento de até uns 25° com um tremular pequeno de até uns 8°, nunca acima de 3 Hz.
+  - Ela gira em volta do mastro pela velocidade suavizada (`e.vel`). Parada, fica de lado e quase quieta. Andando, o pano vai para trás com o vento, uns 70 a 90° a partir da posição parada (mais para trás quanto mais rápido), e por cima disso tremula pouco, até uns 8°, nunca acima de 3 Hz. Acertado pelo orquestrador em 26 nov, vendo as fotos: só o balanço de lado não respondia à reclamação.
   - Ela não encosta na capa, nas asas nem na mochila-foguete.
   - Os amigos veem igual.
 - **O patinete e a nuvem** não mudam.
