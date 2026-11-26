@@ -29,6 +29,7 @@ import type { Camera } from '@babylonjs/core/Cameras/camera';
 import type { GlowLayer } from '@babylonjs/core/Layers/glowLayer';
 import type { Personagem } from './personagem';
 import { criarBoneco } from './boneco';
+import type { PluginPlastico } from './formas';
 import type { Aparencia } from '../personagem/aparencia';
 import { curvaGolpe, PERIODO_MINERAR } from '../personagem/poses';
 import { obterItem } from '../jogo/itens';
@@ -141,10 +142,14 @@ const GIRO_NAO_DENTRO = 0.75;
  */
 const LUZ_NOITE_MAO = 0.55;
 /**
- * Com uma ferramenta na mão, quase nada (portão, 3ª rodada: a lâmina clara da colher do pedreiro,
- * no alto da tela em pé, longe da vinheta do canto, ficava branca e acesa de noite).
+ * A ferramenta na mão, ela só (portão, 3ª e 4ª rodadas: a lâmina clara da colher do pedreiro, no
+ * alto da tela em pé, longe da vinheta do canto, ficava branca e acesa de noite; e com a luz da
+ * mão inteira baixada junto, a mão ficava marrom-escura): a mão e a manga ganham sempre a luz a
+ * mais da noite; as peças da ferramenta, quase nada, e de dia um tico menos de luz (a lâmina de
+ * aço, de frente para os olhos, estourava em branco).
  */
 const LUZ_NOITE_FERRAMENTA = 0.1;
+const LUZ_FERRAMENTA = 0.85;
 
 /**
  * Os tesouros da mão, de dentro (portão da 037): a direção do cabo na mão (no espaço da mão; o
@@ -294,12 +299,22 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
   let luzLugar = 1;
   let noiteAgora = 0;
   let comFerramenta = false;
-  const aplicarLuz = () => {
-    const extra = comFerramenta ? LUZ_NOITE_FERRAMENTA : LUZ_NOITE_MAO;
-    const nova = luzLugar * (1 + extra * noiteAgora);
-    if (nova === luz) return;
-    luz = nova;
-    vista?.definirLuz(luz);
+  const aplicarLuz = (forcar = false) => {
+    // a mão e a manga (e o resto do boneco da frente): sempre a luz a mais da noite
+    const nova = luzLugar * (1 + LUZ_NOITE_MAO * noiteAgora);
+    if (nova !== luz || forcar) {
+      luz = nova;
+      vista?.definirLuz(luz);
+    }
+    // as peças da ferramenta: a luz delas, no plugin dos materiais delas (os da mão não mudam)
+    if (!vista || !comFerramenta) return;
+    const daFerramenta = luzLugar * (1 + LUZ_NOITE_FERRAMENTA * noiteAgora) * LUZ_FERRAMENTA;
+    const daMao = new Set(osso.getChildMeshes(false).filter((m) => !m.isDescendantOf(vista!.noDaMao())).map((m) => m.material));
+    for (const m of vista.noDaMao().getChildMeshes(false)) {
+      if (!m.material || daMao.has(m.material)) continue;
+      const p = m.material.pluginManager?.getPlugin<PluginPlastico>('Plastico');
+      if (p) p.luz = daFerramenta;
+    }
   };
   // o tesouro da mão de dentro: as peças do segundo boneco, na mão da frente (a varinha e o
   // guarda-chuva) ou no céu da frente, com o fio (a pipa)
@@ -533,8 +548,10 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
   const trocarItem = (m: EntradaBraco['naMao']) => {
     itemMostrado = m.bloco !== null || m.item !== null;
     comFerramenta = !!(m.item && obterItem(m.item)?.ferramenta) || m.item === 'colher_pedreiro';
-    aplicarLuz();
     vista!.definirNaMao(m.bloco, m.item, m.qtd);
+    // (refaz a luz de todos, já com as peças novas: uma cor da ferramenta de antes pode voltar
+    // noutro item)
+    aplicarLuz(true);
     marcarGrupo();
     medirEncosto();
   };
