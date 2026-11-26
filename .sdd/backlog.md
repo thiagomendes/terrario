@@ -20,6 +20,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 4. **039, Móveis e utensílios** (ideia do dono em 26 nov, logo depois da 038): a casa por dentro está pobre. Móveis de verdade, com relevo e no estilo dos nossos brinquedos, e não cubos pintados. Original: nada copiado de outro jogo.
    - **A cama nova** (saiu da 038): dois blocos de comprimento, com cabeceira, travesseiro e cobertor em relevo, com a cara do ícone da barra ("o ícone fica bonitinho, mas na hora que você coloca é um terror"). Pôr e quebrar como a porta (duas partes); o que acontece com as camas que já existem; dormir com os amigos.
    - **Ideias do dono:** cozinha, sala, TV, aparelho de som; "pensar fora da caixa".
+   - **Geral, valendo em todos os mundos** (dono, 26 nov): o conjunto básico de casa de criança (cama, mesa, cadeira, sofá, geladeira, fogão, pia, TV, aparelho de som, guarda-roupa, abajur, tapete), como os blocos e as ferramentas. As versões temáticas ficam para a "Riqueza nos mundos antigos" e para cada mundo novo.
    - **Começa por um estudo e um esboço:** o que entra em cada cômodo; o que cada móvel faz ao toque (interações realistas: a TV liga com desenho original, o som toca uma musiquinha do jogo, a geladeira abre); de onde a criança tira os móveis (criação, criativo, lojinha); o custo de desenho; nada que assuste. 2 ou 3 caminhos para o dono escolher.
 5. **027, Noite das Fantasias, partes 2 e 3** (`.sdd/specs/027-mundo-halloween/`, branch `feat/027-noite-das-fantasias`). A parte 1 está no ar desde 22 nov. Faltam:
    - a parte 2, por dentro: os três lugares por dentro e as missões n6 a n8;
@@ -29,6 +30,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
    - objetos, brinquedos e veículos de toque;
    - moradores com nome e missões com história;
    - barracas de comprar e comer com as comidas do tema (o que a 032 deixou para depois).
+   - **os móveis do tema**, versões temáticas dos móveis gerais da 039 (dono, 26 nov), só no seu mundo. Exemplos: no Doce Reino, sofá de bolo e geladeira de sorvete; na Lua, cama-cápsula e TV de painel de nave; no Rancho, fogão a lenha e cadeira de balanço. Também valem para a Vila Neon (TV e som com luzinhas), a Cidade Grande e a Noite das Fantasias (abajur de abóbora fofinha), quando cada uma ganhar a sua spec de riqueza.
 
 ## Jeito de testar (decisão do dono em 22 nov 2026)
 - **A conferência passa a ser por área**, escolhida pelo que mudou:
