@@ -601,7 +601,7 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     const tanH = tanV * (r.width / r.height);
     noPipa.setEnabled(true);
     // (na tela mais larga que alta, ela vai mais para a esquerda: a bússola fica no meio, no alto)
-    const largura = r.width > r.height ? PIPA_TELA_LARGA : PIPA_TELA;
+    const largura = r.width > r.height && r.height <= TELA_BAIXA ? PIPA_TELA_LARGA : PIPA_TELA;
     noPipa.position.set(
       largura[0] * PIPA_DISTANCIA * tanH + Math.sin(t * 0.7) * 0.08,
       largura[1] * PIPA_DISTANCIA * tanV + Math.sin(t * 1.1) * 0.06,
