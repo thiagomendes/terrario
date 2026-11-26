@@ -21,7 +21,7 @@ describe('spec 036 (T06): a vitrine lembra a aba e as novidades', () => {
   it('as abas cobrem todo lugar do catálogo, uma vez cada', () => {
     expect([...ABAS_LOJA].sort()).toEqual([...CATEGORIAS_PREMIUM].sort());
     for (const id of NOVOS_036) expect(PREMIUM.some((p) => p.id === id)).toBe(true);
-    expect(NOVOS_036).toHaveLength(12);
+    expect(NOVOS_036).toHaveLength(13);
   });
 
   it('a primeira visita abre na aba de andar; depois, na aba de onde ela saiu', () => {

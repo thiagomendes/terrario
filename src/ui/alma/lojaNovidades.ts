@@ -11,7 +11,7 @@ import type { Armazenamento } from '../../personagem/persistencia';
 export const CHAVE_LOJA_NOVIDADES = 'terrario:loja-novidades';
 export const VERSAO_LOJA_NOVIDADES = 1;
 
-/** Os itens que chegaram na 036 (a estrelinha de novo). */
+/** Os itens com a estrelinha de novo: os da 036 e a motoquinha dourada (038). */
 export const NOVOS_036: readonly string[] = [
   'patinete-luz',
   'carrinho-pedal',
@@ -25,6 +25,7 @@ export const NOVOS_036: readonly string[] = [
   'varinha-bolhas',
   'guarda-chuva-gotinhas',
   'pipa-lacinhos',
+  'motoquinha-dourada',
 ];
 
 /** As abas da vitrine, por lugar do corpo, na ordem da tela (a de andar primeiro). */
