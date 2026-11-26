@@ -263,6 +263,56 @@ async function encostaNoCanto(page: Page, folga = 8): Promise<string[]> {
   }, folga);
 }
 
+/**
+ * Spec 038: com as informações abertas, as pílulas (som, nome, estação e clima) inteiras na tela e
+ * sem encostar em nada do canto (o mapinha, a mochila, a estrela, os amigos, a bússola e o selinho
+ * ou o convite). Devolve o que fica a menos de `folga` px de cada pílula.
+ */
+async function pilulasEncostam(page: Page, folga = 8): Promise<string[]> {
+  return page.evaluate((folga) => {
+    const visivel = (el: HTMLElement) => {
+      const cs = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      return !el.hidden && cs.display !== 'none' && cs.visibility !== 'hidden' && r.width > 0 && r.height > 0;
+    };
+    const pilulas: Record<string, string> = {
+      som: '.hud .som',
+      nome: '.hud [data-nome-jogador]',
+      mundo: '.hud [data-info-mundo]',
+    };
+    const vizinhos: Record<string, string> = {
+      mapinha: '.minimapa',
+      mochila: '[data-botao-mochila]',
+      estrela: '[data-alma-carteira]',
+      amigos: '.botao-amigos',
+      selinho: '[data-alma-missao]',
+      bussola: '.bussola',
+      // (o "i" e a roda ficam de fora: as pílulas descem logo abaixo do botão que as abre, a 6 px,
+      // de propósito, desde a 011)
+    };
+    const ruins: string[] = [];
+    let vistas = 0;
+    for (const [nome, sel] of Object.entries(pilulas)) {
+      const p = document.querySelector<HTMLElement>(sel);
+      if (!p || !visivel(p)) continue;
+      vistas++;
+      const s = p.getBoundingClientRect();
+      if (s.left < 0 || s.top < 0 || s.right > innerWidth || s.bottom > innerHeight) ruins.push(`${nome} fora da tela`);
+      for (const [outro, sv] of Object.entries(vizinhos))
+        for (const el of document.querySelectorAll<HTMLElement>(sv)) {
+          if (!visivel(el)) continue;
+          const r = el.getBoundingClientRect();
+          const dx = Math.max(r.left - s.right, s.left - r.right, 0);
+          const dy = Math.max(r.top - s.bottom, s.top - r.bottom, 0);
+          if (Math.max(dx, dy) < folga)
+            ruins.push(`${nome} (${Math.round(s.left)},${Math.round(s.top)} ${Math.round(s.width)}×${Math.round(s.height)}) encosta em ${outro}`);
+        }
+    }
+    if (vistas < 2) ruins.push(`só ${vistas} pílulas à vista`);
+    return ruins;
+  }, folga);
+}
+
 for (const tamanho of ['deitado', 'empe'] as const)
   test(`038: o convite aparece, some e não encosta no canto (${tamanho})`, async ({ browser }) => {
     test.setTimeout(400_000);
@@ -302,6 +352,7 @@ for (const tamanho of ['deitado', 'empe'] as const)
     await expect(page.locator('body')).toHaveClass(/hud-aberto/);
     await page.waitForTimeout(600);
     expect(await encostaNoCanto(page)).toEqual([]);
+    expect(await pilulasEncostam(page)).toEqual([]);
     await page.screenshot({ path: `${pasta}/${tamanho}-3-informacoes-abertas.jpg`, type: 'jpeg', quality: 85 });
     await tocar(page, '[data-hud-info]');
     await expect(page.locator('body')).not.toHaveClass(/hud-aberto/);
@@ -310,11 +361,20 @@ for (const tamanho of ['deitado', 'empe'] as const)
     await expect(page.locator('[data-alma-missao]:not([hidden])')).toHaveCount(0, { timeout: 12_000 });
     await escolherNaRoda(page, 'missoes');
     await page.waitForSelector('[data-alma-quadro]', { timeout: 10_000 });
+    // (os cartões do quadro entram com um pulinho: o toque espera eles assentarem, como no alma.spec)
+    await page.waitForTimeout(900);
     await tocar(page, '[data-alma-jogar]');
     await page.waitForFunction(() => !!document.querySelector('[data-alma-missao]:not([hidden])')?.getAttribute('data-missao'));
     await page.waitForTimeout(10_000);
     await expect(page.locator('[data-alma-missao]:not([hidden])')).toHaveCount(1);
     expect(await encostaNoCanto(page)).toEqual([]);
     await page.screenshot({ path: `${pasta}/${tamanho}-4-selinho-da-missao.jpg`, type: 'jpeg', quality: 85 });
+    // e, com a missão, as informações abertas de novo: as pílulas e o selinho, nada se encosta
+    await tocar(page, '[data-hud-info]');
+    await expect(page.locator('body')).toHaveClass(/hud-aberto/);
+    await page.waitForTimeout(600);
+    expect(await encostaNoCanto(page)).toEqual([]);
+    expect(await pilulasEncostam(page)).toEqual([]);
+    await page.screenshot({ path: `${pasta}/${tamanho}-5-missao-informacoes-abertas.jpg`, type: 'jpeg', quality: 85 });
     await page.context().close();
   });

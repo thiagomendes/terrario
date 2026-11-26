@@ -104,6 +104,10 @@ body.toque-ativo .alma-carteira kbd, body.sem-teclas .alma-carteira kbd { displa
 .alma-carteira.contando .gaveta { max-width: 140px; opacity: 1; padding: 0 10px 0 4px; }
 /* informações abertas (as pílulas descem): o selinho fica embaixo delas */
 body.hud-aberto .alma-missao { top: calc(156px + env(safe-area-inset-top)); }
+/* (spec 038: deitado, as pílulas descem na coluna do selinho; ele fica logo embaixo delas) */
+@media (orientation: landscape) and (max-height: 500px) {
+  body.hud-aberto .alma-missao { top: calc(166px + env(safe-area-inset-top)); }
+}
 .alma-bolinhas { display: flex; gap: 3px; }
 .alma-bolinhas .b { width: 20px; height: 20px; border-radius: 50%; background: #efe2c6; display: grid; place-items: center; padding: 2px; box-sizing: border-box; transition: transform 0.25s, background 0.25s; }
 .alma-bolinhas .b .alma-fig { width: 100%; height: 100%; filter: grayscale(1) opacity(0.35); transition: filter 0.3s; }
