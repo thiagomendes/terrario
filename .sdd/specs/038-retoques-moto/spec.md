@@ -152,7 +152,19 @@ Continuam valendo as regras da 036:
 - **O selinho da missão escolhida** não muda: ele fica, porque mostra o que a criança está fazendo.
 - **No celular deitado,** o selinho e o convite não encostam no mapinha, na mochila nem na estrela.
 
-### 6. O esboço sai
+### 6. A cama nova (pedido do dono, 26 nov; entra na 038 por decisão dele)
+- **Hoje:** a cama é um cubo de um bloco só, com a textura de cima e de lado (`cama_topo` e `cama_lado` em `src/art/atlas.ts`), sem relevo nenhum. "Não parece uma cama."
+- **O que o dono quer:** uma cama de **dois blocos** de comprimento, retangular, com relevo: cabeceira, travesseiro e cobertor. Desenho original, no estilo dos nossos móveis, sem cópia de outro jogo.
+- **Esboço primeiro:** 2 ou 3 camas para o dono escolher, com fotos de dia e de noite, de longe e de perto, e na primeira pessoa.
+- **O que precisa ser decidido no esboço e na revisão** (núcleo e rede):
+  - pôr e quebrar uma peça de duas células, como a porta (as duas metades, a direção pelo olhar da criança, a recusa se a segunda célula não couber, quebrar uma metade tira as duas);
+  - o que acontece com as camas de um bloco que já estão nos mundos e nas casas prontas;
+  - dormir e acordar, a câmera própria de dormir (037) e os amigos na nuvem;
+  - se a `VERSAO_REDE` precisa subir. Se subir, o servidor publica antes do site, com o passo do `CLAUDE.md`.
+
+  Este item ganha tarefas próprias depois do esboço.
+
+### 7. O esboço sai
 `src/esboco/retoques.ts`, `retoquesPecas.ts` e o e2e do esboço saem só **depois** de a medida pé–pedal estar no teste do jogo. As fotos e as medidas continuam em `capturas-038/esboco/`.
 
 ## Experiência medida (para não frustrar)
