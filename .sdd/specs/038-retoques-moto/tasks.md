@@ -22,6 +22,8 @@
 | T01 O catálogo e a rede | **feita (26 nov)**. A `motoquinha-dourada` no `PREMIUM` (andar, 140, depois da nuvem) e no `IDS_ANDAR`; a `MONTARIA`, o `GUIDAO` e o desenho dela são os do carrinho, provisórios, até a T03 (o teste das peças exige desenho para cada id). A rede continua 18: `tests/rede/congelado037.ts` congela as regras da `main` a217838 (o catálogo de 18, a aparência com o `montado`, o saneamento e o perfil com o "depois" e a chave à parte), com um teste de que a cópia é fiel sem a moto, e `tests/rede/versao-038.test.ts` tem os 4 casos da spec e a camiseta e o tênis com o mesmo id; os 4 casos já valem hoje, sem conserto. O servidor de antes tira a moto e, com ela, o `montado` (que só vale com o brinquedo); a moto volta do "depois" comprada, mas não vestida. Vitest 262 arquivos e 2432 testes; paridade 36/36 (9,3 min na placa) |
 | T02 O joelho, os pés no pedal e a bandeirinha | **feita (26 nov)**, pelo `artista-voxel`. Os detalhes abaixo |
 | T03 A motoquinha dourada | **feita (26 nov)**, pelo `artista-voxel`. Os detalhes abaixo |
+| T02, acerto da bandeirinha | **feito (26 nov)**, pedido do filho do dono ("a bandeira não mexe quando o carro anda"). Os detalhes abaixo |
+| T04 A camiseta e o tênis | **feita (26 nov)**, pelo `artista-voxel`. Os detalhes abaixo |
 
 ### T02 (26 nov 2026, `artista-voxel`)
 - **O joelho** (`src/personagem/joelho.ts`, sem Babylon):
@@ -97,4 +99,36 @@
   - a bandeirinha do carrinho de perto (pedido do orquestrador).
 - **O que ficou fraco:**
   - na vitrine em pé, o cartão da moto é o quinto da aba de andar e fica embaixo, a meio caminho (a T05 confere o "2 toques, ou a rolagem conta como um toque");
-  - na sequência de perto, a bandeirinha balança pouco de lado (uns 20°): dá para ver, mas é sutil. |
+  - na sequência de perto, a bandeirinha balança pouco de lado (uns 20°): dá para ver, mas é sutil (consertado no acerto abaixo). |
+
+### T02, acerto da bandeirinha (26 nov 2026, `artista-voxel`)
+- **O que mudou** (`bandeiraNoVento`):
+  - parada, o pano aponta para o lado de fora e quase não mexe (uns 2°);
+  - andando, o vento leva o pano para trás, contra o movimento, até 90° a partir da posição parada (quanto mais rápido, mais para trás), com o tremular de uns 5° (2 Hz) por cima;
+  - o vento muda devagar (0,9 por segundo): o pano leva ~1,1 s para ir para trás. A 20 quadros por segundo, o maior salto fica abaixo de 0,15 rad.
+- **O mastro** ficou mais alto (o meio do pano a 1,36 em vez de 0,98) e foi para a quina de trás (0,32 e -0,56 em vez de 0,28 e -0,52). Parado e para o lado, o pano encostava nas asas de borboleta; no meio da volta, nas asas do dragãozinho batendo.
+- **Os testes** (`joelhoAPe.test.ts`):
+  - parada, o pano fica perto de -90° e quase quieto; andando, gira de 70° a 95° e tremula;
+  - o pano, na caixa dele girando junto, não encosta na cabeça, no cabelo, no tronco, na capa de estrelas, nas asas de borboleta, na mochila-foguete nem no dragãozinho. São os dois corpos, parada, arrancando, andando, correndo e freando, a 20 quadros por segundo.
+- **As fotos:** `capturas-038/t03-moto/bandeira/bandeira-de-perto.jpg`, com a câmera atrás e um pouco por cima. Parada (1 a 3), o pano aponta para o lado; andando (4 a 12), ele vai para trás. "Atrás e de lado" não mostrou a mudança: de lado, o pano para o lado e o pano para trás ficam parecidos no quadro.
+
+### T04 (26 nov 2026, `artista-voxel`)
+- **A camiseta de aquário** (`premiumLuzes.ts`): a lista padrão `PEIXES` virou a dos Peixinhos de bolinhas. Na frente fica o amarelinho de bolinhas brancas, e o segundo é pêssego de barriga clara. O desenho das listras saiu do código. O jogo, a figura e o provador mudam juntos.
+- **O tênis-cometa** (`bonecoPremium.ts`), Violeta e ouro:
+  - o cano violeta inteiro (um degradê do mesmo violeta), a língua dourada, a estrela do cometa e a do calcanhar na luz de ouro, e a cauda de ouro a creme;
+  - a luz `cometa` vai do ouro ao ouro claro (`corDoCometa`), sem o azul, e mais mansa (1,1 em vez de 1,25);
+  - o `BRILHOS.cometa`, as pegadas e o anel do pouso ficam em ouro e violeta (`premiumMundo.ts`);
+  - o `efeito` do catálogo passou a "faixa de luz de ouro; pegadas de luz e estrelinhas a cada passo".
+- **O teste** `tests/render/camisetaTenis038.test.ts`:
+  - nenhum peixe tem listra, e o laranja de antes não volta;
+  - as peças e o degradê do tênis só no violeta, no ouro e no branco;
+  - a faixa de luz e os brilhos sem azul.
+- **A conferência:** `npx tsc --noEmit -p .` limpo; render, rede e jogo com 80 arquivos e 617 testes.
+- **As fotos:** `capturas-038/t04-camiseta-tenis/` (com o `indice.md`):
+  - de frente, de costas, de lado e de perto, de dia e de noite;
+  - as pegadas de noite;
+  - a aba de roupa na lojinha;
+  - deitado e computador.
+- **O que ficou fraco:**
+  - as pegadas de luz, que já existiam, ficam quase brancas e com um halo de noite. Não é desta tarefa;
+  - de dentro, na primeira pessoa, a camiseta e o tênis quase não aparecem (o mesmo que o esboço mostrou). |

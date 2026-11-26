@@ -16,6 +16,9 @@ import { assentar, criarMundo, TAMANHOS, type Tamanho } from './guia-palco';
  * - `t03`: a motoquinha dourada nas três telas, de dia e de noite, parada e andando; de frente,
  *   de lado e de costas; os pés nos apoios de perto; a sequência andando; o ícone, a figura e o
  *   provador na lojinha; e a bandeirinha do carrinho de perto (pedido do orquestrador).
+ * - `t04`: a camiseta de aquário (Peixinhos de bolinhas) e o tênis-cometa (Violeta e ouro) de
+ *   frente, de costas e de lado, de perto, de dia e de noite; as pegadas de luz; e os cartões da
+ *   aba de roupa na lojinha.
  */
 declare const process: { env: Record<string, string | undefined> };
 const QUAL = (process.env.CAPTURAS_038 ?? '').split(',').filter(Boolean);
@@ -426,11 +429,12 @@ test('T03: o pano da bandeira do carrinho de perto, parada e andando (celular em
   await montarNo(page, MENINA, 'carrinho-pedal');
   await page.waitForTimeout(1800);
   const band: string[] = [];
-  // andando para a esquerda da câmera do jogo, a criança fica de perfil com a bandeira do lado da
-  // câmera (e a câmera vai junto); para e assenta: as fotos paradas, do mesmo lugar
-  // (a câmera um tico por cima: o vaivém da bandeira em volta do mastro aparece como giro)
-  await noMeio(page, O, 0, 2.2, 0.55);
-  await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(-0.25, -0.9));
+  // (pedido do orquestrador: a câmera atrás e de lado.) A câmera do jogo atrás, um tico do lado
+  // do mastro e mais por cima: parada, o pano aponta para o lado (para a direita no quadro);
+  // andando para a frente, ele vai para trás (para a câmera, descendo no quadro). Anda um pouco,
+  // para e assenta: as fotos paradas; e depois anda de novo
+  await noMeio(page, O, 0.35, 3.0, 0.85);
+  await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(1, 0));
   await page.waitForTimeout(1200);
   await parar(page);
   await page.waitForTimeout(2200);
@@ -439,8 +443,8 @@ test('T03: o pano da bandeira do carrinho de perto, parada e andando (celular em
     band.push(`parada-${i + 1}`);
     await page.waitForTimeout(300);
   }
-  await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(-0.25, -0.9));
-  await page.waitForTimeout(1400);
+  await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(1, 0));
+  await page.waitForTimeout(300);
   for (let i = 0; i < 9; i++) {
     await foto(page, `${PASTA_T03}/bandeira`, `andando-${i + 1}`);
     band.push(`andando-${i + 1}`);
@@ -473,6 +477,82 @@ test('T03: a motoquinha deitado e no computador, de dia e de noite', async ({ br
       await page.waitForTimeout(1600);
       await foto(page, pasta, `andando-${quando}`);
       await parar(page);
+    }
+    await page.context().close();
+  }
+});
+
+// ------------------------------------------------------------------ T04
+const PASTA_T04 = 'capturas-038/t04-camiseta-tenis';
+
+test('T04: a camiseta e o tênis de frente, de costas e de lado, de perto, de dia e de noite (celular em pé)', async ({ browser }) => {
+  test.skip(!QUAL.includes('t04'));
+  test.setTimeout(900_000);
+  const { page, O } = await abrirGramado(browser, 'empe');
+  for (const [quando, hora] of [
+    ['dia', DIA],
+    ['noite', NOITE],
+  ] as const) {
+    await page.evaluate((h) => (window.__brumaluz!.hora = h), hora);
+    for (const [nome, base, premium, alvoY, perto] of [
+      ['camiseta', MENINA, { roupa: 'camiseta-aquario' }, 0.95, 2.3],
+      ['tenis', MENINO, { roupa: 'tenis-cometa' }, 0.3, 1.7],
+    ] as const) {
+      await noMeio(page, O, 0, 5);
+      await page.evaluate(({ base, premium }) => window.__brumaluz!.personagem!.definir({ ...base, premium } as never), { base, premium });
+      await page.waitForTimeout(1500);
+      for (const [vista, giro, dist, alt, y] of [
+        ['frente', 0, 4.2, 0.4, 0.9],
+        ['costas', Math.PI, 4.2, 0.4, 0.9],
+        ['lado', Math.PI / 2, 4.2, 0.4, 0.9],
+        ['perto', 0.35, perto, 0.25, alvoY],
+        ['perto-lado', Math.PI / 2 + 0.3, perto, 0.2, alvoY],
+      ] as const) {
+        if (quando === 'noite' && !vista.startsWith('perto') && vista !== 'frente') continue;
+        await estudio(page, y, giro, dist, alt);
+        await page.waitForTimeout(700);
+        await foto(page, PASTA_T04, `${nome}-${vista}-${quando}`);
+      }
+    }
+  }
+  // as pegadas de luz do tênis (ouro e violeta), andando, com a câmera do jogo por trás
+  await page.evaluate((h) => (window.__brumaluz!.hora = h), NOITE);
+  await noMeio(page, O, 0, 4.4, 0.5);
+  await page.evaluate(({ base }) => window.__brumaluz!.personagem!.definir({ ...base, premium: { roupa: 'tenis-cometa' } } as never), { base: MENINO });
+  await page.waitForTimeout(1000);
+  await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(1, 0));
+  await page.waitForTimeout(1600);
+  await foto(page, PASTA_T04, 'tenis-pegadas-noite');
+  await parar(page);
+  await page.evaluate((h) => (window.__brumaluz!.hora = h), DIA);
+  // os cartões da aba de roupa na lojinha (as figuras do 3D de verdade)
+  await noMeio(page, O, 0, 5);
+  await page.evaluate(() => {
+    for (const el of Array.from(document.body.querySelectorAll<HTMLElement>('*'))) el.style.visibility = '';
+    window.dispatchEvent(new Event('brumaluz:lojinha'));
+  });
+  await page.locator('[data-alma-loja]').waitFor({ state: 'visible' });
+  await page.locator('[data-alma-aba="roupa"]').click();
+  await page.waitForTimeout(2500);
+  await foto(page, `${PASTA_T04}/lojinha`, 'vitrine-roupa');
+  await page.context().close();
+});
+
+test('T04: a camiseta e o tênis deitado e no computador', async ({ browser }) => {
+  test.skip(!QUAL.includes('t04'));
+  test.setTimeout(600_000);
+  for (const tamanho of ['deitado', 'pc'] as const) {
+    const { page, O } = await abrirGramado(browser, tamanho);
+    for (const [nome, base, premium] of [
+      ['camiseta', MENINA, { roupa: 'camiseta-aquario' }],
+      ['tenis', MENINO, { roupa: 'tenis-cometa' }],
+    ] as const) {
+      await noMeio(page, O, 0, 5);
+      await page.evaluate(({ base, premium }) => window.__brumaluz!.personagem!.definir({ ...base, premium } as never), { base, premium });
+      await page.waitForTimeout(1500);
+      await estudio(page, 0.8, 0.5, 3.4, 0.4);
+      await page.waitForTimeout(700);
+      await foto(page, `${PASTA_T04}/${tamanho === 'pc' ? 'computador' : 'deitado'}`, `${nome}-dia`);
     }
     await page.context().close();
   }

@@ -1183,7 +1183,8 @@ export const PREMIUM: readonly ItemPremium[] = [
     categoria: 'roupa',
     nome: 'Tênis-cometa',
     preco: 20,
-    efeito: 'faixa de luz de ouro e azul; pegadas de luz e estrelinhas a cada passo',
+    // (spec 038: o tênis Violeta e ouro, sem o azul; o mesmo id e o mesmo preço)
+    efeito: 'faixa de luz de ouro; pegadas de luz e estrelinhas a cada passo',
     desenho: 'premium:tenis-cometa',
   },
   {

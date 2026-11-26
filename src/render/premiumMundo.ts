@@ -310,8 +310,8 @@ function criarPegadas(scene: Scene) {
       p.z = z;
       p.yaw = yaw;
       p.vida = 0;
-      // as pegadas de ouro e de azul, uma de cada
-      Color3.FromHexString(corN++ % 2 ? '#7fd4ff' : '#ffd84a').toLinearSpaceToRef(p.cor);
+      // as pegadas de ouro e de violeta, uma de cada (spec 038: o tênis Violeta e ouro, sem azul)
+      Color3.FromHexString(corN++ % 2 ? '#b28cff' : '#ffd84a').toLinearSpaceToRef(p.cor);
       p.cor.set(Math.sqrt(p.cor.r), Math.sqrt(p.cor.g), Math.sqrt(p.cor.b));
     },
     quadro(dt: number) {
@@ -608,8 +608,8 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
         for (let i = 0; i < 14; i++) {
           const a = (i / 14) * Math.PI * 2;
           pool().soltar(aux.set(r.x, piso + 0.08, r.z), {
-            // o anel do pouso: ouro e azul alternados
-            cor: i % 2 ? '#7fd4ff' : '#ffd84a',
+            // o anel do pouso: ouro e violeta alternados (spec 038)
+            cor: i % 2 ? '#b28cff' : '#ffd84a',
             v: new Vector3(Math.cos(a) * 1.7, 0.6, Math.sin(a) * 1.7),
             dura: 0.7,
             tam: 0.19,
