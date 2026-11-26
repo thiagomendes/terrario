@@ -78,6 +78,8 @@ const PISO_LUZ_DENTRO = 0.5;
 const MIOLO_MARCA = 0.6;
 const COR_MARCA: [number, number, number] = [3.1, 1.3, 0.15];
 const COR_MARCA_CONTORNO: [number, number, number] = [1.1, 0.82, 0.15];
+/** Em pé, de dentro, a marca vira as quinas com o próximo bloco a menos disto dos olhos (até a caixa). */
+const QUINAS_ATE = 1.5;
 
 /** De dentro, quanto de um fantasma aparece pela distância dos olhos até o cubo (0 some, 1 inteiro). */
 function aparecePerto(
@@ -177,6 +179,46 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
     fina.name = `fantasmas-moldura-fina-${k}`;
     finas.push(fina);
   }
+  /**
+   * Spec 037 (portão, 4ª rodada): em pé, de dentro, o próximo bloco a menos de 1,5 dos olhos virava
+   * uma moldura na tela inteira (ou sumia colado). Aí a marca vira só as quinas: três tracinhos
+   * amarelos em cada um dos 8 cantos do bloco, com o bloquinho girando no meio. As quinas à vista
+   * ficam na tela, curtas, e dizem "um bloco ali".
+   */
+  const quinas = (() => {
+    const h = 0.47;
+    const L = 0.22;
+    const g = 0.05;
+    const barras: Mesh[] = [];
+    for (const sx of [-1, 1])
+      for (const sy of [-1, 1])
+        for (const sz of [-1, 1])
+          for (const eixo of [0, 1, 2]) {
+            const tam = [g, g, g];
+            tam[eixo] = L;
+            const b = MeshBuilder.CreateBox('fantasma-quina', { width: tam[0], height: tam[1], depth: tam[2] }, scene);
+            const pos = [sx * h, sy * h, sz * h];
+            pos[eixo] -= [sx, sy, sz][eixo] * (L / 2 - g / 2);
+            b.position.set(pos[0], pos[1], pos[2]);
+            barras.push(b);
+          }
+    const m = Mesh.MergeMeshes(barras, true, true)!;
+    m.name = 'fantasmas-quinas';
+    const mat = new StandardMaterial('fantasmas-quinas', scene);
+    mat.disableLighting = true;
+    mat.diffuseColor = Color3.Black();
+    mat.specularColor = Color3.Black();
+    mat.emissiveColor = new Color3(1, 0.8, 0.15);
+    mat.fogEnabled = false;
+    m.material = mat;
+    m.isPickable = false;
+    m.receiveShadows = false;
+    m.setEnabled(false);
+    excluirDoGlow(m);
+    return m;
+  })();
+  /** As quinas no lugar da marca agora (o fantasma da mira, de dentro, em pé, perto). */
+  let soQuinas = false;
   /** De dentro agora (o contorno fino, o miolo mais leve, a luz do lugar). */
   let deDentro = false;
   const corBase = camadas.map((c) => ({ mat: c.mat.emissiveColor.clone(), mo: c.matMoldura.emissiveColor.clone() }));
@@ -240,7 +282,7 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
     luzMaterial = 1,
   ): void {
     const k0 = olho
-      ? `${olho.x.toFixed(2)},${olho.y.toFixed(2)},${olho.z.toFixed(2)}|${mira ? `${mira.x},${mira.y},${mira.z}` : ''}|${luzMaterial.toFixed(2)}`
+      ? `${olho.x.toFixed(2)},${olho.y.toFixed(2)},${olho.z.toFixed(2)}|${mira ? `${mira.x},${mira.y},${mira.z}` : ''}|${luzMaterial.toFixed(2)}|${soQuinas}`
       : '-';
     if (k0 === olhoVisto) return;
     olhoVisto = k0;
@@ -260,6 +302,15 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
         const naMira = !!mira && mira.x === f.x && mira.y === f.y && mira.z === f.z;
         // de dentro, o próximo bloco (o da mira) é o único com o miolo cheio, em amarelo claro:
         // a marca se vê sem procurar no meio da grade leve
+        // (em pé, perto, a marca vira só as quinas: o cubo dela some)
+        if (naMira && soQuinas) {
+          if (cores[i * 4 + 3] !== 0 || coresMo[i * 4 + 3] !== 0) {
+            cores[i * 4 + 3] = 0;
+            coresMo[i * 4 + 3] = 0;
+            mudou = true;
+          }
+          return;
+        }
         const marca = naMira && !!olho;
         // (a marca colada nos olhos também clareia: a faixa da beira dela cruzava o céu)
         const colado = olho ? aparecePerto(olho, f, 0.02, 0.35) : 1;
@@ -377,7 +428,20 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
       olho: { x: number; y: number; z: number } | null = null,
       /** A luz do lugar (1 de dia, menos de noite e na caverna): de dentro, a obra segue ela. */
       luz = 1,
+      /** A tela em pé (mais alta que larga): de dentro, o próximo bloco perto vira só as quinas. */
+      emPe = false,
     ): void {
+      // em pé, de dentro, o próximo bloco a menos de 1,5 dos olhos (até a caixa dele): as quinas
+      let distMira = Infinity;
+      if (olho && mira) {
+        const dx = Math.max(0, Math.abs(olho.x - (mira.x + 0.5)) - 0.47);
+        const dy = Math.max(0, Math.abs(olho.y - (mira.y + 0.5)) - 0.47);
+        const dz = Math.max(0, Math.abs(olho.z - (mira.z + 0.5)) - 0.47);
+        distMira = Math.hypot(dx, dy, dz);
+      }
+      soQuinas = emPe && distMira < QUINAS_ATE;
+      quinas.setEnabled(soQuinas);
+      if (soQuinas && mira) quinas.position.set(mira.x + 0.5, mira.y + 0.5, mira.z + 0.5);
       // de dentro: o contorno fino no lugar do grosso, e a cor na luz do lugar
       const dentro = !!olho;
       if (dentro !== deDentro) {

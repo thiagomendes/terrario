@@ -7589,7 +7589,14 @@ export function criarCena(
     // tela), o próximo bloco é marcado: o da camada da vez mais perto do meio da vista, ao alcance
     const deDentroObra = primeiraPessoa.fracao() > 0.5;
     const m = podeEncherObra() ? (fantasmaNaMira() ?? (deDentroObra ? proximoBlocoDaObra() : null)) : null;
-    fantasmas.quadro(tempo, m, deDentroObra ? cameraVisao.globalPosition : null, luzJogador * (0.45 + 0.55 * luzDia));
+    fantasmas.quadro(
+      tempo,
+      m,
+      deDentroObra ? cameraVisao.globalPosition : null,
+      luzJogador * (0.45 + 0.55 * luzDia),
+      // (em pé: a tela mais alta que larga; o próximo bloco perto vira as quinas)
+      canvas.clientHeight > canvas.clientWidth,
+    );
     // o coreto feito toca a musiquinha quando alguém entra nele (uma vez a cada 20 s)
     if (cidadeObra && situacaoDoCanteiro(6) === 'feita') {
       const centro = centroDaObra(cidadeObra, 6);
