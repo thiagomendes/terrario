@@ -64,15 +64,20 @@ const ALFA_MIRA_PERTO = 0.55;
  * sem passar de metade abaixo dela.
  */
 const MIOLO_DENTRO_DA_VEZ = 0.45;
-const CONTORNO_DENTRO_DA_VEZ = 0.7;
-const CONTORNO_DENTRO_CIMA = 0.45;
+// (portão, 3ª rodada: em pé, as muitas camadas de contorno branco ainda pesavam por cima)
+const CONTORNO_DENTRO_DA_VEZ = 0.5;
+const CONTORNO_DENTRO_CIMA = 0.3;
 const PISO_LUZ_DENTRO = 0.5;
 /**
- * De dentro, a marca do próximo bloco: o miolo cheio (sobre o alfa do pulso) e amarelo claro (a
- * cor do vértice multiplica o azul do material: 3 × 0,32, 1,45 × 0,6 e 0,32 × 1 dão o amarelo).
+ * De dentro, a marca do próximo bloco: o miolo amarelo claro, mais forte que o dos outros e que
+ * clareia de perto como eles (portão, 3ª rodada: em pé, a caixa da vez, a um passo, ocupava quase
+ * a tela e deixava o céu amarelo). A cor do vértice multiplica o azul do material: 3,1 × 0,32,
+ * 1,3 × 0,6 e 0,15 × 1 dão o amarelo; de noite, ela se divide pela luz do lugar (o material
+ * segue a luz), e o amarelo continua amarelo.
  */
-const MIOLO_MARCA = 1.3;
-const COR_MARCA: [number, number, number] = [3, 1.45, 0.32];
+const MIOLO_MARCA = 0.6;
+const COR_MARCA: [number, number, number] = [3.1, 1.3, 0.15];
+const COR_MARCA_CONTORNO: [number, number, number] = [1.1, 0.82, 0.15];
 
 /** De dentro, quanto de um fantasma aparece pela distância dos olhos até o cubo (0 some, 1 inteiro). */
 function aparecePerto(
@@ -231,9 +236,11 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
   function apagarPerto(
     olho: { x: number; y: number; z: number } | null,
     mira: { x: number; y: number; z: number } | null,
+    /** A luz do lugar com que o material está aceso (a cor da marca se divide por ela). */
+    luzMaterial = 1,
   ): void {
     const k0 = olho
-      ? `${olho.x.toFixed(2)},${olho.y.toFixed(2)},${olho.z.toFixed(2)}|${mira ? `${mira.x},${mira.y},${mira.z}` : ''}`
+      ? `${olho.x.toFixed(2)},${olho.y.toFixed(2)},${olho.z.toFixed(2)}|${mira ? `${mira.x},${mira.y},${mira.z}` : ''}|${luzMaterial.toFixed(2)}`
       : '-';
     if (k0 === olhoVisto) return;
     olhoVisto = k0;
@@ -254,18 +261,25 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
         // de dentro, o próximo bloco (o da mira) é o único com o miolo cheio, em amarelo claro:
         // a marca se vê sem procurar no meio da grade leve
         const marca = naMira && !!olho;
-        const a = marca ? Math.max(perto, ALFA_MIRA_PERTO) * MIOLO_MARCA : perto * miolo;
-        const contorno = marca ? Math.max(Math.min(1, perto * 1.6), ALFA_MIRA_PERTO) : Math.min(1, perto * 1.6) * traco;
-        const cor = marca ? COR_MARCA : corDoFantasma(f.bloco);
+        // (a marca colada nos olhos também clareia: a faixa da beira dela cruzava o céu)
+        const colado = olho ? aparecePerto(olho, f, 0.02, 0.35) : 1;
+        const a = marca ? perto * MIOLO_MARCA : perto * miolo;
+        const contorno = marca
+          ? Math.max(Math.min(1, perto * 1.6), ALFA_MIRA_PERTO * colado)
+          : Math.min(1, perto * 1.6) * traco;
+        const k = marca ? 1 / Math.max(PISO_LUZ_DENTRO, luzMaterial) : 1;
+        const cor = marca ? [COR_MARCA[0] * k, COR_MARCA[1] * k, COR_MARCA[2] * k] : corDoFantasma(f.bloco);
+        const corMo = marca ? [COR_MARCA_CONTORNO[0] * k, COR_MARCA_CONTORNO[1] * k, COR_MARCA_CONTORNO[2] * k] : [1, 1, 1];
         if (
           cores[i * 4 + 3] !== a ||
           coresMo[i * 4 + 3] !== contorno ||
           cores[i * 4] !== cor[0] ||
           cores[i * 4 + 1] !== cor[1] ||
-          cores[i * 4 + 2] !== cor[2]
+          cores[i * 4 + 2] !== cor[2] ||
+          coresMo[i * 4] !== corMo[0]
         ) {
           cores.set([cor[0], cor[1], cor[2], a], i * 4);
-          coresMo.set(marca ? [1, 0.86, 0.35, contorno] : [1, 1, 1, contorno], i * 4);
+          coresMo.set([corMo[0], corMo[1], corMo[2], contorno], i * 4);
           mudou = true;
         }
       });
@@ -379,7 +393,7 @@ export function criarFantasmasObra(scene: Scene, excluirDoGlow: (m: Mesh) => voi
         c.mat.emissiveColor.copyFrom(corBase[k].mat).scaleInPlace(f);
         c.matMoldura.emissiveColor.copyFrom(corBase[k].mo).scaleInPlace(f);
       });
-      apagarPerto(olho, mira);
+      apagarPerto(olho, mira, f);
       const pulso = 0.5 + 0.5 * Math.sin(tempo * 3.2);
       camadas[0].mat.alpha = 0.38 + 0.3 * pulso;
       camadas[0].matMoldura.alpha = 0.7 + 0.3 * pulso;
