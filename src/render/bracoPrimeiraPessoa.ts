@@ -173,7 +173,8 @@ const GUARDA_FORA_BAIXA = (50 * Math.PI) / 180;
 /** A pipa de dentro: onde ela fica na tela (em metades da tela, do meio) e a distância. */
 // (portão, 3ª rodada: na altura da copa das árvores ela parecia enroscada; mais alta e mais longe,
 // ela fica no céu, abaixo da fileira de botões do alto e longe da mira)
-const PIPA_TELA: [number, number] = [-0.15, 0.5];
+const PIPA_TELA: [number, number] = [-0.15, 0.6];
+const PIPA_TELA_LARGA: [number, number] = [-0.45, 0.6];
 const PIPA_DISTANCIA = 5;
 /** O raio da mão no espaço dela (sem a escala do boneco): o item encosta nele. */
 const RAIO_MAO_LOCAL = 0.085;
@@ -597,9 +598,11 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     const r = canvas!.getBoundingClientRect();
     const tanH = tanV * (r.width / r.height);
     noPipa.setEnabled(true);
+    // (na tela mais larga que alta, ela vai mais para a esquerda: a bússola fica no meio, no alto)
+    const largura = r.width > r.height ? PIPA_TELA_LARGA : PIPA_TELA;
     noPipa.position.set(
-      PIPA_TELA[0] * PIPA_DISTANCIA * tanH + Math.sin(t * 0.7) * 0.08,
-      PIPA_TELA[1] * PIPA_DISTANCIA * tanV + Math.sin(t * 1.1) * 0.06,
+      largura[0] * PIPA_DISTANCIA * tanH + Math.sin(t * 0.7) * 0.08,
+      largura[1] * PIPA_DISTANCIA * tanV + Math.sin(t * 1.1) * 0.06,
       PIPA_DISTANCIA,
     );
     pipaNo.rotation.z = Math.sin(t * 1.3) * 0.12;
