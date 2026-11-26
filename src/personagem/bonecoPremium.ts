@@ -285,16 +285,15 @@ function tenisCometa(P: Pecas, m: MedidasBoneco): void {
   for (const lado of ['pernaE', 'pernaD'] as const) {
     const y0 = -quadril;
     const z0 = 0.04;
-    // tênis gordinho de brinquedo: a sola branca grossa com a faixa de luz (do ouro ao ouro
-    // claro) em volta dela, por inteiro
-    P.caixa(`${lado}-tenis-sola`, lado, 'perna', [0.25, 0.05, 0.35], [0, y0 + 0.026, z0], BRANCO, 0.024, {
+    // tênis gordinho de brinquedo: a sola branca grossa, uma peça só, do calcanhar (alinhada com o
+    // fundo do cano) à ponta, com a faixa de luz (do ouro ao ouro claro) em volta dela, rente
+    // (spec 038, portão: em três lâminas soltas de tamanhos diferentes, parecia uma pilha de pratos)
+    const zSola = z0 + 0.03;
+    P.caixa(`${lado}-tenis-sola`, lado, 'perna', [0.25, 0.11, 0.37], [0, y0 + 0.055, zSola], BRANCO, 0.03, {
       brilho: 0.45,
     });
-    P.caixa(`${lado}-tenis-luz`, lado, 'perna', [0.266, 0.04, 0.366], [0, y0 + 0.068, z0], '#ffd84a', 0.018, {
+    P.caixa(`${lado}-tenis-luz`, lado, 'perna', [0.256, 0.034, 0.376], [0, y0 + 0.062, zSola], '#ffd84a', 0.012, {
       luz: 'cometa',
-    });
-    P.caixa(`${lado}-tenis-sola2`, lado, 'perna', [0.25, 0.026, 0.35], [0, y0 + 0.098, z0], BRANCO, 0.012, {
-      brilho: 0.45,
     });
     // o cano violeta, mais claro em cima (lê de longe), a biqueira branca redonda
     P.caixa(`${lado}-tenis-cano`, lado, 'perna', [0.23, 0.15, 0.285], [0, y0 + 0.18, z0 - 0.012], violeta, 0.065, {

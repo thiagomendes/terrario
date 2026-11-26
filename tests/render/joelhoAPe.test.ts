@@ -101,7 +101,7 @@ describe('spec 038 (T02): a bandeirinha do carrinho', () => {
     });
   };
 
-  it('parada, aponta para o lado e quase não mexe; andando, o pano vai para trás e tremula; a 20 quadros por segundo, nada salta mais que 0,15 rad', () => {
+  it('parada, aponta para o lado e quase não mexe; andando, o pano vai para trás e para fora, em diagonal, e tremula; a 20 quadros por segundo, nada salta mais que 0,15 rad', () => {
     const scene = new Scene(new NullEngine());
     const b = criarBoneco(scene, normalizarAparencia({ premium: { andar: 'carrinho-pedal' }, montado: true }), 'p', undefined, true, true);
     const bandeira = no(scene, 'p-junta-andarBandeira')!;
@@ -126,10 +126,12 @@ describe('spec 038 (T02): a bandeirinha do carrinho', () => {
     // parada: para o lado (-90°), quase quieta
     expect(Math.abs((parada.min + parada.max) / 2 + Math.PI / 2)).toBeLessThan(0.05);
     expect(parada.max - parada.min).toBeLessThan(0.1);
-    // andando: o pano girou de 70° a 90° para trás e tremula um pouco por cima
-    const giro = (andando.min + andando.max) / 2 + Math.PI / 2;
-    expect(giro).toBeGreaterThan((70 * Math.PI) / 180);
-    expect(giro).toBeLessThan((95 * Math.PI) / 180);
+    // andando: o pano foi para trás e ficou em diagonal, de 45° a 60° para fora do carro (para
+    // trás, reto, ele apontava para a câmera da criança e sumia atrás da cabeça), e tremula um
+    // pouco por cima
+    const paraFora = -(andando.min + andando.max) / 2;
+    expect(paraFora).toBeGreaterThan((45 * Math.PI) / 180);
+    expect(paraFora).toBeLessThan((60 * Math.PI) / 180);
     expect(andando.max - andando.min).toBeGreaterThan(0.08);
     expect(andando.max - andando.min).toBeLessThan(0.3);
     scene.dispose();

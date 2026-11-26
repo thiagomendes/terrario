@@ -248,14 +248,17 @@ const VENTO_POR_SEGUNDO = 0.9;
  * Spec 038 (T02, acerto do filho do dono: "a bandeira não mexe quando o carro anda"): a
  * bandeirinha do carrinho em volta do mastro (rad; 0 é o pano apontando para trás).
  * - **Parada:** o pano aponta para o lado de fora (-90°) e quase não mexe.
- * - **Andando:** o vento leva o pano para trás, contra o movimento, até 90°: quanto mais rápido,
- *   mais para trás; por cima, o tremular pequeno (uns 5°, 2 Hz).
+ * - **Andando:** o vento leva o pano para trás e para fora, em diagonal: quanto mais rápido, mais
+ *   para trás, até uns 53° para fora do carro (`BANDEIRA_ANDANDO`); por cima, o tremular pequeno
+ *   (uns 5°, 2 Hz). Portão: reto para trás, o pano apontava para a câmera da criança (atrás dela)
+ *   e sumia atrás da cabeça; em diagonal, ele fica sempre à vista.
  * A força vem da velocidade suavizada e muda devagar (`VENTO_POR_SEGUNDO`): a 20 quadros por
  * segundo, nada salta mais que 0,15 rad de um quadro para o outro.
  */
+export const BANDEIRA_ANDANDO = -0.92;
 export function bandeiraNoVento(e: EstadoAndar): number {
   const forca = e.vento;
-  const rumo = -(Math.PI / 2) * (1 - forca);
+  const rumo = -(Math.PI / 2) + (Math.PI / 2 + BANDEIRA_ANDANDO) * forca;
   const quieta = Math.sin(e.t * Math.PI * 2 * 0.55) * 0.04 * (1 - forca);
   const tremula = Math.sin(e.t * Math.PI * 2 * 2 + 1.3) * 0.08 * forca;
   return rumo + quieta + tremula;
@@ -525,7 +528,9 @@ function moto(P: Pecas): void {
   // o motor (a barriga da moto), os cilindros e o quadro até a roda de trás
   P.caixa('andar-moto-motor', J, undefined, [0.2, 0.2, 0.38], [0, 0.32, 0.06], OURO_ESC, 0.08, NO);
   for (const s of [-1, 1]) {
-    P.bola(`andar-moto-cilindro${s}`, J, undefined, 0.075, [s * 0.1, 0.3, 0.1], PRATA, [0.6, 1, 1], { gomos: 10, ...NO });
+    // (portão: o cilindro claro, logo embaixo do pé, parecia uma rodinha de apoio branca; agora é
+    // ouro escuro e menor, colado no motor)
+    P.bola(`andar-moto-cilindro${s}`, J, undefined, 0.06, [s * 0.09, 0.27, 0.06], OURO_ESC, [0.6, 1, 1], { gomos: 10, ...NO });
     tubo(P, `andar-moto-balanca${s}`, [s * 0.075, 0.3, -0.06], [s * 0.075, R, tras[2]], 0.026, OURO_ESC, 8);
   }
   // o tanque gordinho na frente do banco, com a estrela creme de cada lado
@@ -569,8 +574,9 @@ function moto(P: Pecas): void {
     [-1, apoios.E],
     [1, apoios.D],
   ] as const) {
-    P.caixa(`andar-moto-apoio${s}`, J, undefined, [0.09, 0.03, 0.1], [a[0], a[1] - 0.015, a[2]], PNEU, 0.012, NO);
-    tubo(P, `andar-moto-apoio-haste${s}`, [s * 0.09, a[1] - 0.015, a[2]], [a[0] - s * 0.04, a[1] - 0.015, a[2]], 0.016, PRATA, 6);
+    // (portão: o apoio mais largo e mais grosso, para se ver de lado embaixo do sapato)
+    P.caixa(`andar-moto-apoio${s}`, J, undefined, [0.13, 0.05, 0.15], [a[0], a[1] - 0.025, a[2]], PNEU, 0.018, NO);
+    tubo(P, `andar-moto-apoio-haste${s}`, [s * 0.09, a[1] - 0.03, a[2]], [a[0] - s * 0.05, a[1] - 0.03, a[2]], 0.022, OURO_ESC, 6);
   }
   // as rodas gordinhas (o pneu, a calota dourada, o miolo e a marquinha que mostra o giro)
   for (const [no, c, largura] of [
