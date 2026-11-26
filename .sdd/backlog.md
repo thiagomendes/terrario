@@ -12,7 +12,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
    - **câmera em primeira pessoa num botão de trocar** (olho), com transição suave, as mãozinhas segurando o bloco, a escolha guardada no aparelho; volta sozinha à terceira pessoa ao comprar ou vestir na lojinha. Esboço primeiro;
    - **bloco nunca em cima de corpo** (defeito): hoje o núcleo só olha os jogadores, numa caixa menor que o corpo, e deixa pôr bloco em cima de bicho e de amigo, que ficam presos. Recusar onde houver criança, amigo, bicho ou morador, e soltar quem ficar preso;
    - **bloco só encostado**, em todos os modos: o bloco só entra encostado em outro bloco ou no chão (lado, embaixo ou em cima), com o tremor de mão das outras recusas.
-3. **038, retoques e a moto dourada** (antes: "Redesenho de dois itens antigos") (decisão do dono em 24 nov, pelo portão visual da 036; spec pequena logo depois da 037). Os dois continuam com quem já comprou e só mudam de desenho:
+3. ~~**038, retoques e a moto dourada**~~ **publicada em 26 nov** (ver "Feitas"). (antes: "Redesenho de dois itens antigos") (decisão do dono em 24 nov, pelo portão visual da 036; spec pequena logo depois da 037). Os dois continuam com quem já comprou e só mudam de desenho:
    - a camiseta de aquário: o peixe laranja de listras brancas pode lembrar um personagem de filme conhecido;
    - o tênis de 20 moedinhas: as listras rosa, amarela e azul ficam perto de arco-íris.
    - **e os pés no pedal** (dono, 25 nov): na bicicletinha (e no carrinho de pedal), o pedal gira mas os pés pedalam flutuando em cima, sem encostar. É o mesmo problema que as mãos tinham no guidão (resolvido na 036 apontando o braço para o ponto de segurar): apontar a perna para o pedal, com teste de distância.
@@ -88,6 +88,15 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
   - a câmera de fora entra na grade dos blocos-guia da obra (eles não têm colisão desde a 014);
   - a tocha do Doce Reino parece um palito laranja da cor do chão;
   - a placa da obra, vista de trás em cima do tapume, parece um caixote solto flutuando.
+- **Defeitos antigos vistos na 038** (26 nov):
+  - a ponta do sapato fura a barra do vestido com a menina parada (o vestido de 14 lados);
+  - com a fantasia da Roqueira e o tênis-cometa, os dois tênis ficam um dentro do outro (o cometa só tira o sapato e a bota);
+  - pedalando, a barra da jaqueta da Roqueira fica como um bastão em cima da coxa;
+  - de noite, o brilho do neon do cenário passa por cima do rosto do boneco (parece uma venda ou dentinhos);
+  - de dia, os vagalumes e o pólen fazem bolinhas verdes nas bochechas;
+  - a roleta às vezes fecha sozinha em 7,0 s em vez de ~8,9 s (está na quarentena);
+  - o `servidor.yml` não dispara com `src/personagem/**`, `src/player/**` e `src/art/**`, que o servidor importa;
+  - na "Meus tesouros", a criança do mundo aparece atrás da prévia.
 - **Consertado:** a velocidade do carrinho de quem guia o bate-bate dobrava sem controle para refazer (`src/cliente/bate.ts`); vai ao ar com a próxima publicação.
 - **A página deitada perde o contexto WebGL** na ponte da placa do WSL (a placa trava uns 2 min). Esses testes só rodam no `--tudo`; conferir no aparelho de verdade.
 
@@ -125,6 +134,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 - **A dica "trocar" nos fãs da plateia da Vila** (achado na revisão da 027, 21 nov): o defeito da dica de trocar nos fãs da plateia, a conferir e consertar numa spec própria. Fora da 027.
 
 ## Feitas e publicadas (resumo)
+- **038, Retoques e a moto dourada (26 nov 2026):** a Motoquinha dourada na lojinha (140, com o "vrum" e a estrelinha de novo); o joelho que dobra, com os pés no pedal da bicicletinha e do carrinho (pedais novos) e nos apoios da moto, nos 7 modelos; a bandeirinha do carrinho ao vento; a camiseta de aquário com peixinhos de bolinhas; o tênis-cometa violeta e ouro; o convite das missões aparece uns 8 s e some; no celular deitado, as pílulas e o selinho ao lado da mochila. `VERSAO_REDE` 18. Paridade 36 de 36; duas rodadas do portão visual.
 - **037, Construir melhor (26 nov 2026):** a primeira pessoa no olhinho da roda ("Ver de dentro" e "Ver de fora"), com os olhos na altura de verdade, o braço curto de uma mão só e os itens de frente; no celular a mira segue o toque, no computador o mouse travado com a mira do meio. Os tesouros na mão: o guarda-chuva de verdade por cima, a pipa no céu da frente, a varinha com bolhas. No celular deitado, o mapinha e a mochila foram para a esquerda. O bloco nunca entra em cima de gente ou bicho, e só encostado num bloco ou no chão (a obra, o bolo e o lote do criativo sem a regra do apoio); quem ficou preso sai sozinho. `VERSAO_REDE` 18 (o núcleo mudou, o protocolo não). Medidas: +10% de quadros na primeira pessoa; paridade 36 de 36; cinco rodadas do portão visual e o estudo dos tesouros.
 - **036, Lojinha maior (24 nov 2026):** 12 itens novos: os 4 brinquedos de andar (patinete-luz, carrinho de pedal, bicicletinha, nuvem fofa; só enfeite, comprar já monta, 2 toques na roda para montar e descer), o passarinho voando perto do ombro, o boné de hélice, o pijama de nuvem, as asas de borboleta, a mochila-foguete, a varinha de bolhas, o guarda-chuva e a pipa; a vitrine com abas só de desenho e a estrelinha de novo; o provador montado; os sons; o Unicórnio-pônei e o pinguim sem tremer. `VERSAO_REDE` 18. Conferência por área (79 min e a final de 38 min); dois portões visuais. Pendências pequenas na Situação da spec.
 - **007 a 017, 019, 021, 023, 026, 030 a 035:** ver cada spec.
