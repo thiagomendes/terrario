@@ -256,16 +256,21 @@ function camisetaAquario(P: Pecas, m: MedidasBoneco): void {
   P.anel('camiseta-gola', 'tronco', 'tronco', larg * 0.78, 0.045, [0, troncoH - 0.01, 0.005], PEROLA, {
     luz: 'perola',
   });
-  P.caixa(
-    'camiseta-barra',
-    'tronco',
-    'tronco',
-    [larg + 0.012, 0.022, prof + 0.012],
-    [0, 0.012, 0],
-    PEROLA,
-    0.03,
-    { luz: 'perola' },
-  );
+  // (spec 038, portão: com saia ou vestido, a barra fica de fora: ela é reta e a saia é redonda,
+  // e as quinas dela furavam a cintura da saia como lascas brancas; a barra fica escondida pela
+  // saia, de qualquer jeito)
+  const comSaia = P.lista.some((p) => p.junta === 'saia' || (p.junta === 'tronco' && p.nome === 'saia'));
+  if (!comSaia)
+    P.caixa(
+      'camiseta-barra',
+      'tronco',
+      'tronco',
+      [larg + 0.012, 0.022, prof + 0.012],
+      [0, 0.012, 0],
+      PEROLA,
+      0.03,
+      { luz: 'perola' },
+    );
   // a estrela-do-mar de ouro acesa, deitada na areia da barra (os peixinhos passam por cima)
   P.placa('camiseta-estrela', 'tronco', 'tronco', perfilEstrela(0.042), 0.016, [larg * 0.24, 0.072, frente + 0.006], OURO, {
     luz: 'ouro',

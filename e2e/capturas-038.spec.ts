@@ -561,6 +561,40 @@ test('T04: a camiseta e o tênis deitado e no computador', async ({ browser }) =
 // ------------------------------------------------------------------ T09 (o portão visual)
 const PASTA_T09 = 'capturas-038/t09';
 
+test('T09: a camiseta de peixinhos com saia, sem a barra de pérola, e sem saia como antes (celular em pé)', async ({ browser }) => {
+  test.skip(!QUAL.includes('t09b'));
+  test.setTimeout(600_000);
+  const { page, O } = await abrirGramado(browser, 'empe');
+  for (const [quando, hora] of [
+    ['dia', DIA],
+    ['noite', NOITE],
+  ] as const) {
+    await page.evaluate((h) => (window.__brumaluz!.hora = h), hora);
+    for (const [nome, base] of [
+      ['saia', MENINA],
+      ['vestido', { ...MENINA, roupaEstilo: 8 }],
+      ['sem-saia', MENINO],
+    ] as const) {
+      await noMeio(page, O, 0, 5);
+      await page.evaluate((base) => window.__brumaluz!.personagem!.definir({ ...base, premium: { roupa: 'camiseta-aquario' } } as never), base);
+      await page.waitForTimeout(1500);
+      for (const [vista, giro, dist, alt, y] of [
+        ['frente', 0, 4.2, 0.4, 0.9],
+        ['lado', Math.PI / 2, 4.2, 0.4, 0.9],
+        ['costas', Math.PI, 4.2, 0.4, 0.9],
+        ['perto', 0.35, 2.1, 0.25, 0.75],
+        ['perto-lado', Math.PI / 2 + 0.3, 2.1, 0.2, 0.75],
+      ] as const) {
+        if (nome === 'vestido' && vista !== 'perto' && vista !== 'frente') continue;
+        await estudio(page, y, giro, dist, alt);
+        await page.waitForTimeout(700);
+        await foto(page, PASTA_T09, `2-camiseta-${nome}-${vista}-${quando}`);
+      }
+    }
+  }
+  await page.context().close();
+});
+
 test('T09: os consertos do portão visual (celular em pé)', async ({ browser }) => {
   test.skip(!QUAL.includes('t09'));
   test.setTimeout(1_500_000);

@@ -449,6 +449,10 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
       pos: [0, -altSaia / 2 + 0.06, 0],
       cor: corSaia,
     });
+    // (spec 038, portão: o quadril é reto e a saia é redonda; as quinas dele furavam a saia na
+    // cintura, em pontinhas escuras. Com saia, ele fica mais estreito, todo por dentro dela)
+    const q = pecas.find((p) => p.nome === 'quadril' && p.junta === 'tronco');
+    if (q) q.tamanho = [larg * 0.85, q.tamanho[1], Math.min(q.tamanho[2], larg * 0.48)];
   }
 
   // braços: manga, punho e a mão redonda (sem manga: braço de pele)

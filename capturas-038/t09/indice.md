@@ -9,6 +9,14 @@ fotos "pedalando" saem andando; as "lado" e "tres-quartos" saem paradas, de pert
 - `1-tenis-cometa-carrinho-1.jpg`, `-carrinho-2.jpg`, `-carrinho-perto.jpg`: no carrinho de pedal.
 - `1-tenis-cometa-pegadas-noite.jpg`: a pé, de noite, as pegadas e estrelinhas em ouro e violeta.
 
+## 2. A camiseta de peixinhos com saia, sem lascas na cintura
+Na câmera de estúdio, de dia e de noite. Com saia ou vestido, a barra de pérola sai e o quadril
+fica por dentro da saia: a cintura fica lisa. Sem saia, a barra fica como antes.
+- `2-camiseta-saia-{frente,lado,costas,perto,perto-lado}-{dia,noite}.jpg`: a menina de saia.
+- `2-camiseta-vestido-{frente,perto}-{dia,noite}.jpg`: a menina de vestido.
+- `2-camiseta-sem-saia-{frente,lado,costas,perto,perto-lado}-{dia,noite}.jpg`: o menino sem saia,
+  com a barra de pérola de antes.
+
 ## 3 e 7. Saia, vestido, vestido de baile e tênis de cano, montados
 - `3-menina-saia-{pedalando-1,pedalando-2,lado,tres-quartos}.jpg`: a saia da roupa na bicicletinha.
 - `3-menina-saia-moto-{pedalando-1,pedalando-2,lado,tres-quartos}.jpg`: a mesma saia na moto.

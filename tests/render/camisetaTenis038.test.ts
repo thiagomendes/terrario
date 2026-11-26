@@ -40,6 +40,43 @@ describe('spec 038 (T04): a camiseta de aquário, Peixinhos de bolinhas', () => 
     // o laranja de antes (o do peixe de listras) não volta
     expect(PEIXES.some((p) => p.corpo.toLowerCase() === '#ff8a1f')).toBe(false);
   });
+
+  it('com saia ou vestido, a barra de pérola fica de fora (as quinas furavam a saia); sem saia, ela fica igual', () => {
+    const barra = (extra: object) =>
+      planoBoneco(normalizarAparencia({ premium: { roupa: 'camiseta-aquario' }, ...extra })).pecas.find(
+        (p) => p.nome === 'camiseta-barra',
+      );
+    // saia (6) e vestido (8) da roupa, a pé e com a bicicletinha (a saia passa para a junta dela)
+    for (const roupaEstilo of [6, 7, 8]) {
+      expect(barra({ corpo: 'feminino', roupaEstilo })).toBeUndefined();
+      expect(barra({ corpo: 'feminino', roupaEstilo, premium: { roupa: 'camiseta-aquario', andar: 'bicicletinha' } })).toBeUndefined();
+    }
+    // nenhuma caixa do tronco passa da saia abaixo do peito (o quadril estreita), com e sem a camiseta
+    for (const roupaEstilo of [6, 7, 8])
+      for (const premium of [{}, { roupa: 'camiseta-aquario' }]) {
+        const pl = planoBoneco(normalizarAparencia({ corpo: 'feminino', roupaEstilo, premium }));
+        const saia = pl.pecas.find((p) => p.nome === 'saia')!;
+        const [h, rBaixo, rCima] = saia.tamanho;
+        const topo = saia.pos[1] + h / 2;
+        // (a saia tem 14 lados: o raio de dentro é um tico menor)
+        const raioEm = (y: number) => (rCima + ((topo - y) / h) * (rBaixo - rCima)) * Math.cos(Math.PI / 14);
+        for (const p of pl.pecas) {
+          if (p.junta !== 'tronco' || p.forma !== 'caixa' || p.rot) continue;
+          const y0 = p.pos[1] - p.tamanho[1] / 2;
+          if (y0 >= 0 || y0 < topo - h) continue;
+          const y = Math.min(0, p.pos[1] + p.tamanho[1] / 2);
+          const fora = Math.hypot(Math.abs(p.pos[0]) + p.tamanho[0] / 2, Math.abs(p.pos[2]) + p.tamanho[2] / 2) - raioEm(y);
+          expect(fora, `${roupaEstilo} ${JSON.stringify(premium)} ${p.nome}`).toBeLessThan(0.005);
+        }
+      }
+    // sem saia: a mesma barra de antes
+    for (const roupaEstilo of [0, 2]) {
+      const b = barra({ roupaEstilo });
+      expect(b, `estilo ${roupaEstilo}`).toBeDefined();
+      expect(b!.pos).toEqual([0, 0.012, 0]);
+      expect(b!.luz).toBe('perola');
+    }
+  });
 });
 
 describe('spec 038 (T04): o tênis-cometa, Violeta e ouro', () => {
