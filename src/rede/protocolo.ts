@@ -76,6 +76,11 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * `tests/rede/versao-036.test.ts` guarda uma cópia congelada das regras da 18 de antes e prova
  * que ela lê a aparência da 036 sem quebrar. Se a 036 ganhar comando, evento ou campo de quadro,
  * esta versão sobe.
+ *
+ * Spec 038 (a motoquinha dourada) também fica na 18: só um item novo no catálogo, na categoria
+ * `andar`. `tests/rede/versao-038.test.ts` faz o mesmo com as regras da `main` a217838
+ * (`congelado037.ts`): o servidor e o site de antes tiram só a moto, e o perfil a guarda em
+ * "depois" até o site de agora voltar.
  */
 export const VERSAO_REDE = 18;
 /** Jogadores por mundo. */

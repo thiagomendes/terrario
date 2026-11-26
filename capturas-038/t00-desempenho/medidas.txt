@@ -1,0 +1,33 @@
+Spec 038, T00: medidas de antes, na main a217838 (26 nov 2026, 13h17 a 13h22 de Brasília)
+Suíte: e2e/desempenho-038.spec.ts (MEDIR_DESEMPENHO=1, E2E_SEM_VSYNC=1), placa de vídeo pela ponte do WSL,
+1 trabalhador, celular em pé 390x844, CPU 4x, Vila Neon de dia (hora 0,42, céu limpo), 4 amigos à vista
+(6, 8, 11 e 14 m), 3 rodadas alternadas, 8 s por medida girando a câmera devagar.
+Linha crua: main-a217838.json.txt. Tempo da rodada: 4,5 min (261 s com o contêiner).
+
+Brinquedos: vestido = bicicletinha, carrinho, bicicletinha, carrinho (sem montar);
+            montados = bicicletinha, bicicletinha, carrinho, carrinho.
+
+Mediana das 3 rodadas (fps e chamadas por quadro); quadro mais longo = o maior das 3 medidas;
+troca = o maior quadro nos 5 s em que os bonecos se montam ao entrar no cenário.
+
+cenário             fps    chamadas  maior quadro  troca   (fps das 3 rodadas)
+a pé, parados       46,8   184       48 ms         272 ms  46,0 / 46,8 / 49,0
+a pé, andando       46,5   185       55 ms         119 ms  46,5 / 45,3 / 48,5
+vestido, parados    46,3   188       53 ms         278 ms  46,3 / 46,1 / 48,3
+vestido, andando    45,6   189       150 ms        56 ms   45,6 / 48,1 / 42,0
+montados, parados   44,6   205       97 ms         152 ms  44,6 / 44,6 / 37,3
+montados, andando   42,8   203       59 ms         49 ms   44,6 / 42,8 / 34,5
+
+p95 típico: 25 a 27 ms; a terceira rodada dos montados pesou mais (p95 56 ms parados, 37 ms andando).
+
+Malhas por boneco (diferença para a cena sem amigos, 827 malhas e 78 ativas, dividida por 4):
+  a pé:      10,3 na cena, 4,8 ativas
+  vestido:   17,3 na cena, 5,3 ativas (o brinquedo vestido fica na cena, escondido)
+  montados:  17,3 na cena, 9,3 ativas
+
+Régua para a T06 (metas da "Experiência medida", contra os 4 a pé sem brinquedo):
+  chamadas montados - a pé hoje: +21 (205 contra 184); a meta é no máximo +30;
+  fps montados contra a pé hoje: -4,7% parados, -8,0% andando; a meta é cair no máximo 10%.
+  O ramo vai medir com a motoquinha no lugar das duas bicicletinhas (a suíte troca sozinha
+  quando o catálogo tem a motoquinha-dourada). A variação entre rodadas chega a 7 fps:
+  a T06 deve rodar a main e o ramo na mesma sessão, alternando, e comparar as medianas.

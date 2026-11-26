@@ -347,6 +347,17 @@ body.hud-compacto.hud-aberto .hud [data-info-mundo] { top: 122px !important; }
 body.hud-compacto.hud-aberto .missao-hud { top: 156px; }
 /* informações abertas: os avisos descem para baixo do cartão da missão (não o cobrem) */
 body.hud-compacto.hud-aberto:not([data-overlay]) .toast-area { top: 272px; }
+/* spec 038 (volta para trás da 037): no celular deitado o mapinha e a mochila ficam embaixo do
+   botão, e as pílulas sumiam atrás deles; abertas, elas descem na coluna do selinho, ao lado da
+   mochila (e o selinho, embaixo delas, em alma/hud.ts) */
+@media (orientation: landscape) and (max-height: 500px) {
+  body.hud-botao-info.hud-aberto .hud .som, body.hud-compacto.hud-aberto .hud .som,
+  body.hud-botao-info.hud-aberto .hud .chip-hud, body.hud-compacto.hud-aberto .hud .chip-hud {
+    left: calc(max(10px, env(safe-area-inset-left)) + 168px); }
+  body.hud-botao-info.hud-aberto .hud .som, body.hud-compacto.hud-aberto .hud .som { top: calc(64px + env(safe-area-inset-top)); }
+  body.hud-botao-info.hud-aberto .hud [data-nome-jogador], body.hud-compacto.hud-aberto .hud [data-nome-jogador] { top: calc(96px + env(safe-area-inset-top)) !important; }
+  body.hud-botao-info.hud-aberto .hud [data-info-mundo], body.hud-compacto.hud-aberto .hud [data-info-mundo] { top: calc(128px + env(safe-area-inset-top)) !important; }
+}
 body[data-overlay] .hud-info, body.tela-titulo .hud-info, body.modo-foto .hud-info { display: none !important; }
 `;
 

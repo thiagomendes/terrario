@@ -1183,7 +1183,8 @@ export const PREMIUM: readonly ItemPremium[] = [
     categoria: 'roupa',
     nome: 'Tênis-cometa',
     preco: 20,
-    efeito: 'faixa de luz de ouro e azul; pegadas de luz e estrelinhas a cada passo',
+    // (spec 038: o tênis Violeta e ouro, sem o azul; o mesmo id e o mesmo preço)
+    efeito: 'faixa de luz de ouro; pegadas de luz e estrelinhas a cada passo',
     desenho: 'premium:tenis-cometa',
   },
   {
@@ -1251,6 +1252,17 @@ export const PREMIUM: readonly ItemPremium[] = [
     preco: 150,
     efeito: 'sentada, flutua baixinho balançando devagar e deixa nuvenzinhas para trás',
     desenho: 'premium:nuvem-fofa',
+  },
+  // spec 038 (o pedido do filho do dono, 25 nov 2026): a moto dourada, na aba dos de andar,
+  // depois da nuvem. Só enfeite, como os outros de andar. A rede continua 18: o servidor e o
+  // site de antes a tiram sem quebrar (`tests/rede/versao-038.test.ts`)
+  {
+    id: 'motoquinha-dourada',
+    categoria: 'andar',
+    nome: 'Motoquinha dourada',
+    preco: 140,
+    efeito: 'sentada na motoquinha, com farol que acende de noite e rodinhas de apoio',
+    desenho: 'premium:motoquinha-dourada',
   },
   {
     id: 'passarinho-ombro',

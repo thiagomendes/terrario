@@ -371,15 +371,18 @@
         "src/personagem/montar.ts",
         "src/render/efeitosLojinha.ts",
         "src/render/seguirVoando.ts",
-        "src/ui/alma/lojaNovidades.ts"
+        "src/ui/alma/lojaNovidades.ts",
+        "src/personagem/joelho.ts"
       ],
       "suites": [
         "alma.spec.ts",
         "capturas-036.spec.ts",
+        "capturas-038.spec.ts",
         "capturas-premium.spec.ts",
         "lojinha.spec.ts",
         "meus-tesouros.spec.ts",
         "montar-036.spec.ts",
+        "moto-038.spec.ts",
         "premium-presentes.spec.ts",
         "tesouro-fantasia.spec.ts"
       ]
@@ -564,6 +567,7 @@
         "desempenho-027.spec.ts",
         "desempenho-036.spec.ts",
         "desempenho-037.spec.ts",
+        "desempenho-038.spec.ts",
         "desempenho-achar-amigo.spec.ts",
         "desempenho-brinquedo.spec.ts",
         "desempenho-premium.spec.ts",

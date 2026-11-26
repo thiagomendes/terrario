@@ -48,6 +48,13 @@ const atualizar = (no: TransformNode) => {
 /** A beira de cima das laterais e do capô (y) e o lado de dentro das laterais (x), na prancha. */
 const BEIRA_Y = 0.43;
 const DENTRO_X = 0.29;
+/**
+ * Spec 038 (T02): os pés nos pedais embaixo do painel, com o joelho dobrado para cima (como
+ * criança sentada no carrinho de pedal; o dono escolheu no esboço). O joelho pode subir acima da
+ * beira entre o assento e o painel; a canela e o sapato ficam abaixo dela, e nada da perna passa
+ * do painel para o capô.
+ */
+const PAINEL_Z = 0.26;
 
 describe('036 (portão): no carrinho de pedal, as pernas ficam dentro da carroceria', () => {
   for (const corpo of ['feminino', 'masculino'] as const)
@@ -56,8 +63,8 @@ describe('036 (portão): no carrinho de pedal, as pernas ficam dentro da carroce
       const b = criarBoneco(scene, normalizarAparencia({ corpo, premium: { andar: 'carrinho-pedal' }, montado: true }), 'p', undefined, true, true);
       b.posicionar(0, 0, 0, 0.7);
       const prancha = scene.getTransformNodeByName('p-junta-prancha') as TransformNode;
-      const pernas = scene.meshes.filter((m) => /^p-perna[ED]-fundida$/.test(m.name)) as Mesh[];
-      expect(pernas.length).toBe(2);
+      const pernas = scene.meshes.filter((m) => /^p-(perna|joelho)[ED]-fundida$/.test(m.name)) as Mesh[];
+      expect(pernas.length).toBe(4);
       const fora: string[] = [];
       let t = 0;
       for (const andando of [false, true]) {
@@ -70,20 +77,25 @@ describe('036 (portão): no carrinho de pedal, as pernas ficam dentro da carroce
           const paraPrancha = prancha.getWorldMatrix().clone().invert();
           let alto = -Infinity;
           let largo = 0;
+          let frente = -Infinity;
           for (const m of pernas) {
             atualizar(m);
             const mat = m.getWorldMatrix().multiply(paraPrancha);
             const pos = m.getVerticesData(VertexBuffer.PositionKind)!;
+            const canela = m.name.includes('joelho');
             for (let i = 0; i < pos.length; i += 3) {
               const p = Vector3.TransformCoordinates(new Vector3(pos[i], pos[i + 1], pos[i + 2]), mat);
               // (só o que fica na frente do assento: a coxa sobre o assento é a criança sentada)
               if (p.z < 0.02) continue;
-              alto = Math.max(alto, p.y);
               largo = Math.max(largo, Math.abs(p.x));
+              if (p.y > BEIRA_Y) frente = Math.max(frente, p.z);
+              // (da canela, o que fica a mais de 0,1 abaixo do joelho: o pé e o sapato; o joelho
+              // dobrado é a ponta de cima dela)
+              if (canela && pos[i + 1] < -0.1) alto = Math.max(alto, p.y);
             }
           }
-          if (alto > BEIRA_Y || largo > DENTRO_X)
-            fora.push(`${andando ? 'pedalando' : 'parada'}: alto ${alto.toFixed(3)}, largo ${largo.toFixed(3)}`);
+          if (alto > BEIRA_Y || largo > DENTRO_X || frente > PAINEL_Z)
+            fora.push(`${andando ? 'pedalando' : 'parada'}: canela ${alto.toFixed(3)}, largo ${largo.toFixed(3)}, frente ${frente.toFixed(3)}`);
         }
       }
       expect(fora.slice(0, 4)).toEqual([]);

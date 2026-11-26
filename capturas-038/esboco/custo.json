@@ -1,0 +1,158 @@
+{
+ "a-pe": {
+  "malhas": 11,
+  "triangulos": 11244,
+  "brinquedo": [
+   0,
+   0
+  ],
+  "joelho": [
+   0,
+   0
+  ]
+ },
+ "moto-motoca": {
+  "malhas": 21,
+  "triangulos": 28210,
+  "brinquedo": [
+   8,
+   16750
+  ],
+  "joelho": [
+   2,
+   432
+  ]
+ },
+ "moto-triciclo": {
+  "malhas": 21,
+  "triangulos": 24470,
+  "brinquedo": [
+   8,
+   13010
+  ],
+  "joelho": [
+   2,
+   432
+  ]
+ },
+ "pedal-bici-hoje": {
+  "malhas": 16,
+  "triangulos": 20728,
+  "brinquedo": [
+   5,
+   9484
+  ],
+  "joelho": [
+   0,
+   0
+  ]
+ },
+ "pedal-bici": {
+  "malhas": 19,
+  "triangulos": 27108,
+  "brinquedo": [
+   6,
+   15648
+  ],
+  "joelho": [
+   2,
+   432
+  ]
+ },
+ "pedal-carrinho-hoje": {
+  "malhas": 15,
+  "triangulos": 17546,
+  "brinquedo": [
+   4,
+   6302
+  ],
+  "joelho": [
+   0,
+   0
+  ]
+ },
+ "pedal-carrinho": {
+  "malhas": 18,
+  "triangulos": 22058,
+  "brinquedo": [
+   5,
+   10598
+  ],
+  "joelho": [
+   2,
+   432
+  ]
+ },
+ "tenis-hoje": {
+  "malhas": 21,
+  "triangulos": 16052,
+  "brinquedo": [
+   0,
+   0
+  ],
+  "joelho": [
+   0,
+   0
+  ]
+ },
+ "tenis-violeta": {
+  "malhas": 17,
+  "triangulos": 16052,
+  "brinquedo": [
+   0,
+   0
+  ],
+  "joelho": [
+   0,
+   0
+  ]
+ },
+ "tenis-noite": {
+  "malhas": 19,
+  "triangulos": 16052,
+  "brinquedo": [
+   0,
+   0
+  ],
+  "joelho": [
+   0,
+   0
+  ]
+ },
+ "camiseta-hoje": {
+  "malhas": 17,
+  "triangulos": 12218,
+  "brinquedo": [
+   0,
+   0
+  ],
+  "joelho": [
+   0,
+   0
+  ]
+ },
+ "camiseta-bolinhas": {
+  "malhas": 17,
+  "triangulos": 12218,
+  "brinquedo": [
+   0,
+   0
+  ],
+  "joelho": [
+   0,
+   0
+  ]
+ },
+ "camiseta-cavalinho": {
+  "malhas": 17,
+  "triangulos": 12218,
+  "brinquedo": [
+   0,
+   0
+  ],
+  "joelho": [
+   0,
+   0
+  ]
+ }
+}

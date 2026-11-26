@@ -28,7 +28,30 @@ import {
   type TexturaPremium,
 } from '../personagem/boneco';
 import { ALTURA_PRANCHA } from '../personagem/bonecoFantasia';
-import { GUIDAO, avancarAndar, boiarNuvem, estadoAndar, poseNoBrinquedo } from '../personagem/brinquedoAndar';
+import {
+  GUIDAO,
+  avancarAndar,
+  bandeiraNoVento,
+  boiarNuvem,
+  corpoNoAssento,
+  estadoAndar,
+  ondeOsPes,
+  poseNoBrinquedo,
+} from '../personagem/brinquedoAndar';
+import { SAIA_DA_ROUPA, medidaDaPerna, pernaNoPedal, type MedidaPerna } from '../personagem/joelho';
+
+/**
+ * Spec 038 (portão): a saia montada num brinquedo de pedal ou de apoio: inclinada para a frente
+ * por cima das coxas (rad), mais curta e sem abrir.
+ */
+const SAIA_MONTADA = { giro: -0.55, altura: 0.7, largura: 0.96 };
+/**
+ * O vestido de baile (a saia larga, como o da realeza): inclinado como a saia, ele baixava atrás
+ * até a roda de trás; ele inclina menos, encurta mais e fecha um tico.
+ */
+const SAIA_LARGA_MONTADA = { giro: -0.3, altura: 0.42, largura: 0.86 };
+/** A partir de que raio (no pé da saia) ela é um vestido de baile. */
+const RAIO_SAIA_LARGA = 0.35;
 import { luzPremium, texturaAquario } from './premiumLuzes';
 import type { Pose } from '../personagem/poses';
 import {
@@ -152,7 +175,7 @@ export function dadosDaPeca(
       height: p.tamanho[0],
       diameterBottom: p.tamanho[1] * 2,
       diameterTop: p.tamanho[2] * 2,
-      tessellation: grosso ? 8 : 14,
+      tessellation: grosso ? Math.min(8, p.lados ?? 8) : (p.lados ?? 14),
     });
   else if (p.forma === 'placa') vd = dadosPlaca(p.perfil ?? [], p.tamanho[2]);
   else if (p.forma === 'malha') vd = dadosMalhaPano(p.malha?.pos ?? [], p.malha?.ind ?? [], p.malha?.avessoClaro);
@@ -161,7 +184,8 @@ export function dadosDaPeca(
     vd = CreateTorusVertexData({
       diameter: p.tamanho[0],
       thickness: p.tamanho[1],
-      tessellation: 20,
+      // (spec 038: as rodas dos brinquedos de andar com menos gomos)
+      tessellation: p.lados ?? 20,
     });
   if ((p.viva || corNoVertice) && !p.pintar) {
     const n = vd.positions!.length / 3;
@@ -411,6 +435,17 @@ export function criarBoneco(
    */
   let andarVestido: string | null = null;
   let montado = false;
+  /**
+   * Spec 038 (T02): a perna com joelho (só com brinquedo de pedal ou de apoio vestido), a altura
+   * do quadril do plano (para sentar no assento) e o peso dos pés no pedal (0 a pé, 1 montada,
+   * suave ao montar e ao descer).
+   */
+  let medidaPerna: MedidaPerna | null = null;
+  /** Spec 038 (portão): a saia da roupa passou do tronco para a junta da saia. */
+  let saiaDaRoupa = false;
+  let saiaLarga = false;
+  let quadrilDoPlano = 0.34;
+  let pesoPes = 0;
   /** Spec 023: os nós próprios dos premium (as asas do dragão). */
   let subjuntas: Partial<Record<SubjuntaPremium, TransformNode>> = {};
   /** Spec 036: o giro de repouso de cada nó próprio (a animação soma em cima). */
@@ -668,6 +703,12 @@ export function criarBoneco(
     mats.definirLuz(luz);
     // spec 036 (T04): o brinquedo de andar só aparece com a criança montada
     subjuntas.brinquedo?.setEnabled(montado);
+    // spec 038 (T02): a perna com joelho e o quadril do plano
+    quadrilDoPlano = plano.juntas.pernaE.pos[1];
+    medidaPerna = subjuntas.joelhoE && subjuntas.joelhoD ? medidaDaPerna(plano) : null;
+    saiaDaRoupa = plano.pecas.some((p) => p.nome === SAIA_DA_ROUPA);
+    saiaLarga = plano.pecas.some((p) => p.junta === 'saia' && p.forma === 'cilindro' && p.tamanho[1] > RAIO_SAIA_LARGA);
+    pesoPes = montado && medidaPerna ? 1 : 0;
   }
 
   /** Spec 036 (T04): montar e descer sem refazer o boneco (só o nó do brinquedo e a pose). */
@@ -1007,8 +1048,83 @@ export function criarBoneco(
       braco.rotation.y *= 1 - w;
     }
   }
+  /**
+   * Spec 038 (T02): montada num brinquedo de pedal ou de apoio, a perna e o joelho saem da conta
+   * (`pernaNoPedal`) a cada quadro, com o quadril de verdade deste quadro (depois de o corpo ser
+   * suavizado): a sola pisa no alto do pedal em toda a volta. A conta não passa pelo `suave`; ao
+   * montar e ao descer, o peso leva da pose a pé para a conta, sem salto. A pé, o joelho e o
+   * giro para o lado ficam em 0.
+   */
+  const mCorpoInv = new Matrix();
+  const vAlvo = new Vector3();
+  function pesNoPedal(k: number): void {
+    const j = juntas;
+    const med = medidaPerna;
+    const alvos = med && andarVestido ? ondeOsPes(andarVestido, andar) : null;
+    if (!med || !alvos || !j.prancha) return;
+    pesoPes += ((montado ? 1 : 0) - pesoPes) * k;
+    if (!montado && pesoPes < 0.002) pesoPes = 0;
+    const w = pesoPes;
+    const jE = subjuntas.joelhoE;
+    const jD = subjuntas.joelhoD;
+    if (w <= 0) {
+      if (jE) jE.rotation.x = 0;
+      if (jD) jD.rotation.x = 0;
+      j.pernaE.rotation.z = 0;
+      j.pernaD.rotation.z = 0;
+      return;
+    }
+    for (const n of [raiz, escalar, j.corpo, j.prancha]) n.computeWorldMatrix(true);
+    j.corpo.getWorldMatrix().invertToRef(mCorpoInv);
+    for (const [lado, perna, joelho] of [
+      ['E', j.pernaE, jE],
+      ['D', j.pernaD, jD],
+    ] as const) {
+      const p = alvos[lado];
+      vAlvo.set(p[0], p[1], p[2]);
+      Vector3.TransformCoordinatesToRef(vAlvo, j.prancha.getWorldMatrix(), vAlvo);
+      Vector3.TransformCoordinatesToRef(vAlvo, mCorpoInv, vAlvo);
+      const r = pernaNoPedal([vAlvo.x - perna.position.x, vAlvo.y - perna.position.y, vAlvo.z - perna.position.z], med);
+      perna.rotation.x += (r.x - perna.rotation.x) * w;
+      perna.rotation.y *= 1 - w;
+      perna.rotation.z = r.z * w;
+      if (joelho) joelho.rotation.x = r.joelho * w;
+    }
+  }
+
+  /**
+   * Spec 038 (portão visual): com brinquedo de pedal ou de apoio vestido, a saia e o vestido.
+   * - A saia da roupa passou do tronco para a junta da saia (`dividirPernas`): a pé, ela segue o
+   *   tronco como antes (o mesmo giro, sem abrir).
+   * - Montada, a saia (a da roupa e a das fantasias) inclina para a frente por cima das coxas
+   *   dobradas e encurta, sem abrir: as coxas não furam o pano, e o vestido não fica aberto como
+   *   um abajur por cima do selim nem passa pela roda de trás.
+   */
+  function ajustarSaia(): void {
+    const j = juntas;
+    if (!medidaPerna || !j.saia) return;
+    if (saiaDaRoupa) {
+      j.saia.rotation.set(j.tronco.rotation.x, j.tronco.rotation.y, j.tronco.rotation.z);
+      j.saia.scaling.setAll(1);
+    }
+    const w = pesoPes;
+    if (w <= 0) return;
+    const mistura = (a: number, b: number) => a + (b - a) * w;
+    const alvo = saiaLarga ? SAIA_LARGA_MONTADA : SAIA_MONTADA;
+    j.saia.rotation.x = mistura(j.saia.rotation.x, alvo.giro);
+    j.saia.rotation.y = mistura(j.saia.rotation.y, 0);
+    j.saia.rotation.z = mistura(j.saia.rotation.z, 0);
+    j.saia.scaling.set(
+      mistura(j.saia.scaling.x, alvo.largura),
+      mistura(j.saia.scaling.y, alvo.altura),
+      mistura(j.saia.scaling.z, alvo.largura),
+    );
+  }
+
   function animarBrinquedo(): void {
     const s = subjuntas;
+    // spec 038 (T02): a bandeirinha tremula em volta do mastro com o vento do andar
+    if (s.andarBandeira) s.andarBandeira.rotation.y = bandeiraNoVento(andar);
     for (const r of [s.andarRodaF, s.andarRodaT]) if (r) r.rotation.x = andar.roda;
     // (as rodinhas de apoio são menores: giram mais depressa no mesmo chão)
     if (s.andarRodinhaE) s.andarRodinhaE.rotation.x = (andar.roda * 2.5) % (Math.PI * 2);
@@ -1044,6 +1160,9 @@ export function criarBoneco(
     if (montado && andarVestido) {
       if (extras) avancarAndar(andar, andarVestido, dt, (extras.vista?.passada ?? 0) * VEL_ANDAR_BONECO);
       poseNoBrinquedo(andarVestido, alvo, pose, andar);
+      // spec 038 (T02): sentada de verdade no assento, pela perna deste modelo
+      const sentar = corpoNoAssento(andarVestido, quadrilDoPlano);
+      if (sentar !== null) alvo.corpoY = sentar;
     }
     // spec 036: o tesouro da mão esquerda (a varinha, o guarda-chuva, a pipa): o braço segura no
     // alto, menos durante um gesto (o gesto manda no braço)
@@ -1078,6 +1197,8 @@ export function criarBoneco(
     // spec 036 (T05, acerto do dono): montada, as mãos fecham no guidão e no volante de verdade,
     // como quer que o tronco esteja (fora de um gesto, que manda nos braços)
     if (montado && andarVestido) maosNoGuidao(andarVestido, 1 - Math.min(1, Math.max(0, (pose.pesoGesto ?? 0) / 0.3)));
+    // spec 038 (T02): os pés no pedal (ou no apoio), depois da suavização, a cada quadro
+    pesNoPedal(k);
     j.cabeca.rotation.x = suave('cabecaX', alvo.cabeca[0], k);
     j.cabeca.rotation.y = suave('cabecaY', alvo.cabeca[1], k);
     j.cabeca.rotation.z = suave('cabecaZ', alvo.cabeca[2], k);
@@ -1090,6 +1211,8 @@ export function criarBoneco(
     j.saia.rotation.z = suave('saiaZ', alvo.saia[2], kLento);
     const abre = subirJunto('saiaAbre', alvo.saiaEscala[0], kLento);
     j.saia.scaling.set(abre, suave('saiaY', alvo.saiaEscala[1], k), abre);
+    // spec 038 (portão): com brinquedo de pedal ou de apoio vestido, a saia e o vestido
+    ajustarSaia();
     j.rabo.rotation.x = subirJunto('raboX', alvo.rabo[0], kLento);
     j.rabo.rotation.y = suave('raboY', alvo.rabo[1], k);
     // spec 023: as asas do dragão batem: devagar parado (mas sempre se vê), rápido correndo e

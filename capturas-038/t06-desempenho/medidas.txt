@@ -1,0 +1,40 @@
+Spec 038, T06: desempenho, main a217838 contra o ramo a8982f2 (26 nov 2026, 15h15 a 15h50 de Brasília)
+Suíte: e2e/desempenho-038.spec.ts, a mesma da T00 (no ramo, as duas bicicletinhas montadas viram
+motoquinha sozinhas: montados = motoquinha, motoquinha, bicicletinha, carrinho). Placa pela ponte do
+WSL, 1 trabalhador, celular em pé 390x844, CPU 4x, Vila Neon de dia.
+Cada execução tem 1 rodada (RODADAS=1), alternando main, ramo, main, ramo, main, ramo.
+
+SESSÃO 1 (15h15 a 15h27, 712 s): descartada para os quadros. Os quadros caíram para 7 a 15 fps no
+meio das execuções, igual na main e no ramo, com a máquina parada do lado do WSL (algo do lado do
+Windows, invisível daqui). As chamadas ficaram iguais às da sessão 2. Linha crua: sessao1-perturbada.json.txt.
+
+SESSÃO 2 (15h29 a 15h40, 635 s; carga do WSL entre 1,2 e 1,9): a que vale. Linha crua: sessao2.json.txt.
+Mediana das 3 execuções (fps e chamadas por quadro); maior quadro = o maior das 3.
+
+                    ---------- main ----------    ---------- ramo ----------
+cenário             fps    cham   maior  troca    fps    cham   maior  troca
+a pé, parados       41,0   184    65     278      41,1   184    74     335
+a pé, andando       40,8   184    56     150      39,8   184    100    141
+vestido, parados    37,0   184    175    317      35,4   192    73     406
+vestido, andando    32,4   191    155    62       37,1   200    120    94
+montados, parados   31,8   197    225    199      38,5   209    51     306
+montados, andando   40,5   196    80     52       35,4   204    230    59
+(fps das 3: main montados parados 31,8/42,9/28,0; ramo montados parados 38,5/37,0/39,5;
+ ramo montados andando 40,9/30,0/35,4; ramo a pé andando 42,6/39,8/36,3)
+
+Malhas por boneco (diferença para a cena sem amigos, dividida por 4), iguais nas 3 execuções:
+                 main: na cena / ativas      ramo: na cena / ativas
+  a pé           10,3 / 4,8                  10,3 / 4,8
+  vestido        17,3 / 5,0                  20,3 / 7,0
+  montados       17,3 / 9,0                  20,0 / 11,5
+
+METAS (no ramo, montados contra os 4 a pé sem brinquedo):
+  chamadas: +25 parados (209 contra 184) e +20 andando (204 contra 184): dentro da meta de +30.
+    Por execução: +25, +27, +21 parados; +28, +18, +18 andando. O pior visto foi +28.
+    Contra a main, os montados têm de +8 a +12 chamadas a mais (197 para 209), e o vestido a pé
+    de +8 a +9 (184 para 192, 191 para 200): é o joelho, com +2 a +2,5 malhas ativas por boneco.
+  quadros: -6,3% parados (38,5 contra 41,1), dentro da meta. Andando, -11,1% (35,4 contra 39,8),
+    1 ponto acima da meta. Mas na mesma sessão a main, sem nada de novo, deu -22% parados e -1%
+    andando no mesmo par: a variação entre execuções (até 13 fps) é maior que a diferença medida.
+    Com esta régua, não dá para afirmar que o ramo passa da meta nos quadros.
+  maior quadro: o ramo não piorou (51 a 230 ms contra 56 a 225 ms na main).

@@ -28,6 +28,18 @@ export interface SituacaoSomItens {
   ativa: boolean;
 }
 
+/**
+ * O som curto de cada brinquedo de andar ao montar (o puf vem junto). Spec 038 (T05): a
+ * motoquinha faz um "vrum" de brinquedo, só ao montar.
+ */
+export const SOM_DO_BRINQUEDO: Readonly<Record<string, EventoSom>> = {
+  'patinete-luz': 'zum',
+  'carrinho-pedal': 'buzininha',
+  bicicletinha: 'campainha',
+  'nuvem-fofa': 'fuf',
+  'motoquinha-dourada': 'vrum',
+};
+
 /** Os relógios de cada som (segundos até o próximo). */
 export type RelogiosSomItens = Partial<Record<EventoSom, number>>;
 
@@ -66,7 +78,9 @@ export function sonsQueValem(s: SituacaoSomItens): EventoSom[] {
   const out: EventoSom[] = [];
   const andando = s.noChao && s.anda > ANDANDO;
   if (s.montado && andando) {
-    if (p.andar === 'patinete-luz' || p.andar === 'carrinho-pedal') out.push('rodinha');
+    // (spec 038: a motoquinha andando é só as rodinhas, nada de motor)
+    if (p.andar === 'patinete-luz' || p.andar === 'carrinho-pedal' || p.andar === 'motoquinha-dourada')
+      out.push('rodinha');
     if (p.andar === 'bicicletinha' || p.andar === 'carrinho-pedal') out.push('pedal');
   }
   if (p.chapeu === 'bone-helice' && s.anda > CORRENDO) out.push('helice');

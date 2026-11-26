@@ -17,6 +17,8 @@ import {
 import { vestirPremiumNoPlano } from './bonecoPremium';
 import { pecasVestidas, type FantasiaVestida } from './fantasias';
 import { acessorioEscondido } from './tesouroEFantasia';
+import { temPes } from './brinquedoAndar';
+import { dividirPernas } from './joelho';
 /** Spec 026: o corte liso até os ombros (o do vocalista e da Roqueira do Palco). */
 export const CABELO_LISO = 2;
 
@@ -76,6 +78,11 @@ export interface Peca {
    * de ~190 mil triângulos para menos da metade, e o pelo continua o mesmo de perto.
    */
   gomos?: number;
+  /**
+   * Spec 038 (T02, desempenho): os lados do cilindro (sem nada, 14) e do anel (sem nada, 20). As rodas e os pedais
+   * redondos dos brinquedos de andar ficam com menos (o teto de 10 mil triângulos por brinquedo).
+   */
+  lados?: number;
   /**
    * Spec 027 (T22): a peça fica fora do boneco de longe (o morador a mais de 18 blocos): a
    * pontinha de cada tufo do pelo, que de lá não passa de um pixel.
@@ -194,7 +201,15 @@ export type SubjuntaPremium =
   | 'andarRodinhaE'
   | 'andarRodinhaD'
   | 'andarPedal'
-  | 'andarNuvem';
+  | 'andarNuvem'
+  /** Spec 038 (T02): a bandeirinha do carrinho, que tremula em volta do mastro. */
+  | 'andarBandeira'
+  /**
+   * Spec 038 (T02): o joelho (a canela e o sapato, dentro da perna), só com brinquedo de pedal ou
+   * de apoio vestido. Esticado, é a mesma perna de antes.
+   */
+  | 'joelhoE'
+  | 'joelhoD';
 
 export interface PlanoBoneco {
   juntas: Record<Junta, { pai: Junta | null; pos: [number, number, number] }>;
@@ -434,6 +449,10 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
       pos: [0, -altSaia / 2 + 0.06, 0],
       cor: corSaia,
     });
+    // (spec 038, portão: o quadril é reto e a saia é redonda; as quinas dele furavam a saia na
+    // cintura, em pontinhas escuras. Com saia, ele fica mais estreito, todo por dentro dela)
+    const q = pecas.find((p) => p.nome === 'quadril' && p.junta === 'tronco');
+    if (q) q.tamanho = [larg * 0.85, q.tamanho[1], Math.min(q.tamanho[2], larg * 0.48)];
   }
 
   // braços: manga, punho e a mão redonda (sem manga: braço de pele)
@@ -968,8 +987,7 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
   // parte 3: de skate (a prancha debaixo dos pés; o corpo sobe em cima dela na pose)
   else if (a.skate) vestirSkate(pecas);
   if (modo) ajeitarCabeloDebaixo(pecas, modo, topoTampa, cab);
-
-  return {
+  const plano: PlanoBoneco = {
     juntas,
     pecas,
     escala: ESCALA_BONECO,
@@ -982,6 +1000,10 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
     },
     semManga,
   };
+  // spec 038 (T02): com brinquedo de pedal ou de apoio vestido (e sem patins nem skate), a perna
+  // ganha o joelho; esticada, é a mesma perna de antes
+  if (!a.patins && !a.skate && temPes(a.premium?.andar)) dividirPernas(plano);
+  return plano;
 }
 
 /**

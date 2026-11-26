@@ -17,6 +17,9 @@ import {
   alvoDaMissao,
   chegouAoAlvo,
   contarLavoura,
+  CONVITE_REPETE_S,
+  CONVITE_S,
+  CONVITE_VISIVEL_S,
   criarRelogioConvite,
   espalharPegadas,
   ondaNaPegada,
@@ -267,5 +270,90 @@ describe('030: o convite', () => {
     expect(r.passo(0.1, { missao: true, noJogo: true }).mostra).toBe(false);
     expect(r.segundos).toBe(0);
     expect(r.passo(0.1, { missao: false, noJogo: true }).mostra).toBe(false);
+  });
+});
+
+describe('038: o convite aparece e some', () => {
+  /**
+   * Um relógio falso a 60 quadros por segundo: anda `seg` segundos e anota cada aparição (quando
+   * acendeu) e cada sumiço, no tempo do relógio.
+   */
+  function rodar(
+    r: ReturnType<typeof criarRelogioConvite>,
+    seg: number,
+    op: { missao: boolean; noJogo: boolean; nova?: boolean } | ((t: number) => { missao: boolean; noJogo: boolean }),
+    relogio: { t: number; acendeu: number[]; sumiu: number[]; antes: boolean },
+  ) {
+    const dt = 1 / 60;
+    for (let i = 0; i < Math.round(seg * 60); i++) {
+      relogio.t += dt;
+      const p = r.passo(dt, typeof op === 'function' ? op(relogio.t) : op);
+      if (p.acendeu) relogio.acendeu.push(relogio.t);
+      if (relogio.antes && !p.mostra) relogio.sumiu.push(relogio.t);
+      relogio.antes = p.mostra;
+    }
+    return relogio;
+  }
+  const novo = () => ({ t: 0, acendeu: [] as number[], sumiu: [] as number[], antes: false });
+  const brincando = { missao: false, noJogo: true };
+
+  it('aparece aos 2 min, some aos 8 s e não volta antes de 5 min', () => {
+    expect(CONVITE_VISIVEL_S).toBe(8);
+    expect(CONVITE_REPETE_S).toBe(300);
+    const r = criarRelogioConvite();
+    const c = rodar(r, CONVITE_S + 1, brincando, novo());
+    expect(c.acendeu).toHaveLength(1);
+    expect(c.acendeu[0]).toBeCloseTo(CONVITE_S, 1);
+    rodar(r, 10, brincando, c);
+    expect(c.sumiu).toHaveLength(1);
+    expect(c.sumiu[0] - c.acendeu[0]).toBeCloseTo(CONVITE_VISIVEL_S, 1);
+    // 5 min brincando sem missão: ele não volta antes, e volta uma vez só
+    rodar(r, c.acendeu[0] + CONVITE_REPETE_S - 0.5 - c.t, brincando, c);
+    expect(c.acendeu).toHaveLength(1);
+    rodar(r, 20, brincando, c);
+    expect(c.acendeu).toHaveLength(2);
+    expect(c.acendeu[1] - c.acendeu[0]).toBeGreaterThanOrEqual(CONVITE_REPETE_S);
+    expect(c.sumiu).toHaveLength(2);
+    // numa hora sem missão: no máximo uma vez a cada 5 min, e cada vez à vista por 8 s
+    rodar(r, 3600, brincando, c);
+    for (let i = 1; i < c.acendeu.length; i++)
+      expect(c.acendeu[i] - c.acendeu[i - 1]).toBeGreaterThanOrEqual(CONVITE_REPETE_S);
+    for (let i = 0; i < c.sumiu.length; i++) expect(c.sumiu[i] - c.acendeu[i]).toBeCloseTo(CONVITE_VISIVEL_S, 1);
+    expect(c.acendeu.length).toBeLessThanOrEqual(2 + Math.ceil(3600 / CONVITE_REPETE_S));
+  });
+
+  it('com uma tela por cima (o quadro aberto pelo toque nele), ele some no tempo e não conta a espera', () => {
+    const r = criarRelogioConvite(2);
+    const c = rodar(r, 2.5, brincando, novo());
+    expect(c.acendeu).toHaveLength(1);
+    // ela toca no convite e o quadro fica aberto 20 s: ele some no tempo de antes
+    rodar(r, 20, { missao: false, noJogo: false }, c);
+    expect(c.sumiu).toHaveLength(1);
+    expect(c.sumiu[0] - c.acendeu[0]).toBeCloseTo(CONVITE_VISIVEL_S, 1);
+    // com a tela por cima, a espera de 5 min não anda
+    rodar(r, 600, { missao: false, noJogo: false }, c);
+    expect(c.acendeu).toHaveLength(1);
+  });
+
+  it('a missão escolhida zera tudo; sem missão de novo, o primeiro convite volta a ser aos 2 min', () => {
+    const r = criarRelogioConvite();
+    const c = rodar(r, CONVITE_S + 3, brincando, novo());
+    expect(c.acendeu).toHaveLength(1);
+    // ela escolhe uma missão com o convite à vista: ele some na hora
+    rodar(r, 1, { missao: true, noJogo: true }, c);
+    expect(c.sumiu).toHaveLength(1);
+    expect(r.aVista).toBe(0);
+    rodar(r, 30, { missao: true, noJogo: true }, c);
+    // a missão acabou: o próximo convite é aos 2 min, e não aos 5
+    const fim = c.t;
+    rodar(r, CONVITE_S + 1, brincando, c);
+    expect(c.acendeu).toHaveLength(2);
+    expect(c.acendeu[1] - fim).toBeCloseTo(CONVITE_S, 1);
+  });
+
+  it('sem missão nova, nunca aparece', () => {
+    const r = criarRelogioConvite();
+    const c = rodar(r, 1200, { missao: false, noJogo: true, nova: false }, novo());
+    expect(c.acendeu).toHaveLength(0);
   });
 });

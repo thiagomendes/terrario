@@ -11,9 +11,9 @@
  * - **Camiseta aquário:** a água azul-mar com os peixinhos dando a volta no corpo e nas mangas
  *   (o rabinho abanando), as bolhas subindo, a areia e as algas na barra; a gola, os punhos e a
  *   barra são de pérola acesa; a estrela-do-mar de ouro deitada na areia.
- * - **Tênis-cometa:** sola branca grossa com a faixa de luz que vai do ouro ao azul, o cano
- *   violeta, a biqueira, a língua, os cadarços e o cometa de ouro com a cauda de ouro e azul dos
- *   dois lados.
+ * - **Tênis-cometa** (spec 038: Violeta e ouro, sem arco-íris): sola branca grossa com a faixa de
+ *   luz que vai do ouro ao ouro claro, o cano violeta inteiro, a biqueira, a língua dourada, os
+ *   cadarços e o cometa de ouro com a cauda de ouro e creme dos dois lados.
  * - **Capa de estrelas:** veludo azul-noite que vira violeta embaixo, a barra de ouro, a lua e
  *   as estrelas que piscam em três tempos, a gola e os broches de estrela.
  * - **Dragãozinho** (fantasia, pela 017): o capuz refeito (focinho com narinas, dentinhos,
@@ -256,16 +256,21 @@ function camisetaAquario(P: Pecas, m: MedidasBoneco): void {
   P.anel('camiseta-gola', 'tronco', 'tronco', larg * 0.78, 0.045, [0, troncoH - 0.01, 0.005], PEROLA, {
     luz: 'perola',
   });
-  P.caixa(
-    'camiseta-barra',
-    'tronco',
-    'tronco',
-    [larg + 0.012, 0.022, prof + 0.012],
-    [0, 0.012, 0],
-    PEROLA,
-    0.03,
-    { luz: 'perola' },
-  );
+  // (spec 038, portão: com saia ou vestido, a barra fica de fora: ela é reta e a saia é redonda,
+  // e as quinas dela furavam a cintura da saia como lascas brancas; a barra fica escondida pela
+  // saia, de qualquer jeito)
+  const comSaia = P.lista.some((p) => p.junta === 'saia' || (p.junta === 'tronco' && p.nome === 'saia'));
+  if (!comSaia)
+    P.caixa(
+      'camiseta-barra',
+      'tronco',
+      'tronco',
+      [larg + 0.012, 0.022, prof + 0.012],
+      [0, 0.012, 0],
+      PEROLA,
+      0.03,
+      { luz: 'perola' },
+    );
   // a estrela-do-mar de ouro acesa, deitada na areia da barra (os peixinhos passam por cima)
   P.placa('camiseta-estrela', 'tronco', 'tronco', perfilEstrela(0.042), 0.016, [larg * 0.24, 0.072, frente + 0.006], OURO, {
     luz: 'ouro',
@@ -278,33 +283,34 @@ function tenisCometa(P: Pecas, m: MedidasBoneco): void {
   const { quadril } = m;
   // o tênis entra no lugar do sapato, da bota ou da pata da fantasia
   P.tirar(/^perna[ED]-(sapato|bota)/);
-  const violeta = '#6a3df5';
-  const rosa = '#ff5fc8';
+  // (spec 038, T04: Violeta e ouro, escolha do dono. As listras rosa, amarela e azul ficavam perto
+  // de arco-íris: o cano fica violeta inteiro, num degradê do mesmo violeta, e o resto em ouro)
+  const violeta = '#5b34e0';
+  const violetaClaro = '#7550f6';
   for (const lado of ['pernaE', 'pernaD'] as const) {
     const y0 = -quadril;
     const z0 = 0.04;
-    // tênis gordinho de brinquedo: a sola branca grossa com a faixa de luz (do ouro ao azul)
-    // em volta dela, por inteiro
-    P.caixa(`${lado}-tenis-sola`, lado, 'perna', [0.25, 0.05, 0.35], [0, y0 + 0.026, z0], BRANCO, 0.024, {
+    // tênis gordinho de brinquedo: a sola branca grossa, uma peça só, do calcanhar (alinhada com o
+    // fundo do cano) à ponta, com a faixa de luz (do ouro ao ouro claro) em volta dela, rente
+    // (spec 038, portão: em três lâminas soltas de tamanhos diferentes, parecia uma pilha de pratos)
+    const zSola = z0 + 0.03;
+    P.caixa(`${lado}-tenis-sola`, lado, 'perna', [0.25, 0.11, 0.37], [0, y0 + 0.055, zSola], BRANCO, 0.03, {
       brilho: 0.45,
     });
-    P.caixa(`${lado}-tenis-luz`, lado, 'perna', [0.266, 0.04, 0.366], [0, y0 + 0.068, z0], '#ffd84a', 0.018, {
+    P.caixa(`${lado}-tenis-luz`, lado, 'perna', [0.256, 0.034, 0.376], [0, y0 + 0.062, zSola], '#ffd84a', 0.012, {
       luz: 'cometa',
     });
-    P.caixa(`${lado}-tenis-sola2`, lado, 'perna', [0.25, 0.026, 0.35], [0, y0 + 0.098, z0], BRANCO, 0.012, {
-      brilho: 0.45,
-    });
-    // o cano em degradê do violeta ao rosa (lê de longe), a biqueira branca redonda
+    // o cano violeta, mais claro em cima (lê de longe), a biqueira branca redonda
     P.caixa(`${lado}-tenis-cano`, lado, 'perna', [0.23, 0.15, 0.285], [0, y0 + 0.18, z0 - 0.012], violeta, 0.065, {
       viva: true,
       brilho: 0.5,
-      pintar: (_x, y, z) => misturarCor(violeta, rosa, (y - (y0 + 0.1)) / 0.16 + (z - z0) * 0.8),
+      pintar: (_x, y) => misturarCor(violeta, violetaClaro, (y - (y0 + 0.1)) / 0.16),
     });
     P.bola(`${lado}-tenis-bico`, lado, 'perna', 0.12, [0, y0 + 0.15, z0 + 0.12], BRANCO, [1, 0.55, 0.75], {
       brilho: 0.45,
     });
     // a língua e a gola de pelúcia branca em cima, e os cadarços
-    P.caixa(`${lado}-tenis-lingua`, lado, 'perna', [0.12, 0.09, 0.05], [0, y0 + 0.255, z0 - 0.03], '#ffe14d', 0.022, {
+    P.caixa(`${lado}-tenis-lingua`, lado, 'perna', [0.12, 0.09, 0.05], [0, y0 + 0.255, z0 - 0.03], '#ffd65a', 0.022, {
       brilho: 0.4,
       rot: [-0.25, 0, 0],
     });
@@ -321,20 +327,20 @@ function tenisCometa(P: Pecas, m: MedidasBoneco): void {
         '#ffffff',
         0.009,
       );
-    // o calcanhar com a estrelinha de pérola acesa
-    P.placa(`${lado}-tenis-calcanhar`, lado, 'perna', perfilEstrela(0.04), 0.014, [0, y0 + 0.18, z0 - 0.162], PEROLA, {
-      luz: 'perola',
+    // o calcanhar com a estrelinha de ouro acesa (spec 038: a mesma luz da estrela do cometa)
+    P.placa(`${lado}-tenis-calcanhar`, lado, 'perna', perfilEstrela(0.04), 0.014, [0, y0 + 0.18, z0 - 0.162], OURO, {
+      luz: 'ouro',
       rot: [0, Math.PI, 0],
     });
     // o cometa dos dois lados: a estrela de ouro acesa e a cauda em três fitas para trás (o
-    // ouro perto da estrela, virando azul na ponta)
+    // ouro perto da estrela, clareando até o creme na ponta)
     for (const s of [-1, 1]) {
       const x = s * 0.119;
       P.placa(`${lado}-tenis-cometa${s}`, lado, 'perna', perfilEstrela(0.058), 0.016, [x, y0 + 0.185, z0 + 0.05], OURO, {
         luz: 'ouro',
         rot: [0, (s * Math.PI) / 2, 0],
       });
-      const fitas = ['#ffd23f', '#7fd4ff', '#3f8cff'];
+      const fitas = ['#ffd23f', '#ffe27a', '#fff0b8'];
       fitas.forEach((cor, i) =>
         P.caixa(
           `${lado}-tenis-cauda${s}${i}`,

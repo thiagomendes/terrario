@@ -21,8 +21,8 @@ import type { IdLuzPremium } from '../personagem/boneco';
 export const BRILHOS = {
   /** A festa de vestir e de comprar: ouro, creme e um fio de lilás. */
   festa: ['#ffe27a', '#fff6c8', '#ffc93d', '#d9c8ff'],
-  /** O tênis-cometa: ouro e azul. */
-  cometa: ['#ffd84a', '#7fd4ff', '#ffe9a0', '#4fa8ff'],
+  /** O tênis-cometa (spec 038: Violeta e ouro, sem o azul): ouro, ouro claro e violeta. */
+  cometa: ['#ffd84a', '#b28cff', '#ffe9a0', '#8f6af0'],
   /** O unicórnio: rosa, lilás e branco perolado. */
   unicornio: ['#ff6fbf', '#b98cff', '#fff4fb', '#ff9ad6'],
   /** O dragãozinho: as cores dele (verde-água, violeta) e ouro. */
@@ -74,10 +74,9 @@ function daCena(scene: Scene): LuzesDaCena {
     const t = nova.t;
     const m = nova.mats;
     if (m.cometa) {
-      // a faixa vai do ouro ao azul e volta, passando pelo branco (um lampejo de cometa, sem
-      // o verde-acinzentado do meio do caminho), sempre bem acesa
+      // a faixa vai do ouro ao ouro claro e volta (spec 038: sem o azul; o tênis Violeta e ouro)
       corDoCometa(t, cor);
-      m.cometa.emissiveColor.copyFrom(cor).scaleInPlace(1.25);
+      m.cometa.emissiveColor.copyFrom(cor).scaleInPlace(1.1);
     }
     if (m.ouro) {
       const p = 0.82 + 0.18 * Math.sin(t * 2.4);
@@ -133,22 +132,17 @@ export function luzPremium(scene: Scene, id: IdLuzPremium): StandardMaterial {
   return m;
 }
 
-/** O ouro e o azul da faixa do tênis-cometa, passando pelo branco (t em segundos). */
-function corDoCometa(t: number, out: Color3): void {
-  // uma volta a cada 2,4 s: ouro, lampejo branco, azul, lampejo branco
+/**
+ * A faixa do tênis-cometa (t em segundos). Spec 038 (T04, Violeta e ouro, escolha do dono): do
+ * ouro ao ouro claro e de volta, devagar (uma volta a cada 2,4 s), sem o azul de antes. A soma das
+ * cores fica abaixo do brilho que borra.
+ */
+export function corDoCometa(t: number, out: Color3): void {
   const f = (t / 2.4) % 1;
   const ouro = [0.86, 0.6, 0.1];
-  const azul = [0.22, 0.62, 1];
-  const branco = [1, 0.97, 0.88];
-  const misturar = (a: number[], b: number[], k: number) =>
-    out.set(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k);
-  const suave = (k: number) => k * k * (3 - 2 * k);
-  if (f < 0.35) misturar(ouro, ouro, 0);
-  else if (f < 0.42) misturar(ouro, branco, suave((f - 0.35) / 0.07));
-  else if (f < 0.5) misturar(branco, azul, suave((f - 0.42) / 0.08));
-  else if (f < 0.85) misturar(azul, azul, 0);
-  else if (f < 0.92) misturar(azul, branco, suave((f - 0.85) / 0.07));
-  else misturar(branco, ouro, suave((f - 0.92) / 0.08));
+  const claro = [1, 0.86, 0.46];
+  const k = 0.5 - 0.5 * Math.cos(f * Math.PI * 2);
+  out.set(ouro[0] + (claro[0] - ouro[0]) * k, ouro[1] + (claro[1] - ouro[1]) * k, ouro[2] + (claro[2] - ouro[2]) * k);
 }
 
 // ------------------------------------------------------------------ o aquário da camiseta
@@ -165,7 +159,8 @@ function corDoCometa(t: number, out: Color3): void {
 export const AQUARIO = { largura: 512, altura: 136, quadrosPorSegundo: 24 } as const;
 
 type Rgb = string;
-interface Peixe {
+/** Um peixinho do aquário da camiseta. */
+export interface Peixe {
   /** Onde começa na volta (0 a 1) e a altura (0 em cima, na gola; 1 na barra). */
   x0: number;
   y: number;
@@ -176,34 +171,36 @@ interface Peixe {
   borda: Rgb;
   barbatana: Rgb;
   barriga?: Rgb;
-  /** Listras (o palhacinho) ou pintas. */
-  listras?: Rgb;
+  /** As bolinhas (spec 038: nenhum peixe tem listra; o desenho das listras saiu). */
   pintas?: Rgb;
 }
 
 /**
- * Os peixinhos (duas ou três cores amigas cada: laranja, amarelo, coral e branco). Na foto da
- * lojinha (t = 0) o palhacinho e o amarelinho estão na frente do peito.
+ * Os peixinhos (duas ou três cores amigas cada: amarelo, pêssego, coral e branco). Spec 038 (T04,
+ * os Peixinhos de bolinhas, escolha do dono): o peixe laranja de listras brancas podia lembrar um
+ * personagem de filme; no lugar dele, um amarelinho de bolinhas brancas, e nenhum peixe tem
+ * listra. Na foto da lojinha (t = 0) o amarelinho de bolinhas e o pêssego estão na frente do peito.
  */
-const PEIXES: readonly Peixe[] = [
+export const PEIXES: readonly Peixe[] = [
   {
     x0: 0.45,
     y: 0.43,
     tam: 27,
     vel: 12,
-    corpo: '#ff8a1f',
-    borda: '#c4500a',
-    barbatana: '#ff8a1f',
-    listras: '#ffffff',
+    corpo: '#ffd23a',
+    borda: '#d18a00',
+    barbatana: '#ff9a3c',
+    pintas: '#ffffff',
   },
   {
     x0: 0.6,
     y: 0.66,
     tam: 21,
     vel: -9,
-    corpo: '#ffd23a',
-    borda: '#d18a00',
-    barbatana: '#ff9f1c',
+    corpo: '#ff9e6e',
+    borda: '#cf5a32',
+    barbatana: '#ffd23a',
+    barriga: '#fff3ee',
   },
   {
     x0: 0.93,
@@ -294,17 +291,6 @@ function desenharPeixe(c: CanvasRenderingContext2D, p: Peixe, fase: number): voi
     c.ellipse(s * 0.05, s * 0.5, s * 0.95, s * 0.36, 0, 0, Math.PI * 2);
     c.fill();
   }
-  if (p.listras) {
-    // as faixas brancas do palhacinho, com o contorno escuro fininho
-    for (const x of [s * 0.42, -s * 0.22]) {
-      c.fillStyle = p.listras;
-      c.beginPath();
-      c.ellipse(x, 0, s * 0.15, s * 0.8, 0, 0, Math.PI * 2);
-      c.fill();
-      c.lineWidth = Math.max(1, s * 0.06);
-      c.stroke();
-    }
-  }
   if (p.pintas) {
     c.fillStyle = p.pintas;
     for (const [x, y, r] of [
@@ -375,8 +361,11 @@ interface Aquario {
   quadro(t: number): void;
 }
 
-/** Desenha o aquário no instante t (segundos). Exportada para os testes. */
-export function desenharAquario(c: CanvasRenderingContext2D, t: number): void {
+/**
+ * Desenha o aquário no instante t (segundos). Exportada para os testes. Spec 038 (esboço): os
+ * peixinhos podem vir de fora (o desenho novo da camiseta); sem eles, os de hoje.
+ */
+export function desenharAquario(c: CanvasRenderingContext2D, t: number, peixes: readonly Peixe[] = PEIXES): void {
   const W = AQUARIO.largura;
   const H = AQUARIO.altura;
   const areia = H * 0.83;
@@ -507,8 +496,8 @@ export function desenharAquario(c: CanvasRenderingContext2D, t: number): void {
     if (a > 0) emVolta(x, 8, (xx) => desenharBolha(c, xx, y, r, a));
   }
   // os peixinhos dando a volta (e as bolhinhas que cada um solta)
-  for (let i = 0; i < PEIXES.length; i++) {
-    const p = PEIXES[i];
+  for (let i = 0; i < peixes.length; i++) {
+    const p = peixes[i];
     const x = p.x0 * W + p.vel * t;
     const y = p.y * H + Math.sin(t * 1.4 + i * 1.9) * 3;
     const dir = Math.sign(p.vel) || 1;
