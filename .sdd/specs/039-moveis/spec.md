@@ -1,7 +1,7 @@
 ---
 id: 039-moveis
 title: 'Móveis e utensílios, parte 1: a cama nova de dois blocos, sentar e deitar, e os móveis de brincar, para todos os mundos'
-status: DRAFT
+status: APPROVED
 base_branch: main
 branch: feat/039-moveis
 created_at: 2026-11-26T21:00:00Z
@@ -66,9 +66,14 @@ A cama nova saiu da 038 e veio para cá. Sobre a cama de hoje, o dono disse: "o 
 
 ## Decisões do orquestrador (pequenas, contadas ao dono; ajustadas na revisão de 26 nov)
 - **A âncora:** só a âncora viaja. As outras células saem sempre do núcleo.
-- **A cama curtinha** é a mesma `CAMA` com a parte "curtinha" no metadado. Ela continua marcando o lugar de nascer e servindo para dormir.
-- **O desenho pode passar da célula:** o encosto do sofá (1,35), a cabeceira (1,35) e o encosto da cadeira passam da altura de uma célula, só no desenho. A célula de cima continua livre. A colisão fica na célula, como a cerca, sem mudar o andador das plantas.
-- **O tapete** fica rente ao chão e não segura nada. Por cima dele vão móveis e blocos: o bloco posto em cima de uma célula do tapete leva o tapete inteiro para a mochila, sem apagar só um pedaço.
+- **A cama curtinha** é a mesma `CAMA` com a parte "curtinha" no metadado. Ela continua marcando o lugar de nascer e servindo para dormir. Nela, a criança deita encolhidinha, de lado, com o edredom: cabe numa célula.
+- **O desenho pode passar da célula:** o encosto do sofá (1,35), a cabeceira (1,35) e o encosto da cadeira passam da altura de uma célula, só no desenho. A célula de cima continua livre. A colisão vai até 1,0, sem mudar o andador das plantas.
+- **O tapete fica numa camada própria, rente ao chão** (decisão do dono, 27 nov: "sim, por cima").
+  - Ele não é o bloco da célula: fica guardado à parte, pelo núcleo, por célula de chão, com dono e direção, e é salvo.
+  - Por cima dele vão o sofá, a cadeira, a mesa e os blocos, como numa sala de verdade.
+  - Ele não segura nada e não tem colisão.
+  - Para tirá-lo, a criança quebra uma parte do tapete onde não há nada em cima. Sai o tapete inteiro, para a mochila do dono, com a proteção de quebrar.
+  - O desenho do T01 e do T05 diz como ele vai na malha do pedaço.
 - **O abajur e o criado-mudo acesos** são outro id de bloco (como a `FORNALHA_ACESA`), editados pelo núcleo e salvos. Assim a luz é a mesma para todos e para a lavoura.
 - **A pia:** a água e as bolhas aparecem só na tela de quem está perto, sem salvar e sem núcleo. Um toque liga e outro desliga, ou ela desliga sozinha em 6 s.
 - **O guarda-roupa:** as portas abrem só na tela de quem tocou e abrem a troca de roupa direto nas roupas, sem o botão "Jogar". As outras crianças veem as portas paradas.
@@ -102,8 +107,9 @@ A cama nova saiu da 038 e veio para cá. Sobre a cama de hoje, o dono disse: "o 
 - **A peça solta** (parte sem âncora válida):
   - ao abrir o mundo, vira ar;
   - o `editarLote` e a previsão dele descartam as partes que não são âncora, e cada âncora vira o móvel inteiro, se couber, ou fica de fora;
-  - assim, o colar, o espelho, o preencher e o desfazer funcionam sozinhos;
-  - quebrar uma peça solta não devolve item.
+  - assim, o colar, o espelho, o preencher e o desfazer funcionam sozinhos. Um teste prova que o colar girado mantém o sofá, o tapete e o guarda-roupa inteiros dentro da região;
+  - quebrar uma peça solta não devolve item;
+  - a função pura trata qualquer peça solta, inclusive a gerada cuja âncora foi apagada por uma edição antiga, como "não é móvel": sem desenho, sem colisão e sem item ao quebrar.
 - **Do lado do aparelho:** a previsão de pôr, quebrar e usar com várias células (`cena.ts:3262-3345`); o fantasma do móvel inteiro, vermelho se não couber; o espelho do criativo, que repete o móvel inteiro.
 - **A rede:** a `VERSAO_REDE` vai para **19**. A 039 vem antes no backlog e fica com ela. A 027, partes 2 e 3, passa para 20 e 21; o mesmo commit atualiza a `027/spec.md:219` e as `tasks.md` T29 e T36.
 - **Não há volta:** depois que o servidor 19 converte um mundo, um servidor 18 leria cada metade como uma cama inteira. Por isso:
@@ -131,7 +137,7 @@ A cama nova saiu da 038 e veio para cá. Sobre a cama de hoje, o dono disse: "o 
 - **O sentado** não é salvo e vai no jogador visto, também para quem entra no meio. Quem está montado desce antes. Quem está comendo continua comendo sentado.
 - **Deitar e dormir:** a cama passa a deitar a criança. A regra de dormir vira "todos deitados na cama, de noite".
   - Se alguém levanta antes de as outras deitarem, a espera continua para quem ficou deitado.
-  - Quem não tem cama por perto não segura a noite dos outros, como hoje.
+  - Como hoje, todos seguram a noite: ela só passa com **todos** deitados (decisão do dono, 27 nov).
 - **A pose de sentar e a de deitar** valem para a criança e para os amigos, nas duas câmeras. Na cama, o corpo achata e o edredom vai do queixo ao pé, como na segunda volta.
 
 ### 4. O desenho
@@ -174,7 +180,7 @@ A cama nova saiu da 038 e veio para cá. Sobre a cama de hoje, o dono disse: "o 
 
 ## A paridade
 - **As duas sessões que põem a cama** (`paridade.spec.ts:960-976`, `1061-1080`) são regravadas. Uma comparação prova que a única diferença é a célula do pé e o metadado.
-- **As outras 24 sessões** conferem sem regravar.
+- **As outras 24 sessões** conferem sem regravar. Se alguma mudar (por exemplo, o caminho dos moradores do sítio com o pé da cama), a causa é explicada antes de regravar.
 - **Os hashes por tema que mudam** (o `paridade-base`, o `paridade-cinco` e o `paridade-povoados`) ficam listados. Um teste prova que a Vila Neon e a Festa não mudam, porque não têm cama.
 - **Os nomes novos** saem do `hashTextos`, como a 027 fez (`paridade-cinco.test.ts:422`).
 
