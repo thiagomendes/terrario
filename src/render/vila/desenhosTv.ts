@@ -28,19 +28,20 @@ function sorteio(semente: number): () => number {
   };
 }
 
-const circulo = (g: G, x: number, y: number, r: number, cor: string) => {
+// (os ajudantes de desenho também servem à TV da casa, spec 039b: `render/moveis/desenhosTv.ts`)
+export const circulo = (g: G, x: number, y: number, r: number, cor: string) => {
   g.fillStyle = cor;
   g.beginPath();
   g.arc(x, y, Math.max(0.1, r), 0, Math.PI * 2);
   g.fill();
 };
-const elipse = (g: G, x: number, y: number, rx: number, ry: number, cor: string, giro = 0) => {
+export const elipse = (g: G, x: number, y: number, rx: number, ry: number, cor: string, giro = 0) => {
   g.fillStyle = cor;
   g.beginPath();
   g.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), giro, 0, Math.PI * 2);
   g.fill();
 };
-const ceu = (g: G, W: number, H: number, cima: string, baixo: string) => {
+export const ceu = (g: G, W: number, H: number, cima: string, baixo: string) => {
   const gr = g.createLinearGradient(0, 0, 0, H);
   gr.addColorStop(0, cima);
   gr.addColorStop(1, baixo);
@@ -48,7 +49,7 @@ const ceu = (g: G, W: number, H: number, cima: string, baixo: string) => {
   g.fillRect(0, 0, W, H);
 };
 /** Uma carinha feliz (os olhinhos e o sorriso), do tamanho `r`, em (x, y). */
-const carinha = (g: G, x: number, y: number, r: number, olho = '#3a2414') => {
+export const carinha = (g: G, x: number, y: number, r: number, olho = '#3a2414') => {
   circulo(g, x - r * 0.35, y - r * 0.15, r * 0.12, olho);
   circulo(g, x + r * 0.35, y - r * 0.15, r * 0.12, olho);
   g.strokeStyle = olho;
@@ -296,7 +297,7 @@ export function pintarChuvisco(g: G, W: number, H: number, f: number): void {
 }
 
 /** As linhas da TV de tubo por cima de tudo (bem de leve). */
-function linhasDeTv(g: G, W: number, H: number): void {
+export function linhasDeTv(g: G, W: number, H: number): void {
   g.fillStyle = 'rgba(0,0,0,0.12)';
   for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1);
 }

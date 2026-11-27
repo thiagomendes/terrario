@@ -2280,6 +2280,8 @@ export function criarCena(
     leitor: leitorDoDesenho,
     tapetes: () => cliente.tapetes,
     aoCriar: (m) => glow.addExcludedMesh(m),
+    // spec 039b (T03): o que mexe nos móveis ligados (a TV, o som, o fogão e a geladeira)
+    ligados: () => cliente.ligados,
   });
   estado.moveis = moveis;
   // spec 039 (T05): sentada e deitada (a criança e os amigos); o assento da criança chega pelo

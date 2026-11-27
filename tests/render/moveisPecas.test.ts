@@ -19,6 +19,12 @@ const MOVEIS = [
   Bloco.GUARDA_ROUPA,
   Bloco.CAMA,
   Bloco.TAPETE,
+  // spec 039b: a parte 2
+  Bloco.FOGAO,
+  Bloco.GELADEIRA,
+  Bloco.MESA,
+  Bloco.TV,
+  Bloco.SOM,
 ];
 
 function caixa(P: ArrayLike<number>) {
@@ -52,6 +58,18 @@ describe('os modelos dos móveis (spec 039, T05)', () => {
       const tri = (m.corpo!.indices!.length + (m.luz?.indices?.length ?? 0)) / 3;
       expect(tri, 'triângulos').toBeLessThan(2600);
     });
+
+  it('spec 039b: as partes do que liga (a porta e a luz da geladeira, o anel e o vapor, os cones e as notinhas)', () => {
+    expect(Object.keys(montarModeloMovel(Bloco.GELADEIRA).partes).sort()).toEqual(['comidinha', 'luzDentro', 'porta']);
+    expect(Object.keys(montarModeloMovel(Bloco.FOGAO).partes).sort()).toEqual(['anel', 'vapor0', 'vapor1', 'vapor2']);
+    expect(Object.keys(montarModeloMovel(Bloco.SOM).partes).sort()).toEqual(['cone0', 'cone1', 'luzSom', 'nota0', 'nota1', 'nota2']);
+    // a mesa e o som cabem na caixa da colisão (o tampo a 0,875; o som até 0,69)
+    const topo = (b: number) => Math.max(...(montarModeloMovel(b).corpo!.positions as number[]).filter((_, i) => i % 3 === 1));
+    expect(topo(Bloco.MESA)).toBeLessThanOrEqual(0.9);
+    expect(topo(Bloco.SOM)).toBeLessThanOrEqual(0.71);
+    // o fogão e o som cabem numa célula de alto (o vapor e as notinhas só ligados)
+    expect(topo(Bloco.FOGAO)).toBeLessThanOrEqual(1.03);
+  });
 
   it('as partes que mexem: as portas, a água, o edredom e a manta', () => {
     expect(Object.keys(montarModeloMovel(Bloco.GUARDA_ROUPA).partes).sort()).toEqual(['portaD', 'portaE']);

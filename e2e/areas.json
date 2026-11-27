@@ -110,6 +110,7 @@
         "ajustes-filho.spec.ts",
         "bloco-some.spec.ts",
         "capturas-039-t05.spec.ts",
+        "capturas-039b-t03.spec.ts",
         "construir-037.spec.ts",
         "cristal.spec.ts",
         "dar-item.spec.ts",
