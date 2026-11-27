@@ -575,6 +575,7 @@
         "desempenho-036.spec.ts",
         "desempenho-037.spec.ts",
         "desempenho-038.spec.ts",
+        "desempenho-039.spec.ts",
         "desempenho-achar-amigo.spec.ts",
         "desempenho-brinquedo.spec.ts",
         "desempenho-premium.spec.ts",
