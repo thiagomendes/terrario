@@ -1,0 +1,120 @@
+== clima-1337-doce-reino.json: 4 diferenças
+  .etapas.dormiu.edicoes.3,5[21029 (x5 z2 y82)]: - -> bloco 56 meta 5 dono 0
+  .etapas.dormiu.spawn.z: 82.5 -> 81.5
+  .etapas.final.edicoes.3,5[21029 (x5 z2 y82)]: - -> bloco 56 meta 5 dono 0
+  .etapas.final.spawn.z: 82.5 -> 81.5
+== clima-1337-rancho-alegre.json: 4 diferenças
+  .etapas.dormiu.edicoes.-13,-3[20716 (x12 z14 y80)]: - -> bloco 56 meta 5 dono 0
+  .etapas.dormiu.spawn.z: -33.5 -> -34.5
+  .etapas.final.edicoes.-13,-3[20716 (x12 z14 y80)]: - -> bloco 56 meta 5 dono 0
+  .etapas.final.spawn.z: -33.5 -> -34.5
+== clima-42-doce-reino.json: 4 diferenças
+  .etapas.dormiu.edicoes.0,0[21131 (x11 z8 y82)]: - -> bloco 56 meta 5 dono 0
+  .etapas.dormiu.spawn.z: 8.5 -> 7.5
+  .etapas.final.edicoes.0,0[21131 (x11 z8 y82)]: - -> bloco 56 meta 5 dono 0
+  .etapas.final.spawn.z: 8.5 -> 7.5
+== clima-42-rancho-alegre.json: 4 diferenças
+  .etapas.dormiu.edicoes.-2,3[22079 (x15 z3 y86)]: - -> bloco 56 meta 5 dono 0
+  .etapas.dormiu.spawn.z: 51.5 -> 50.5
+  .etapas.final.edicoes.-2,3[22079 (x15 z3 y86)]: - -> bloco 56 meta 5 dono 0
+  .etapas.final.spawn.z: 51.5 -> 50.5
+== clima-7-doce-reino.json: 4 diferenças
+  .etapas.dormiu.edicoes.4,4[19663 (x15 z12 y76)]: - -> bloco 56 meta 5 dono 0
+  .etapas.dormiu.spawn.z: 76.5 -> 75.5
+  .etapas.final.edicoes.4,4[19663 (x15 z12 y76)]: - -> bloco 56 meta 5 dono 0
+  .etapas.final.spawn.z: 76.5 -> 75.5
+== clima-7-rancho-alegre.json: 4 diferenças
+  .etapas.dormiu.edicoes.10,-10[21263 (x15 z0 y83)]: - -> bloco 56 meta 5 dono 0
+  .etapas.dormiu.spawn.z: -159.5 -> -160.5
+  .etapas.final.edicoes.10,-10[21263 (x15 z0 y83)]: - -> bloco 56 meta 5 dono 0
+  .etapas.final.spawn.z: -159.5 -> -160.5
+== construir-1337-doce-reino.json: igual
+== construir-1337-rancho-alegre.json: igual
+== construir-42-doce-reino.json: igual
+== construir-42-rancho-alegre.json: igual
+== construir-7-doce-reino.json: igual
+== construir-7-rancho-alegre.json: igual
+== fornalha-1337-doce-reino.json: igual
+== fornalha-1337-rancho-alegre.json: igual
+== fornalha-42-doce-reino.json: igual
+== fornalha-42-rancho-alegre.json: igual
+== fornalha-7-doce-reino.json: igual
+== fornalha-7-rancho-alegre.json: igual
+== itens-1337-doce-reino.json: igual
+== itens-1337-rancho-alegre.json: igual
+== itens-42-doce-reino.json: igual
+== itens-42-rancho-alegre.json: igual
+== itens-7-doce-reino.json: igual
+== itens-7-rancho-alegre.json: igual
+== sobrevivencia-1337-doce-reino.json: 10 diferenças
+  .etapas.faminto.edicoes.3,5[21029 (x5 z2 y82)]: - -> bloco 56 meta 5 dono 0
+  .etapas.faminto.spawn.z: 82.5 -> 81.5
+  .etapas.caiu.edicoes.3,5[21029 (x5 z2 y82)]: - -> bloco 56 meta 5 dono 0
+  .etapas.caiu.spawn.z: 82.5 -> 81.5
+  .etapas.comeu.edicoes.3,5[21029 (x5 z2 y82)]: - -> bloco 56 meta 5 dono 0
+  .etapas.comeu.spawn.z: 82.5 -> 81.5
+  .etapas.desmaiou.edicoes.3,5[21029 (x5 z2 y82)]: - -> bloco 56 meta 5 dono 0
+  .etapas.desmaiou.spawn.z: 82.5 -> 81.5
+  .etapas.final.edicoes.3,5[21029 (x5 z2 y82)]: - -> bloco 56 meta 5 dono 0
+  .etapas.final.spawn.z: 82.5 -> 81.5
+== sobrevivencia-1337-rancho-alegre.json: 10 diferenças
+  .etapas.faminto.edicoes.-13,-3[20716 (x12 z14 y80)]: - -> bloco 56 meta 5 dono 0
+  .etapas.faminto.spawn.z: -33.5 -> -34.5
+  .etapas.caiu.edicoes.-13,-3[20716 (x12 z14 y80)]: - -> bloco 56 meta 5 dono 0
+  .etapas.caiu.spawn.z: -33.5 -> -34.5
+  .etapas.comeu.edicoes.-13,-3[20716 (x12 z14 y80)]: - -> bloco 56 meta 5 dono 0
+  .etapas.comeu.spawn.z: -33.5 -> -34.5
+  .etapas.desmaiou.edicoes.-13,-3[20716 (x12 z14 y80)]: - -> bloco 56 meta 5 dono 0
+  .etapas.desmaiou.spawn.z: -33.5 -> -34.5
+  .etapas.final.edicoes.-13,-3[20716 (x12 z14 y80)]: - -> bloco 56 meta 5 dono 0
+  .etapas.final.spawn.z: -33.5 -> -34.5
+== sobrevivencia-42-doce-reino.json: 10 diferenças
+  .etapas.faminto.edicoes.0,0[21131 (x11 z8 y82)]: - -> bloco 56 meta 5 dono 0
+  .etapas.faminto.spawn.z: 8.5 -> 7.5
+  .etapas.caiu.edicoes.0,0[21131 (x11 z8 y82)]: - -> bloco 56 meta 5 dono 0
+  .etapas.caiu.spawn.z: 8.5 -> 7.5
+  .etapas.comeu.edicoes.0,0[21131 (x11 z8 y82)]: - -> bloco 56 meta 5 dono 0
+  .etapas.comeu.spawn.z: 8.5 -> 7.5
+  .etapas.desmaiou.edicoes.0,0[21131 (x11 z8 y82)]: - -> bloco 56 meta 5 dono 0
+  .etapas.desmaiou.spawn.z: 8.5 -> 7.5
+  .etapas.final.edicoes.0,0[21131 (x11 z8 y82)]: - -> bloco 56 meta 5 dono 0
+  .etapas.final.spawn.z: 8.5 -> 7.5
+== sobrevivencia-42-rancho-alegre.json: 10 diferenças
+  .etapas.faminto.edicoes.-2,3[22079 (x15 z3 y86)]: - -> bloco 56 meta 5 dono 0
+  .etapas.faminto.spawn.z: 51.5 -> 50.5
+  .etapas.caiu.edicoes.-2,3[22079 (x15 z3 y86)]: - -> bloco 56 meta 5 dono 0
+  .etapas.caiu.spawn.z: 51.5 -> 50.5
+  .etapas.comeu.edicoes.-2,3[22079 (x15 z3 y86)]: - -> bloco 56 meta 5 dono 0
+  .etapas.comeu.spawn.z: 51.5 -> 50.5
+  .etapas.desmaiou.edicoes.-2,3[22079 (x15 z3 y86)]: - -> bloco 56 meta 5 dono 0
+  .etapas.desmaiou.spawn.z: 51.5 -> 50.5
+  .etapas.final.edicoes.-2,3[22079 (x15 z3 y86)]: - -> bloco 56 meta 5 dono 0
+  .etapas.final.spawn.z: 51.5 -> 50.5
+== sobrevivencia-7-doce-reino.json: 10 diferenças
+  .etapas.faminto.edicoes.4,4[19663 (x15 z12 y76)]: - -> bloco 56 meta 5 dono 0
+  .etapas.faminto.spawn.z: 76.5 -> 75.5
+  .etapas.caiu.edicoes.4,4[19663 (x15 z12 y76)]: - -> bloco 56 meta 5 dono 0
+  .etapas.caiu.spawn.z: 76.5 -> 75.5
+  .etapas.comeu.edicoes.4,4[19663 (x15 z12 y76)]: - -> bloco 56 meta 5 dono 0
+  .etapas.comeu.spawn.z: 76.5 -> 75.5
+  .etapas.desmaiou.edicoes.4,4[19663 (x15 z12 y76)]: - -> bloco 56 meta 5 dono 0
+  .etapas.desmaiou.spawn.z: 76.5 -> 75.5
+  .etapas.final.edicoes.4,4[19663 (x15 z12 y76)]: - -> bloco 56 meta 5 dono 0
+  .etapas.final.spawn.z: 76.5 -> 75.5
+== sobrevivencia-7-rancho-alegre.json: 10 diferenças
+  .etapas.faminto.edicoes.10,-10[21263 (x15 z0 y83)]: - -> bloco 56 meta 5 dono 0
+  .etapas.faminto.spawn.z: -159.5 -> -160.5
+  .etapas.caiu.edicoes.10,-10[21263 (x15 z0 y83)]: - -> bloco 56 meta 5 dono 0
+  .etapas.caiu.spawn.z: -159.5 -> -160.5
+  .etapas.comeu.edicoes.10,-10[21263 (x15 z0 y83)]: - -> bloco 56 meta 5 dono 0
+  .etapas.comeu.spawn.z: -159.5 -> -160.5
+  .etapas.desmaiou.edicoes.10,-10[21263 (x15 z0 y83)]: - -> bloco 56 meta 5 dono 0
+  .etapas.desmaiou.spawn.z: -159.5 -> -160.5
+  .etapas.final.edicoes.10,-10[21263 (x15 z0 y83)]: - -> bloco 56 meta 5 dono 0
+  .etapas.final.spawn.z: -159.5 -> -160.5
+== trocas-1337-doce-reino.json: igual
+== trocas-1337-rancho-alegre.json: igual
+== trocas-42-doce-reino.json: igual
+== trocas-42-rancho-alegre.json: igual
+== trocas-7-doce-reino.json: igual
+== trocas-7-rancho-alegre.json: igual

@@ -4,7 +4,9 @@ import { armazemMemoria } from '../src/armazem';
 import { ESTILO_PADRAO, alturaTerreno } from '../../src/world/chunk';
 import '../../src/temas/todos';
 import { Bloco } from '../../src/world/blocks';
-import { celulasDoMovel } from '../../src/jogo/moveis';
+import { PARTE_CURTINHA, celulasDoMovel, metaDoMovel } from '../../src/jogo/moveis';
+import { criarNucleo } from '../../src/nucleo/nucleo';
+import { VERSAO_CAMAS } from '../../src/nucleo/camas';
 import { celulasDoTapete } from '../../src/jogo/tapetes';
 import { VERSAO_REDE, type RespostaServidor } from '../../src/rede/protocolo';
 import type { Quadro } from '../../src/nucleo/protocolo';
@@ -27,6 +29,95 @@ function canal() {
 const ident = (id: string) => ({ id, chave: `chave-secreta-de-${id}-123`, apelido: id, aparencia: {} });
 const quadros = (c: ReturnType<typeof canal>) =>
   c.recebidas.filter((m) => m.t === 'quadro') as Quadro[];
+
+describe('as camas de antes na sala da nuvem (spec 039, T03)', () => {
+  it('o mundo da main levado para a nuvem: as camas viram a nova ou a curtinha, uma vez só, e voltam assim', async () => {
+    let t = 0;
+    const armazem = armazemMemoria();
+    const g = criarGerenciador({ armazem, agora: () => t, sorteio: Math.random, depuracao: true });
+    const avancar = async (ms: number) => {
+      for (let i = 0; i < ms; i += 50) {
+        t += 50;
+        g.passo();
+        if (i % 1000 === 0) await g.manutencao();
+      }
+      await g.manutencao();
+    };
+    // o salvamento como a main grava: um chão de tábuas no alto, duas camas de uma célula (uma
+    // com a frente livre, outra com uma parede na frente) e nada de `extras.camas`
+    const X = 40;
+    const Z = 40;
+    const Y = alturaTerreno(X, Z, 1337) + 24;
+    const base = criarNucleo({ semente: 1337, modo: 'criativo', versaoMundo: 2, dono: 'x' });
+    const ed = base.estado.edicoes;
+    for (let x = X - 1; x <= X + 4; x++)
+      for (let z = Z - 1; z <= Z + 4; z++) ed.definir(x, Y - 1, z, Bloco.TABUAS);
+    ed.definir(X, Y, Z, Bloco.CAMA, 0);
+    ed.definir(X + 2, Y, Z, Bloco.CAMA, 0);
+    ed.definir(X + 2, Y, Z + 1, Bloco.TABUAS);
+    const s = base.salvar();
+    const extras: Record<string, unknown> = { ...s.extras, spawn: { x: X + 0.5, z: Z + 0.5 } };
+    delete extras['camas'];
+    const dados = { versao: 1, edicoes: s.edicoes, jogador: null, hora: s.hora, extras };
+    const a = canal();
+    await g.receber(
+      a,
+      JSON.stringify({
+        t: 'entrar',
+        versao: VERSAO_REDE,
+        jogador: ident('ana'),
+        criar: {
+          nome: 'Casa',
+          semente: 1337,
+          tema: 'rancho-alegre',
+          modo: 'criativo',
+          versaoMundo: 2,
+          estilo: ESTILO_PADRAO,
+          dados,
+        },
+      }),
+    );
+    const bv = a.recebidas.find((m) => m.t === 'bemvindo') as Extract<RespostaServidor, { t: 'bemvindo' }>;
+    const codigo = bv.sala.codigo;
+    await avancar(200);
+    const nucleo = () => g.ativas.get(codigo)!.nucleo;
+    const conferir = () => {
+      const n = nucleo();
+      expect(n.estado.mundo.bloco(X, Y, Z + 1)).toBe(Bloco.CAMA);
+      expect(n.estado.edicoes.obterMeta(X, Y, Z + 1)).toBe(metaDoMovel(0, 1));
+      expect(n.estado.mundo.bloco(X + 2, Y, Z)).toBe(Bloco.CAMA);
+      expect(n.estado.edicoes.obterMeta(X + 2, Y, Z)).toBe(metaDoMovel(0, PARTE_CURTINHA));
+      expect(n.estado.mundo.bloco(X + 2, Y, Z + 1)).toBe(Bloco.TABUAS);
+    };
+    conferir();
+    // o "bem-vindo" já leva as camas convertidas (o navegador monta o mesmo terreno)
+    const pe = bv.edicoes[`${Math.floor(X / 16)},${Math.floor((Z + 1) / 16)}`] ?? [];
+    expect(pe.some(([, v]) => (v & 255) === Bloco.CAMA && ((v >> 8) & 255) === metaDoMovel(0, 1))).toBe(
+      true,
+    );
+    // a sala dorme e acorda: a conversão não roda de novo, e as camas são as mesmas
+    const antes = JSON.stringify(nucleo().estado.edicoes.exportar());
+    g.caiu(a);
+    await avancar(95_000);
+    expect(g.ativas.has(codigo)).toBe(false);
+    const a2 = canal();
+    await g.receber(
+      a2,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('ana'), codigo }),
+    );
+    await avancar(200);
+    conferir();
+    expect(JSON.stringify(nucleo().estado.edicoes.exportar())).toBe(antes);
+    // parar de jogar com amigos: o mundo volta para o aparelho com a marca da conversão
+    await g.receber(a2, JSON.stringify({ t: 'dono', acao: 'devolver' }));
+    await avancar(200);
+    const devolvido = a2.recebidas.find((m) => m.t === 'devolvido') as Extract<
+      RespostaServidor,
+      { t: 'devolvido' }
+    >;
+    expect(devolvido.dados.extras['camas']).toBe(VERSAO_CAMAS);
+  });
+});
 
 describe('móveis e tapetes na sala da nuvem', () => {
   it('a amiga que entra no meio, quem cai e volta e a sala que dorme e acorda veem tudo igual', async () => {
