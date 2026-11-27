@@ -22,11 +22,12 @@ import type { Scene } from '@babylonjs/core/scene';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
-import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Bloco, obterBloco } from '../../world/blocks';
 import { ALTURA, TAM_X, TAM_Z } from '../../world/chunk';
 import {
   PARTE_CURTINHA,
+  celulasDoMovel,
   ehAncora,
   movelEm,
   parteDoMeta,
@@ -76,6 +77,11 @@ export interface RenderMoveis {
    * `luz`: a do dia no plástico (a mesma conta do boneco: 0,45 + 0,55 × o dia).
    */
   quadro(x: number, z: number, dt: number, luz?: number): void;
+  /**
+   * O fantasma do móvel `b` na mão, com a âncora em (x, y, z) e a direção `d`: inteiro, e
+   * vermelho se não cabe (`null`: some).
+   */
+  fantasma(b: number | null, x?: number, y?: number, z?: number, d?: number, cabe?: boolean): void;
   /** As portas do guarda-roupa da âncora (x, y, z) abrem (só na tela de quem tocou). */
   portas(x: number, y: number, z: number, abertas: boolean): void;
   /** A água da pia da âncora (x, y, z), ligada ou desligada (só na tela de quem está perto). */
@@ -462,7 +468,65 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
     }
   }
 
+  /**
+   * Spec 039 (T06): o fantasma do móvel na mão, inteiro, antes de pôr: o modelo meio
+   * transparente, e vermelho quando não cabe. Uma malha só, refeita quando o móvel ou a direção
+   * mudam.
+   */
+  let fant: { malha: Mesh; k: string } | null = null;
+  let matFantasma: StandardMaterial | null = null;
+  let matNaoCabe: StandardMaterial | null = null;
+  function materiaisDoFantasma(): void {
+    if (matFantasma) return;
+    matFantasma = new StandardMaterial('moveis-fantasma', scene);
+    matFantasma.alpha = 0.5;
+    matFantasma.specularColor.set(0, 0, 0);
+    matFantasma.emissiveColor.set(0.35, 0.35, 0.35);
+    matFantasma.backFaceCulling = true;
+    matNaoCabe = new StandardMaterial('moveis-fantasma-nao', scene);
+    matNaoCabe.alpha = 0.55;
+    matNaoCabe.diffuseColor.set(0.95, 0.25, 0.2);
+    matNaoCabe.emissiveColor.set(0.55, 0.1, 0.08);
+    matNaoCabe.specularColor.set(0, 0, 0);
+  }
+  function fantasma(b: number | null, x = 0, y = 0, z = 0, d = 0, cabe = true): void {
+    if (b === null) {
+      fant?.malha.setEnabled(false);
+      return;
+    }
+    const tapete = b === Bloco.TAPETE;
+    const k = `${b}:${d & 3}`;
+    if (!fant || fant.k !== k) {
+      fant?.malha.dispose();
+      materiaisDoFantasma();
+      const cs = tapete ? celulasDoTapete(0, 0, 0, d) : celulasDoMovel(b, 0, 0, 0, d);
+      const i = instancia(b, d & 3, { x: 0, y: 0, z: 0 }, cs, false);
+      const g = girado(i, false);
+      const malha = new Mesh('moveis-fantasma', scene);
+      if (g.corpo) {
+        const vd = new VertexData();
+        vd.positions = g.corpo.pos;
+        vd.normals = g.corpo.nor;
+        vd.colors = g.corpo.cor;
+        vd.indices = g.corpo.idx;
+        vd.applyToMesh(malha);
+      }
+      malha.isPickable = false;
+      // o meio do pé, a partir da âncora (0, 0, 0)
+      malha.metadata = { ox: i.cx, oz: i.cz };
+      op.aoCriar?.(malha);
+      fant = { malha, k };
+    }
+    const m = fant.malha;
+    const { ox, oz } = m.metadata as { ox: number; oz: number };
+    m.position.set(x + ox, y + (tapete ? 0.01 : 0), z + oz);
+    m.material = cabe ? matFantasma : matNaoCabe;
+    m.useVertexColors = cabe;
+    m.setEnabled(true);
+  }
+
   return {
+    fantasma,
     chunk(cx, cz, base, edicoes) {
       const k = chaveC(cx, cz);
       let p = pedacos.get(k);
@@ -601,6 +665,9 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
         mx.no.dispose();
       }
       mexendo.clear();
+      fant?.malha.dispose();
+      matFantasma?.dispose();
+      matNaoCabe?.dispose();
       (matCorpo as StandardMaterial).dispose();
     },
   };

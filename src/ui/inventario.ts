@@ -3,6 +3,8 @@ import { tocarSomInterface } from '../audio/somInterface';
 import { TAMANHO_BARRA, TAMANHO_INVENTARIO, type Inventario, type Slot } from '../jogo/inventario';
 import { obterItem, todosItens, type DefItem } from '../jogo/itens';
 import { itensDoCatalogo } from '../jogo/catalogo';
+import { categoriaDoItem } from '../jogo/receitas';
+import { CSS_ABAS_CATEGORIA, criarAbasCategoria } from './abasCategoria';
 import { estiloMundo } from '../world/chunk';
 import { EVENTO_ICONES, iconeDoItem } from './icones';
 import {
@@ -94,7 +96,8 @@ body[data-modo='criativo'] .slot-inv .qtd { display: none; }
 .ajuda-inv, .ajuda-inv-toque { font-size: 0.78rem; font-weight: 600; color: var(--tinta-suave); }
 /* as dicas quebram linha na largura das grades (não alargam a janela) */
 .ajuda-inv, .ajuda-inv-toque { width: 0; min-width: 100%; }
-`;
+.catalogo .abas-categoria { max-width: calc(var(--slot) * 9 + 40px); }
+${CSS_ABAS_CATEGORIA}`;
 
 /** Teclado virtual (iOS): ao focar, o campo rola para a área visível. */
 export function rolarAoFocar(campo: HTMLElement): void {
@@ -172,7 +175,9 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
   const rotCat = document.createElement('div');
   rotCat.className = 'rotulo-secao';
   rotCat.textContent = 'Catálogo criativo';
-  catalogo.append(rotCat, busca, gradeCat);
+  // spec 039: as abas de ícone em cima do catálogo (as mesmas categorias do livro de receitas)
+  const abasCat = criarAbasCategoria(() => renderCatalogo());
+  catalogo.append(rotCat, abasCat.raiz, busca, gradeCat);
   topo.append(areaExtra, catalogo);
 
   const titulo = document.createElement('h2');
@@ -577,8 +582,10 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
   function renderCatalogo(): void {
     const termo = busca.value.trim().toLowerCase();
     // spec 014: o que é só de outro tema não aparece no criativo deste mundo
+    const aba = abasCat.atual();
     const itens = itensDoCatalogo(estiloMundo()).filter(
-      (d) => !termo || d.nome.toLowerCase().includes(termo),
+      (d) =>
+        (!termo || d.nome.toLowerCase().includes(termo)) && (!aba || categoriaDoItem(d) === aba),
     );
     gradeCat.replaceChildren();
     for (const d of itens) {

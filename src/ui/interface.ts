@@ -558,11 +558,32 @@ export function criarInterface(
   }
   let aoAbrirEditor: (() => void) | undefined;
   bPersonagem.addEventListener('click', () => mostrarTela('personagem'));
-  voltar.addEventListener('click', () => mostrarTela('menu'));
+  /**
+   * Spec 039 (T06): a troca de roupa aberta pelo guarda-roupa do jogo (direto nas roupas, sem o
+   * botão "Jogar": o "voltar" volta para o jogo). Ao fechar, as portas do guarda-roupa fecham.
+   */
+  let provador = false;
+  function fecharProvador(): void {
+    if (!provador) return;
+    provador = false;
+    telaPersonagem.classList.remove('provador');
+    window.dispatchEvent(new CustomEvent('brumaluz:guardaRoupaFechou'));
+  }
+  voltar.addEventListener('click', () => {
+    if (provador) {
+      fecharProvador();
+      entrarNoJogo();
+      return;
+    }
+    mostrarTela('menu');
+  });
   // Sem HUD por cima do título; volta ao menu quando o título fecha.
   const sincronizarTitulo = () => {
     document.body.classList.toggle('tela-titulo', !entrada.hidden);
-    if (entrada.hidden) mostrarTela('menu');
+    if (entrada.hidden) {
+      fecharProvador();
+      mostrarTela('menu');
+    }
   };
   new MutationObserver(sincronizarTitulo).observe(entrada, {
     attributes: true,
@@ -772,6 +793,16 @@ export function criarInterface(
     document.exitPointerLock?.();
     painel.abrirFantasias('temas');
   }
+  // Spec 039 (T06): o guarda-roupa do jogo abre a troca de roupa direto nas roupas
+  window.addEventListener('brumaluz:guardaRoupa', () => {
+    if (!entrada.hidden) return;
+    entrada.hidden = false;
+    provador = true;
+    telaPersonagem.classList.add('provador');
+    mostrarTela('personagem');
+    document.exitPointerLock?.();
+    painel.abrirAba('roupa');
+  });
   // Spec 017 (T05): mundo recém-criado sugere uma vez a fantasia do tema dele
   if (opMundo.mundo && opMundo.mundoNovo) {
     const loja = armazenamento();

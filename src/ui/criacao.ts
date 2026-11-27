@@ -16,6 +16,7 @@ import {
 import { iconeDoItem } from './icones';
 import { rolarAoFocar, type InventarioUI } from './inventario';
 import { trocar } from './conteiner';
+import { criarAbasCategoria } from './abasCategoria';
 
 export const CSS_CRIACAO = `
 /* criação e livro são seções do inventário: sem fundo nem sombra próprios */
@@ -129,7 +130,9 @@ export function criarCriacao(
   rolarAoFocar(busca);
   const lista = document.createElement('div');
   lista.className = 'lista';
-  livro.append(busca, lista);
+  // spec 039: as abas de ícone das categorias (as mesmas do catálogo do criativo)
+  const abas = criarAbasCategoria(() => renderLivro());
+  livro.append(abas.raiz, busca, lista);
   botaoLivro.addEventListener('click', (e) => {
     e.preventDefault();
     livro.hidden = !livro.hidden;
@@ -170,7 +173,10 @@ export function criarCriacao(
     const termo = busca.value.trim().toLowerCase();
     lista.replaceChildren();
     // spec 014: receitas com algo só de outro tema não aparecem neste mundo
-    const itens = RECEITAS.filter((r) => receitaNoMundo(r, estiloMundo()))
+    const aba = abas.atual();
+    const itens = RECEITAS.filter(
+      (r) => receitaNoMundo(r, estiloMundo()) && (!aba || r.categoria === aba),
+    )
       .map((r) => ({ r, def: obterItem(r.resultado.item) }))
       .filter(({ def }) => !!def && (!termo || def.nome.toLowerCase().includes(termo)))
       .map((x) => ({ ...x, ok: podeFazer(x.r, contar) && (!x.r.mesa || lado === 3) }))

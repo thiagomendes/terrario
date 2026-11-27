@@ -3,7 +3,8 @@ import { Bloco, obterBloco } from '../../src/world/blocks';
 import { caixasDoBloco } from '../../src/world/formas';
 import { criarEdicoes } from '../../src/world/edicoes';
 import { criarMundoSolido } from '../../src/world/solido';
-import { colar, copiar } from '../../src/jogo/construcao';
+import { colar, colarTapetes, copiar, espelharMovel } from '../../src/jogo/construcao';
+import { celulasDoTapete } from '../../src/jogo/tapetes';
 import { recusaConstruir } from '../../src/jogo/construir';
 import {
   FORMA_CAMA,
@@ -438,5 +439,70 @@ describe('o lote do criativo com os móveis', () => {
       const sofa = cheias.find(([x, y, z]) => l.bloco(x, y, z) === Bloco.SOFA)!;
       expect(movelEm(l, sofa[0], sofa[1], sofa[2])!.d, `giro ${giro}`).toBe((4 - giro) % 4);
     }
+  });
+
+  it('spec 039 (T06): o colar girado leva o tapete inteiro, dentro da região, com o sofá por cima', () => {
+    const sala = mundo();
+    porMovel(sala, Bloco.SOFA, 0, 1, 0, 0);
+    // o tapete 3 × 2 rente ao chão, debaixo do sofá; o outro, metade fora, não vai
+    const tapetes = [
+      { x: 0, y: 1, z: 0, d: 0 },
+      { x: 2, y: 1, z: 2, d: 0 },
+    ];
+    const bp = copiar(
+      'sala',
+      { x: 0, y: 1, z: 0 },
+      { x: 2, y: 2, z: 2 },
+      (x, y, z) => sala.bloco(x, y, z) | (sala.meta(x, y, z) << 8),
+      tapetes,
+    )!;
+    expect(bp.tapetes).toEqual([{ x: 0, y: 0, z: 0, d: 0 }]);
+    for (const giro of [0, 1, 2, 3]) {
+      const o = { x: 20, y: 1, z: 30 };
+      const [t] = colarTapetes(bp, o, giro);
+      expect(t.d, `giro ${giro}`).toBe((4 - giro) % 4);
+      for (const c of celulasDoTapete(t.x, t.y, t.z, t.d)) {
+        expect(c.x - o.x, `giro ${giro}`).toBeGreaterThanOrEqual(0);
+        expect(c.x - o.x, `giro ${giro}`).toBeLessThan(3);
+        expect(c.z - o.z, `giro ${giro}`).toBeGreaterThanOrEqual(0);
+        expect(c.z - o.z, `giro ${giro}`).toBeLessThan(3);
+        expect(c.y, `giro ${giro}`).toBe(o.y);
+      }
+      // o sofá colado continua em cima do tapete (as duas células dele são do tapete)
+      const l = mundo();
+      aplicar(
+        l,
+        colar(bp, o, giro).map((e) => ({ ...e.p, v: e.v })),
+      );
+      const doTapete = new Set(
+        celulasDoTapete(t.x, t.y, t.z, t.d).map((c) => `${c.x},${c.y},${c.z}`),
+      );
+      expect(l.m.size, `giro ${giro}`).toBe(2);
+      for (const k of l.m.keys()) expect(doTapete.has(k), `giro ${giro} ${k}`).toBe(true);
+    }
+  });
+
+  it('spec 039 (T06): o espelho repete o móvel do outro lado, crescendo para o outro lado', () => {
+    const eixo = 10;
+    const chaves = (cs: { x: number; y: number; z: number }[]) =>
+      new Set(cs.map((c) => `${c.x},${c.y},${c.z}`));
+    const espelhadas = (cs: { x: number; y: number; z: number }[]) =>
+      new Set(cs.map((c) => `${2 * eixo - c.x},${c.y},${c.z}`));
+    const celulas = (b: number, x: number, y: number, z: number, d: number) =>
+      b === Bloco.TAPETE ? celulasDoTapete(x, y, z, d) : celulasDoMovel(b, x, y, z, d);
+    for (const b of [Bloco.SOFA, Bloco.GUARDA_ROUPA, Bloco.CAMA, Bloco.ABAJUR, Bloco.PIA, Bloco.TAPETE])
+      for (let d = 0; d < 4; d++) {
+        const m = espelharMovel(b, 4, 1, 5, d, eixo);
+        expect(m, `${b} ${d}`).not.toBeNull();
+        // as mesmas células, espelhadas (nada deslocado)
+        expect(chaves(celulas(b, m!.x, m!.y, m!.z, m!.d)), `${b} ${d}`).toEqual(
+          espelhadas(celulas(b, 4, 1, 5, d)),
+        );
+        // o que olhava para +x olha para -x (e o contrário); +z e -z ficam
+        expect(m!.d, `${b} ${d}`).toBe(d === 1 ? 3 : d === 3 ? 1 : d);
+      }
+    // a cama: a cabeceira espelhada é a cabeceira (a âncora)
+    const cama = espelharMovel(Bloco.CAMA, 4, 1, 5, 1, eixo)!;
+    expect([cama.x, cama.z]).toEqual([16, 5]);
   });
 });

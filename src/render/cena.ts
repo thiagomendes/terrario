@@ -30,6 +30,7 @@ import { construirMapaEmissivo } from './emissivo';
 import { criarTintaProtecao } from './tintaProtecao';
 import { decidirLote, gruposDoLote } from '../jogo/loteMoveis';
 import {
+  acesoOuApagado,
   celulasDoMovel,
   ehMovel,
   metaDoMovel,
@@ -237,8 +238,10 @@ import { criarVisualConstrucao } from './construcao';
 import {
   NOMES_FERRAMENTA,
   colar,
+  colarTapetes,
   copiar,
   criarHistorico,
+  espelharMovel,
   espelharX,
   pontosDaForma,
   type Blueprint,
@@ -375,6 +378,7 @@ import {
   aquecerAmostras,
   chuvaAudivel,
   observarSons,
+  perfilDoSom,
   somDoTrovao,
   SONS_NOVOS_019,
 } from '../audio/sons';
@@ -459,6 +463,9 @@ const INTERATIVOS = new Set<number>([
   Bloco.ABAJUR_ACESO,
   Bloco.CRIADO_MUDO,
   Bloco.CRIADO_MUDO_ACESO,
+  // spec 039 (T06): os toques só da tela (as portas e a troca de roupa; a água da pia)
+  Bloco.GUARDA_ROUPA,
+  Bloco.PIA,
 ]);
 let raioChunks = RAIO_INICIAL;
 /**
@@ -578,6 +585,20 @@ export interface EstadoDepuracao {
    * `sentou` e `levantou`; as fotos chamam direto.
    */
   meuAssento?: (a: import('./poseMovel').AssentoNaTela | null) => void;
+  /** Spec 039 (T06, testes): as peças soltas na cópia da tela, numa caixa ("x,y,z"). */
+  pecasSoltas?: (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number) => string[];
+  /** Spec 039 (T06): o fantasma do móvel na mão agora (testes e fotos; null: nenhum). */
+  fantasmaMovel?: { bloco: number; x: number; y: number; z: number; d: number; cabe: boolean } | null;
+  /**
+   * Spec 039 (T06): o toque de tela de cada móvel, para os testes (as portas do guarda-roupa e a
+   * água da pia de agora, e o assento em que a tela levou o boneco).
+   */
+  moveisTela?: () => {
+    portas: string | null;
+    agua: string[];
+    assento: import('./poseMovel').AssentoNaTela | null;
+    chegando: boolean;
+  };
   /** Spec 026: o estado do bairro que o núcleo mandou (show, estojos, caixas, lhamas). */
   vilaEstado?: () => import('../nucleo/vila').VilaVista | null;
   /** Spec 026: manda a caixa do palco ou o toque no palco ao núcleo. */
@@ -2818,8 +2839,8 @@ export function criarCena(
         telefone: () => estado.vilaMissoes?.rua('orelhao'),
       })
     : null;
-  if (passeio || casaCena)
-    controle.definirAssento(() => passeio?.lugar() ?? casaCena?.lugar() ?? null);
+  // (spec 039, T06: e o assento do móvel, em todos os mundos)
+  controle.definirAssento(() => passeio?.lugar() ?? casaCena?.lugar() ?? lugarNoMovel());
   if (casaCena)
     estado.vilaCasa = {
       tocar: (qual) => casaCena.tocar(qual),
@@ -3307,13 +3328,26 @@ export function criarCena(
    * Spec 039: pôr o tapete na camada rente ao chão: a mesma regra do núcleo antes de prever (as
    * seis células livres, com chão e a proteção), e o tapete aparece na hora.
    */
-  function porTapete(x: number, y: number, z: number, meta: number): boolean {
+  function porTapete(
+    x: number,
+    y: number,
+    z: number,
+    meta: number,
+    /** O colar e o espelho do criativo: o que não cabe fica de fora, calado. */
+    doLote = false,
+  ): boolean {
     const d = meta & 3;
     const r = recusaPorTapete(regra, cliente.tapetes, voce, x, y, z, d, Bloco.TAPETE, ALTURA);
     if (r) {
+      if (doLote) return false;
       if ('protecao' in r) return recusarProtegido(r.protecao);
       barramento.emitir('recusa', { motivo: 'colocar' });
       return false;
+    }
+    // spec 039 (T06): o espelho do criativo repete o tapete do outro lado, virado
+    if (!doLote && espelho !== null && modo === 'criativo') {
+      const m = espelharMovel(Bloco.TAPETE, x, y, z, d, espelho);
+      if (m && (m.x !== x || m.d !== d)) window.setTimeout(() => porTapete(m.x, m.y, m.z, m.d, true), 0);
     }
     const id = proximoId();
     cliente.preverTapete(id, { x, y, z, d, dono: meuIndiceDono() ?? 0 });
@@ -3416,7 +3450,19 @@ export function criarCena(
         slot,
         ...(extrasFeitos.length ? { extras: extrasFeitos } : {}),
       });
-    if (espelho !== null && modo === 'criativo' && !(quebra && b !== Bloco.AR)) {
+    // spec 039 (T06): o móvel espelhado cresce para o outro lado (a âncora e a direção viram)
+    const movelEspelhado =
+      movelPosto && espelho !== null && modo === 'criativo'
+        ? espelharMovel(b, x, y, z, meta & 3, espelho)
+        : null;
+    if (movelEspelhado) {
+      const { x: mx, y: my, z: mz, d: md } = movelEspelhado;
+      if (mx !== x || md !== (meta & 3)) {
+        const v = empacotar(b, metaDoMovel(md, 0));
+        lote.push({ x: mx, y: my, z: mz, antes: valorEm(mx, my, mz), depois: v });
+        editarLote([{ x: mx, y: my, z: mz, v }]);
+      }
+    } else if (espelho !== null && modo === 'criativo' && !(quebra && b !== Bloco.AR)) {
       const m = espelharX({ x, y, z }, espelho);
       if (m.x !== x) {
         const a = valorEm(m.x, m.y, m.z);
@@ -3742,6 +3788,33 @@ export function criarCena(
       corpos: corposAgora(),
     });
   }
+  /**
+   * Spec 039 (T06): as células do móvel `b` com a âncora em (x, y, z), olhando para `d`, e se
+   * todas estão livres (o ar, a planta baixa ou a peça solta, dentro da altura do mundo).
+   */
+  function celulasLivresDoMovel(b: number, x: number, y: number, z: number, d: number) {
+    const celulas = celulasDoMovel(b, x, y, z, d);
+    const livres = celulas.every(
+      (c) =>
+        c.y >= 0 &&
+        c.y < ALTURA &&
+        (substituivel(blocoEm(c.x, c.y, c.z)) || pecaSolta(leitorMoveis, c.x, c.y, c.z)),
+    );
+    return { celulas, livres };
+  }
+  /**
+   * Spec 039 (T06): o móvel (ou o tapete) cabe ali, pela mesma conta do núcleo: as células
+   * livres, a proteção e a regra da 037 (nunca em cima de um corpo, e de pé no chão). É o que
+   * pinta o fantasma de vermelho.
+   */
+  function movelCabe(b: number, x: number, y: number, z: number, d: number): boolean {
+    if (b === Bloco.TAPETE)
+      return !recusaPorTapete(regra, cliente.tapetes, voce, x, y, z, d, Bloco.TAPETE, ALTURA);
+    const { celulas, livres } = celulasLivresDoMovel(b, x, y, z, d);
+    if (!livres) return false;
+    if (celulas.some((c) => recusaColocar(regra, voce, c.x, c.y, c.z, b))) return false;
+    return !naoEntraAqui(b, celulas);
+  }
 
   function interagir(acao: AcaoInteracao): boolean {
     return executarInteracao(acao, {
@@ -3772,13 +3845,7 @@ export function criarCena(
         // spec 039: o móvel ocupa as células da tabela; se alguma não estiver livre, o "não"
         // curtinho da 037 (o núcleo confere as mesmas)
         if (ehMovel(b)) {
-          const celulas = celulasDoMovel(b, x, y, z, meta & 3);
-          const livres = celulas.every(
-            (c) =>
-              c.y >= 0 &&
-              c.y < ALTURA &&
-              (substituivel(blocoEm(c.x, c.y, c.z)) || pecaSolta(leitorMoveis, c.x, c.y, c.z)),
-          );
+          const { celulas, livres } = celulasLivresDoMovel(b, x, y, z, meta & 3);
           if (!livres) {
             barramento.emitir('recusa', { motivo: 'colocar' });
             return false;
@@ -3933,6 +4000,18 @@ export function criarCena(
         barramento.emitir('recusa', { motivo: 'colocar' });
         return;
       }
+      // spec 039 (T06): o abajur e o criado-mudo acendem na hora, as células juntas (a cúpula e
+      // o pé trocam de id no mesmo passo: a cópia da tela nunca fica com meio abajur)
+      if (acesoOuApagado(alvoBloco) !== null) {
+        tocarMovel(a.x, a.y, a.z, alvoBloco);
+        return;
+      }
+      // spec 039 (T06): os toques só da tela, em qualquer guarda-roupa e pia (o guarda-roupa
+      // abre as portas e a troca de roupa; a pia abre e fecha a água)
+      if (alvoBloco === Bloco.GUARDA_ROUPA || alvoBloco === Bloco.PIA) {
+        tocarMovel(a.x, a.y, a.z, alvoBloco);
+        return;
+      }
       // baú e fornalha abrem quando o núcleo manda o conteúdo; a cama decide o sono lá
       pedirUso(a.x, a.y, a.z);
       return;
@@ -4015,6 +4094,215 @@ export function criarCena(
     if (p?.item === COLHER_PEDREIRO) return;
     interagirComEventos('colocar');
   }
+
+  // ------------------------------------------------------------ os móveis na tela (spec 039, T06)
+  /** O guarda-roupa de portas abertas agora (a âncora; só na tela de quem tocou). */
+  let portasAbertas: { x: number; y: number; z: number } | null = null;
+  /** As pias com a água aberta (a âncora → o relógio que fecha sozinho em 6 s). */
+  const aguasAbertas = new Map<string, { x: number; y: number; z: number; timer: number }>();
+  /** Até quando o som de móvel de agora toca (um por vez perto da criança). */
+  let somMovelAte = 0;
+  /** Um som de móvel, perto da criança, e um por vez (o outro espera acabar). */
+  function somMovel(ev: EventoSom, x: number, z: number): void {
+    const t = performance.now();
+    if (t < somMovelAte) return;
+    if (Math.hypot(x + 0.5 - controle.jogador.x, z + 0.5 - controle.jogador.z) > 12) return;
+    if (tocarSom(motorAudio, ev)) somMovelAte = t + perfilDoSom(ev, 'pedra').duracao * 1000;
+  }
+  /**
+   * O toque num móvel que muda (o abajur e o criado-mudo pelo núcleo, previstos na hora; o
+   * guarda-roupa e a pia só na tela). A peça solta não é móvel: nada acontece.
+   */
+  function tocarMovel(x: number, y: number, z: number, b: number): void {
+    const m = movelEm(leitorMoveis, x, y, z);
+    if (!m) return;
+    const { x: ax, y: ay, z: az } = m.ancora;
+    const novo = acesoOuApagado(b);
+    if (novo !== null) {
+      const id = proximoId();
+      // a cúpula e o pé (ou o criado-mudo inteiro) trocam de id juntos, com a parte e o dono
+      // de cada célula (o núcleo faz igual)
+      for (const q of m.celulas) cliente.prever(id, q.x, q.y, q.z, novo, metaDoMovel(m.d, q.parte));
+      somMovel('clique', ax, az);
+      enviarTelemetria(true);
+      enviar({ t: 'usar', id, x, y, z });
+      return;
+    }
+    if (b === Bloco.GUARDA_ROUPA) {
+      if (portasAbertas) moveis.portas(portasAbertas.x, portasAbertas.y, portasAbertas.z, false);
+      portasAbertas = { x: ax, y: ay, z: az };
+      moveis.portas(ax, ay, az, true);
+      somMovel('portas', ax, az);
+      // as portas abrem (0,4 s) e a troca de roupa vem logo, direto nas roupas
+      window.setTimeout(() => {
+        if (portasAbertas?.x === ax && portasAbertas.y === ay && portasAbertas.z === az)
+          window.dispatchEvent(new CustomEvent('brumaluz:guardaRoupa'));
+      }, 300);
+      return;
+    }
+    if (b === Bloco.PIA) {
+      const k = `${ax},${ay},${az}`;
+      const aberta = aguasAbertas.get(k);
+      if (aberta) {
+        fecharAgua(k);
+        return;
+      }
+      moveis.agua(ax, ay, az, true);
+      somMovel('torneira', ax, az);
+      const timer = window.setTimeout(() => fecharAgua(k), 6000);
+      aguasAbertas.set(k, { x: ax, y: ay, z: az, timer });
+    }
+  }
+  function fecharAgua(k: string): void {
+    const a = aguasAbertas.get(k);
+    if (!a) return;
+    window.clearTimeout(a.timer);
+    aguasAbertas.delete(k);
+    moveis.agua(a.x, a.y, a.z, false);
+  }
+  // a troca de roupa fechou: as portas fecham devagar (sem bater)
+  window.addEventListener('brumaluz:guardaRoupaFechou', () => {
+    if (!portasAbertas) return;
+    const p = portasAbertas;
+    portasAbertas = null;
+    moveis.portas(p.x, p.y, p.z, false);
+    somMovel('portas', p.x, p.z);
+  });
+
+  /**
+   * Sentar e deitar: o núcleo decide (o evento `sentou`), e a tela leva o boneco até o assento
+   * (ou o meio da cama ou do sofá), deslizando, sem pulo; lá ele fica preso ao lugar até andar ou
+   * pular, e então desliza para a célula livre mais perto de onde veio e solta. O núcleo levanta
+   * quem não chega em 3 s, quem pula e quem se afasta.
+   */
+  const DURA_IR_AO_ASSENTO = 0.3;
+  const DURA_SAIR_DO_ASSENTO = 0.25;
+  let noAssento: {
+    a: AssentoNaTela;
+    de: { x: number; y: number; z: number };
+    ate: { x: number; y: number; z: number };
+    t0: number;
+    dura: number;
+    /** Indo para o lugar, sentado (preso), ou saindo dele. */
+    fase: 'indo' | 'sentado' | 'saindo';
+  } | null = null;
+  /** O alto da colisão do assento: o boneco fica em cima dele (a pose arruma o corpo). */
+  const altoDoAssento = (a: AssentoNaTela) =>
+    a.y + (blocoEm(a.x, a.y, a.z) === Bloco.CAMA ? 9 / 16 : 10 / 16);
+  function irAoAssento(a: AssentoNaTela): void {
+    const j = controle.jogador;
+    const de = noAssento?.fase === 'sentado' ? noAssento.ate : { x: j.x, y: j.y, z: j.z };
+    noAssento = {
+      a,
+      de: { ...de },
+      ate: { x: a.px, y: altoDoAssento(a), z: a.pz },
+      t0: performance.now() / 1000,
+      dura: DURA_IR_AO_ASSENTO,
+      fase: 'indo',
+    };
+    // quem estava de pé guarda de onde veio (para levantar para o mesmo lado)
+    if (!lugarDeOndeVeio) lugarDeOndeVeio = { x: j.x, z: j.z };
+    somMovel(a.deitado ? 'deitar' : 'sentar', a.x, a.z);
+  }
+  let lugarDeOndeVeio: { x: number; z: number } | null = null;
+  /** A célula livre em volta do móvel mais perto de onde a criança veio (para levantar). */
+  function lugarDeLevantar(a: AssentoNaTela): { x: number; y: number; z: number } | null {
+    const m = movelEm(leitorMoveis, a.x, a.y, a.z);
+    const cs = m?.celulas.filter((c) => c.y === a.y) ?? [{ x: a.x, y: a.y, z: a.z, parte: 0 }];
+    const dentro = new Set(cs.map((c) => `${c.x},${c.z}`));
+    const livre = (x: number, y: number, z: number) =>
+      !obterBlocoDef(blocoEm(x, y, z))?.solido && !obterBlocoDef(blocoEm(x, y + 1, z))?.solido;
+    const de = lugarDeOndeVeio ?? { x: a.px, z: a.pz };
+    let melhor: { x: number; y: number; z: number } | null = null;
+    let dm = Infinity;
+    for (const c of cs)
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const x = c.x + dx;
+        const z = c.z + dz;
+        if (dentro.has(`${x},${z}`) || !livre(x, a.y, z)) continue;
+        const d = Math.hypot(x + 0.5 - de.x, z + 0.5 - de.z);
+        if (d < dm) {
+          dm = d;
+          melhor = { x: x + 0.5, y: a.y, z: z + 0.5 };
+        }
+      }
+    return melhor;
+  }
+  /** Sai do assento (andou, pulou, ou o núcleo levantou): desliza para o lado e solta. */
+  function sairDoAssento(): void {
+    definirMeuAssento(null);
+    if (!noAssento || noAssento.fase === 'saindo') return;
+    const j = controle.jogador;
+    const fora = lugarDeLevantar(noAssento.a);
+    if (!fora) {
+      // cercado: fica em pé em cima do móvel (a física cuida do resto)
+      j.y = noAssento.a.y + 1;
+      noAssento = null;
+      lugarDeOndeVeio = null;
+      return;
+    }
+    noAssento = {
+      ...noAssento,
+      de: { x: j.x, y: j.y, z: j.z },
+      ate: fora,
+      t0: performance.now() / 1000,
+      dura: DURA_SAIR_DO_ASSENTO,
+      fase: 'saindo',
+    };
+  }
+  /** O lugar do boneco agora (preso ao assento), ou null (a física anda solta). */
+  function lugarNoMovel(): { x: number; y: number; z: number } | null {
+    const s = noAssento;
+    if (!s) return null;
+    const t = performance.now() / 1000;
+    if (s.fase === 'sentado') {
+      const tk = controle.teclas;
+      if (tk.frente || tk.tras || tk.esquerda || tk.direita || tk.pular) {
+        sairDoAssento();
+        return lugarNoMovel();
+      }
+      return s.ate;
+    }
+    const u = Math.min(1, (t - s.t0) / s.dura);
+    const k = u * u * (3 - 2 * u);
+    const p = {
+      x: s.de.x + (s.ate.x - s.de.x) * k,
+      y: s.de.y + (s.ate.y - s.de.y) * k,
+      z: s.de.z + (s.ate.z - s.de.z) * k,
+    };
+    if (u >= 1) {
+      if (s.fase === 'indo') {
+        s.fase = 'sentado';
+        // chegou: a pose de sentada (ou deitada) entra agora
+        definirMeuAssento(s.a);
+        enviarTelemetria(true);
+      } else {
+        noAssento = null;
+        lugarDeOndeVeio = null;
+      }
+    }
+    return p;
+  }
+  /** Testes: as peças soltas na cópia da tela, numa caixa (a previsão nunca deixa nenhuma). */
+  estado.pecasSoltas = (x0, y0, z0, x1, y1, z1) => {
+    const soltas: string[] = [];
+    for (let y = y0; y <= y1; y++)
+      for (let z = z0; z <= z1; z++)
+        for (let x = x0; x <= x1; x++)
+          if (pecaSolta(leitorMoveis, x, y, z)) soltas.push(`${x},${y},${z}`);
+    return soltas;
+  };
+  estado.moveisTela = () => ({
+    portas: portasAbertas ? `${portasAbertas.x},${portasAbertas.y},${portasAbertas.z}` : null,
+    agua: [...aguasAbertas.keys()],
+    assento: noAssento?.fase === 'sentado' ? noAssento.a : null,
+    chegando: noAssento?.fase === 'indo',
+  });
 
   /** Abre ou fecha a porta (e a metade de cima/baixo, se houver). */
   function alternarPorta(x: number, y: number, z: number): void {
@@ -4113,6 +4401,12 @@ export function criarCena(
   estado.apontar = (yaw, pitch) => controle.apontar(yaw, pitch);
   estado.teleportar = (x, z, yFixo) => {
     const j = controle.jogador;
+    // spec 039 (T06): quem vai para outro lugar de uma vez larga o móvel (o núcleo levanta junto)
+    if (noAssento) {
+      noAssento = null;
+      lugarDeOndeVeio = null;
+      definirMeuAssento(null);
+    }
     const livre = (yy: number) => !obterBlocoDef(blocoEm(Math.floor(x), yy, Math.floor(z)))?.solido;
     let y = yFixo ?? alturaTerreno(Math.floor(x), Math.floor(z), semente) + 1;
     while (yFixo === undefined && y < ALTURA - 2 && !(livre(y) && livre(y + 1))) y++;
@@ -7136,6 +7430,8 @@ export function criarCena(
       }
       aplicarLote(lote, 'depois');
       historico.registrar(lote);
+      // spec 039 (T06): os tapetes da cópia, girados com ela (a camada rente ao chão)
+      for (const t of colarTapetes(blueprintAtual, p, giro)) porTapete(t.x, t.y, t.z, t.d, true);
       toast(`Construção colada (${lote.length} blocos)`);
       return;
     }
@@ -7147,7 +7443,7 @@ export function criarCena(
     const b = p;
     if (f === 'copiar') {
       const nome = `Construção ${blueprints().length + 1}`;
-      const bp = copiar(nome, pontoA, b, valorEm);
+      const bp = copiar(nome, pontoA, b, valorEm, cliente.tapetes.todos());
       if (!bp) toast('Região grande demais');
       else {
         blueprintAtual = bp;
@@ -7221,6 +7517,8 @@ export function criarCena(
       toast(`Giro: ${giro * 90}°`);
     }
   });
+  let chaveFantasmaMovel = '';
+  let cabeFantasmaMovel = true;
   quadroConstrucao = (tempo: number) => {
     const a = alvoDoQuadro();
     const f = modoConstrucao >= 0 ? FERRAMENTAS[modoConstrucao] : null;
@@ -7233,13 +7531,30 @@ export function criarCena(
       f === 'preencher' || f === 'parede' || f === 'linha' || f === 'esfera';
     const pontoFantasma =
       ferramentaComFantasma || (!f && configAtual?.previaColocar) ? colocar : null;
+    // spec 039 (T06): o móvel na mão mostra sempre o fantasma dele inteiro (vermelho se não
+    // cabe), no lugar do cubo
+    const movelNaMao = !f && !!bloco && (ehMovel(bloco) || bloco === Bloco.TAPETE);
+    if (movelNaMao && colocar) {
+      const d = metaColocacao(bloco) & 3;
+      const j = controle.jogador;
+      const k = `${bloco},${colocar.x},${colocar.y},${colocar.z},${d},${edicoes.versaoGeral},${cliente.tapetes.versao},${Math.round(j.x * 4)},${Math.round(j.y * 4)},${Math.round(j.z * 4)}`;
+      if (k !== chaveFantasmaMovel) {
+        chaveFantasmaMovel = k;
+        cabeFantasmaMovel = movelCabe(bloco, colocar.x, colocar.y, colocar.z, d);
+      }
+      moveis.fantasma(bloco, colocar.x, colocar.y, colocar.z, d, cabeFantasmaMovel);
+      estado.fantasmaMovel = { bloco, x: colocar.x, y: colocar.y, z: colocar.z, d, cabe: cabeFantasmaMovel };
+    } else {
+      moveis.fantasma(null);
+      estado.fantasmaMovel = null;
+    }
     // spec 016: na passagem (ou na casa do mundo) o fantasma fica de outra cor: ali não vai
     const proibido =
       !!pontoFantasma &&
       !!bloco &&
       recusaColocar(regra, voce, pontoFantasma.x, pontoFantasma.y, pontoFantasma.z, bloco) !== null;
     visualConstrucao.fantasma(
-      pontoFantasma,
+      movelNaMao ? null : pontoFantasma,
       bloco && def && !def.planta ? bloco : null,
       tempo,
       proibido,
@@ -8329,10 +8644,11 @@ export function criarCena(
         break;
       // spec 039 (T05): a pose de sentada e de deitada da criança (o núcleo decide, T04)
       case 'sentou':
-        definirMeuAssento({ x: e.x, y: e.y, z: e.z, d: e.d, px: e.px, pz: e.pz, ...(e.deitado ? { deitado: true } : {}) });
+        // spec 039 (T06): a tela leva o boneco até o lugar, deslizando; a pose entra quando chega
+        irAoAssento({ x: e.x, y: e.y, z: e.z, d: e.d, px: e.px, pz: e.pz, ...(e.deitado ? { deitado: true } : {}) });
         break;
       case 'levantou':
-        definirMeuAssento(null);
+        sairDoAssento();
         break;
       case 'acordou': {
         // as estações não esperam a transição: o dia novo já amanhece com elas

@@ -142,6 +142,8 @@ export const CSS_PAINEL =
   box-shadow: 0 1px 0 var(--amarela-fundo), inset 0 2px 0 rgba(255, 255, 255, 0.6),
     0 20px 0 18px var(--painel), 0 -16px 0 18px var(--painel);
 }
+/* spec 039: a troca de roupa do guarda-roupa, sem o "Jogar" (o "voltar" volta para o jogo) */
+.tela-personagem.provador .painel-personagem .jogar { display: none; }
 ` +
   CSS_FANTASIAS +
   CSS_TESOUROS;
@@ -648,6 +650,10 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
      */
     arrumarTesouros() {
       if (tirarOsQueSaem()) opcoes.aoMudar(vista());
+    },
+    /** Spec 039 (T06): abre uma aba (o guarda-roupa abre direto nas roupas). */
+    abrirAba(id: string) {
+      mostrarAba(id);
     },
     /** Abre a aba Fantasias (num grupo, se pedido: a sugestão do mundo novo abre em "Dos temas"). */
     abrirFantasias(grupo?: GrupoFantasia) {

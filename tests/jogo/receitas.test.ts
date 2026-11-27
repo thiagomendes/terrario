@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CATEGORIAS_RECEITA,
   FUNDICAO,
   RECEITAS,
+  TAGS,
   consumirGrade,
   encontrarReceita,
   podeFazer,
@@ -99,6 +101,57 @@ describe('receitas', () => {
   it('consumir tira um de cada slot', () => {
     const g: Grade = [p(TAB, 3), null, p(TAB, 1), null];
     expect(consumirGrade(g)).toEqual([p(TAB, 2), null, null, null]);
+  });
+
+  it('spec 039: nenhuma grade repete outra (cada receita acha ela mesma, com qualquer item da tag)', () => {
+    for (const r of RECEITAS) {
+      if (!r.forma) continue;
+      const maior = Math.max(r.forma.length, ...r.forma.map((l) => l.length));
+      const lado = r.mesa || maior > 2 ? 3 : 2;
+      // cada item de cada tag, um de cada vez (os outros com o primeiro da tag)
+      const opcoes = Object.entries(r.chaves!).flatMap(([letra, chave]) =>
+        (chave.startsWith('#') ? TAGS[chave] : [chave]).map((item) => ({ letra, item })),
+      );
+      for (const troca of [null, ...opcoes]) {
+        const celulas: Record<number, string> = {};
+        r.forma.forEach((linha, y) =>
+          [...linha].forEach((ch, x) => {
+            if (ch === ' ') return;
+            const chave = r.chaves![ch];
+            const item =
+              troca?.letra === ch ? troca.item : chave.startsWith('#') ? TAGS[chave][0] : chave;
+            celulas[y * lado + x] = item;
+          }),
+        );
+        expect(
+          encontrarReceita(grade(lado, celulas), lado)?.id,
+          `${r.id} ${troca?.item ?? ''}`,
+        ).toBe(r.id);
+      }
+    }
+  });
+
+  it('spec 039: os oito móveis na categoria casa, na mesa, e a pia com ferro de verdade', () => {
+    const casa = RECEITAS.filter((r) => r.categoria === 'casa');
+    const blocos = casa.map((r) => obterItem(r.resultado.item)?.bloco ?? -1);
+    expect(new Set(blocos)).toEqual(
+      new Set([
+        Bloco.CAMA,
+        Bloco.SOFA,
+        Bloco.CADEIRA,
+        Bloco.CRIADO_MUDO,
+        Bloco.ABAJUR,
+        Bloco.TAPETE,
+        Bloco.PIA,
+        Bloco.GUARDA_ROUPA,
+      ]),
+    );
+    expect(casa).toHaveLength(8);
+    for (const r of casa) expect(r.mesa, r.id).toBe(true);
+    expect(Object.values(RECEITAS.find((r) => r.id === 'pia')!.chaves!)).toContain(
+      'lingote_ferro',
+    );
+    for (const r of RECEITAS) expect(CATEGORIAS_RECEITA, r.id).toContain(r.categoria);
   });
 
   it('podeFazer soma itens de uma tag', () => {

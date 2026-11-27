@@ -83,7 +83,16 @@ export type EventoSom =
   | 'bolha'
   | 'foguete'
   | 'gotinha'
-  | 'pipa';
+  | 'pipa'
+  /**
+   * Spec 039 (T06): os móveis (sentar usa o "puf" de sentar): o deitar na cama (o fofo do
+   * colchão e um sininho que desce), as portas do guarda-roupa (dois "toc" de madeira macios,
+   * sem bater), a torneira da pia (a água caindo na cuba) e o clique do abajur.
+   */
+  | 'deitar'
+  | 'portas'
+  | 'torneira'
+  | 'clique';
 
 export const EVENTOS_SOM: readonly EventoSom[] = [
   'golpe',
@@ -140,6 +149,10 @@ export const EVENTOS_SOM: readonly EventoSom[] = [
   'foguete',
   'gotinha',
   'pipa',
+  'deitar',
+  'portas',
+  'torneira',
+  'clique',
 ];
 
 export const VARIACOES_POR_EVENTO = 4;
@@ -250,6 +263,11 @@ const BASE_EVENTO: Record<EventoSom, BaseEvento> = {
   foguete: { ganho: 0.08, duracao: 0.5, ruido: 0.9, escalaTom: 1, grupoAudio: 'efeitos' },
   gotinha: { ganho: 0.08, duracao: 0.14, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
   pipa: { ganho: 0.08, duracao: 0.45, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
+  // spec 039 (T06): os móveis, curtos e macios, abaixo do golpe de bloco (nada de porta batendo)
+  deitar: { ganho: 0.16, duracao: 0.7, ruido: 0.6, escalaTom: 1, grupoAudio: 'efeitos' },
+  portas: { ganho: 0.16, duracao: 0.4, ruido: 0.3, escalaTom: 1, grupoAudio: 'efeitos' },
+  torneira: { ganho: 0.12, duracao: 0.9, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
+  clique: { ganho: 0.14, duracao: 0.3, ruido: 0.1, escalaTom: 1, grupoAudio: 'efeitos' },
 };
 
 const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
@@ -301,6 +319,10 @@ const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
   foguete: { frequencia: 220, filtroHz: 1200 },
   gotinha: { frequencia: 1400, filtroHz: 5000 },
   pipa: { frequencia: 300, filtroHz: 900 },
+  deitar: { frequencia: 784, filtroHz: 700 },
+  portas: { frequencia: 330, filtroHz: 1400 },
+  torneira: { frequencia: 900, filtroHz: 1600 },
+  clique: { frequencia: 1046.5, filtroHz: 3200 },
 };
 
 export const AMPLITUDE_TOM = 0.12;
@@ -1090,6 +1112,38 @@ function desenharNovo(
       pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 0.9, 0.45, 0.42, 0.15));
       pecas.push(ruido(ctx, out, t0 + 0.18, 'bandpass', par.filtroHz * 2.4, 2.5, 0.25, 0.05, 0.003));
       break;
+    // spec 039 (T06): os móveis
+    case 'deitar':
+      // o fofo do colchão (um sopro grave e macio) e três notinhas de sino que descem, de ninar
+      pecas.push(ruido(ctx, out, t0, 'lowpass', par.filtroHz, 0.7, 0.6, 0.22, 0.02));
+      for (const [k, at] of [
+        [1, 0.12],
+        [0.84, 0.26],
+        [0.75, 0.4],
+      ] as const)
+        pecas.push(tom(ctx, out, t0 + at, 'sine', f * k, f * k, 0.16, 0.28, 0.01));
+      break;
+    case 'portas':
+      // as duas portinhas de madeira: dois "toc" macios, um atrás do outro (nunca uma batida)
+      for (const at of [0, 0.12]) {
+        pecas.push(tom(ctx, out, t0 + at, 'sine', f * (at ? 1.12 : 1), f * 0.9, 0.45, 0.07, 0.004));
+        pecas.push(ruido(ctx, out, t0 + at, 'bandpass', par.filtroHz, 2.5, 0.18, 0.03, 0.003));
+      }
+      break;
+    case 'torneira':
+      // a água caindo na cuba: um chiado macio que abre e fecha e umas bolhinhas
+      pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 0.8, 0.5, 0.8, 0.12));
+      for (let i = 0; i < 4; i++) {
+        const b = f * (1 + sorte() * 0.5);
+        pecas.push(tom(ctx, out, t0 + 0.15 + i * 0.13, 'sine', b, b * 1.6, 0.14, 0.05, 0.002));
+      }
+      break;
+    case 'clique':
+      // o botãozinho do abajur: "tic" de plástico e um brilho curtinho
+      pecas.push(tom(ctx, out, t0, 'sine', f * 1.4, f * 1.1, 0.4, 0.035, 0.001));
+      pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 3, 0.2, 0.02, 0.001));
+      pecas.push(tom(ctx, out, t0 + 0.05, 'sine', f, f, 0.12, 0.2, 0.01));
+      break;
     default:
       pecas.push(tom(ctx, out, t0, 'sine', f, f, 0.3, 0.05));
   }
@@ -1162,6 +1216,11 @@ export const SONS_NOVOS_019: readonly EventoSom[] = [
   'foguete',
   'gotinha',
   'pipa',
+  // (spec 039, T06: os móveis)
+  'deitar',
+  'portas',
+  'torneira',
+  'clique',
 ];
 
 let observador: ((evento: EventoSom) => void) | null = null;

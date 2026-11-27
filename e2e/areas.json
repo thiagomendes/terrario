@@ -98,8 +98,7 @@
         "src/ui/gestosInventario.ts",
         "src/ui/icones.ts",
         "src/ui/status.ts",
-        "src/esboco/moveis.ts",
-        "src/esboco/moveisPecas.ts",
+        "src/ui/abasCategoria.ts",
         "src/render/moveis/",
         "src/render/poseMovel.ts"
       ],
@@ -110,7 +109,6 @@
         "construir-037.spec.ts",
         "cristal.spec.ts",
         "dar-item.spec.ts",
-        "esboco-moveis.spec.ts",
         "interacao.spec.ts",
         "inventario.spec.ts",
         "mineracao.spec.ts"
