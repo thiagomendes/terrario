@@ -2,7 +2,7 @@ import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { Bloco } from '../src/world/blocks';
 import { celulasDoMovel, metaDoMovel } from '../src/jogo/moveis';
-import { abrirMundo, type Tamanho } from './guia-palco';
+import { abrirMundo, criarMundo, TAMANHOS, type Tamanho } from './guia-palco';
 
 /**
  * Spec 039 (T06): os móveis no aparelho, no celular em pé (a aba "casa" também deitado).
@@ -606,6 +606,153 @@ test('montar na mesa: o sofá pela aba casa do livro, posto e quebrado (volta um
   expect(erros).toEqual([]);
   await p.context().close();
 });
+
+/**
+ * O defeito do dono (27 nov): quebrar o tapete quebrava o bloco de baixo, a criança caía no
+ * buraco e atravessava o tapete. Agora a mira no chão coberto tira o tapete (para a mochila) e o
+ * chão fica.
+ */
+for (const tamanho of ['empe', 'pc'] as const)
+  test(`quebrar o tapete: ele volta para a mochila e o chão fica, sem buraco (${tamanho})`, async ({ browser }) => {
+    test.setTimeout(300_000);
+    const PASTA_TAPETE = 'capturas-039/fix-tapete';
+    mkdirSync(PASTA_TAPETE, { recursive: true });
+    const p = await mundoComChao(browser, `moveis-tapete-${tamanho}`, tamanho);
+    const erros: string[] = [];
+    p.on('pageerror', (e) => erros.push(String(e)));
+    const TAPETE = `bloco:${Bloco.TAPETE}`;
+    await p.evaluate((t) => {
+      const e = window.__brumaluz!;
+      const [x, y, z] = e.posicao!;
+      e.soltarItem!(t, 1, x, y - 1, z);
+    }, TAPETE);
+    await expect.poll(() => p.evaluate((t) => window.__brumaluz!.inventario!.contar(t), TAPETE), { timeout: 20_000 }).toBe(1);
+    const slot = await p.evaluate((t) => window.__brumaluz!.inventario!.slots.findIndex((s) => s?.item === t), TAPETE);
+    expect(slot).toBeLessThan(9);
+    await p.evaluate((i) => window.__brumaluz!.selecionarSlot!(i), slot);
+    // no chão de tábuas gravado (y 99), na frente da criança
+    const a = { x: 6, y: 100, z: 5 };
+    await expect.poll(() => p.evaluate(() => window.__brumaluz!.bloco!(7, 99, 6))).toBe(Bloco.TABUAS);
+    await ir(p, a.x + 1.5, a.z - 2.5, a.y);
+    await p.waitForTimeout(500);
+    await mirarAte(p, { ...a, y: a.y - 1 }, CIMA);
+    expect(await p.evaluate((c) => {
+      const e = window.__brumaluz!;
+      e.mirarBloco!(c.x, c.y - 1, c.z, { x: 0, y: 1, z: 0 } as never);
+      return e.interagir!('colocar') as unknown as boolean;
+    }, a)).toBe(true);
+    await expect.poll(() => p.evaluate((t) => window.__brumaluz!.inventario!.contar(t), TAPETE)).toBe(0);
+    await expect.poll(() => p.evaluate(() => window.__brumaluz!.moveis!.contagem().tapetes)).toBeGreaterThanOrEqual(1);
+    // o chão embaixo do meio do tapete
+    const chao = { x: a.x + 1, y: a.y - 1, z: a.z + 1 };
+    const antes = await p.evaluate((c) => window.__brumaluz!.bloco!(c.x, c.y, c.z), chao);
+    await p.screenshot({ path: `${PASTA_TAPETE}/tapete-posto-${tamanho}.png` });
+    // segurar o quebrar mirando o chão coberto: sai o tapete
+    await mirarAte(p, chao, CIMA);
+    await p.evaluate(async (c) => {
+      const e = window.__brumaluz!;
+      e.mirarBloco!(c.x, c.y, c.z, { x: 0, y: 1, z: 0 } as never);
+      e.controleDireto!.quebrar(true);
+      await new Promise((r) => setTimeout(r, 2500));
+      e.controleDireto!.quebrar(false);
+    }, chao);
+    await expect.poll(() => p.evaluate((t) => window.__brumaluz!.inventario!.contar(t), TAPETE), { timeout: 15_000 }).toBe(1);
+    await expect.poll(() => p.evaluate(() => window.__brumaluz!.moveis!.contagem().tapetes)).toBe(0);
+    // o chão continua (nenhum bloco de baixo foi quebrado), nem no meio nem nas beiradas
+    expect(await p.evaluate((c) => window.__brumaluz!.bloco!(c.x, c.y, c.z), chao)).toBe(antes);
+    for (const c of celulasDoMovelTapete(a))
+      expect(await p.evaluate((c) => window.__brumaluz!.bloco!(c.x, c.y - 1, c.z), c), `${c.x},${c.z}`).not.toBe(0);
+    await p.waitForTimeout(1500);
+    // (o núcleo confirmou: nada voltou)
+    expect(await p.evaluate((t) => window.__brumaluz!.inventario!.contar(t), TAPETE)).toBe(1);
+    expect(await p.evaluate((c) => window.__brumaluz!.bloco!(c.x, c.y, c.z), chao)).toBe(antes);
+    await p.screenshot({ path: `${PASTA_TAPETE}/tapete-tirado-${tamanho}.png` });
+    expect(erros).toEqual([]);
+    await p.context().close();
+  });
+
+test('quebrar o tapete no criativo: sai o tapete e o chão fica', async ({ browser }) => {
+  test.setTimeout(300_000);
+  const p = await mundo(browser, 'moveis-tapete-criativo');
+  const erros: string[] = [];
+  p.on('pageerror', (e) => erros.push(String(e)));
+  const { cx, cz, Y } = await plataforma(p);
+  const a = { x: cx, y: Y + 1, z: cz };
+  await naMao(p, Bloco.TAPETE);
+  await ir(p, a.x + 1.5, a.z - 2.5, a.y);
+  await mirarAte(p, { ...a, y: Y }, CIMA);
+  expect(await p.evaluate(() => window.__brumaluz!.interagir!('colocar') as unknown as boolean)).toBe(true);
+  await expect.poll(() => p.evaluate(() => window.__brumaluz!.moveis!.contagem().tapetes)).toBeGreaterThanOrEqual(1);
+  const chao = { x: a.x + 2, y: Y, z: a.z + 1 };
+  await mirarAte(p, chao, CIMA);
+  expect(await p.evaluate((c) => {
+    const e = window.__brumaluz!;
+    e.mirarBloco!(c.x, c.y, c.z, { x: 0, y: 1, z: 0 } as never);
+    return e.interagir!('quebrar') as unknown as boolean;
+  }, chao)).toBe(true);
+  await expect.poll(() => p.evaluate(() => window.__brumaluz!.moveis!.contagem().tapetes)).toBe(0);
+  await p.waitForTimeout(1200);
+  expect(await p.evaluate((c) => window.__brumaluz!.bloco!(c.x, c.y, c.z), chao)).toBe(Bloco.PEDRA_LISA);
+  expect(await p.evaluate(() => window.__brumaluz!.moveis!.contagem().tapetes)).toBe(0);
+  expect(erros).toEqual([]);
+  await p.context().close();
+});
+
+/**
+ * Um mundo da sobrevivência gravado com um chão de tábuas no alto (y 99, no pedaço 0,0, com o ar
+ * livre em cima) e a criança em cima dele: na sobrevivência o lote do criativo não vale.
+ */
+async function mundoComChao(browser: Browser, id: string, tamanho: Tamanho): Promise<Page> {
+  const ctx = await browser.newContext(TAMANHOS[tamanho]);
+  const page = await ctx.newPage();
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('terrario:config', JSON.stringify({ distancia: 3, mostrarFps: false, mostrarAtalhos: false }));
+    } catch {
+      // sem armazenamento
+    }
+  });
+  await criarMundo(page, id, 'doce-reino', {}, 1337, 'sobrevivencia');
+  const indice = (x: number, y: number, z: number) => (y * 16 + z) * 16 + x;
+  const edicoes: [number, number][] = [];
+  for (let x = 1; x <= 14; x++)
+    for (let z = 1; z <= 14; z++) {
+      edicoes.push([indice(x, 99, z), Bloco.TABUAS]);
+      for (let y = 100; y <= 103; y++) edicoes.push([indice(x, y, z), 0]);
+    }
+  await page.evaluate(
+    ({ id, edicoes }) =>
+      new Promise<void>((ok, erro) => {
+        const req = indexedDB.open('brumaluz', 1);
+        req.onerror = () => erro(req.error);
+        req.onsuccess = () => {
+          const tx = req.result.transaction('kv', 'readwrite');
+          tx.objectStore('kv').put(
+            { versao: 1, edicoes: { '0,0': edicoes }, jogador: { x: 7.5, y: 100, z: 2.5, yaw: 0, pitch: 0.3 }, hora: 0.42, extras: {} },
+            `mundo:${id}`,
+          );
+          tx.oncomplete = () => ok();
+        };
+      }),
+    { id, edicoes },
+  );
+  await page.goto(`/?mundo=${id}`);
+  await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, { timeout: 240_000 });
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+    const e = window.__brumaluz!;
+    e.pausarDia = true;
+    e.hora = 0.42;
+    e.definirClima?.('limpo');
+  });
+  await page.addStyleTag({ content: '.toast-area { display: none !important; }' });
+  await page.waitForTimeout(2500);
+  return page;
+}
+
+/** As seis células do tapete com a âncora em `a`, olhando para +z. */
+const celulasDoMovelTapete = (a: P) =>
+  [0, 1, 2].flatMap((i) => [0, 1].map((k) => ({ x: a.x + i, y: a.y, z: a.z + k })));
 
 test('a troca de roupa pelo guarda-roupa, deitado: as roupas sem rolar, com o fundo por trás', async ({ browser }) => {
   test.setTimeout(300_000);

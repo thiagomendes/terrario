@@ -622,6 +622,58 @@ for (const modo of ['local', 'nuvem'] as const)
         expect(bloco(n, T.x + 2, YP, T.z + 1)).toBe(Bloco.FLOR);
       });
 
+    it('o chão embaixo some (quebrado ou pelo lote do criativo): o tapete sai inteiro e volta para o dono', () => {
+      // na sobrevivência: a Ana quebra uma tábua do chão embaixo do tapete dela
+      const n = abrir(modo, { jogo: 'sobrevivencia' });
+      const ana = n.estado.jogadores.get('ana')!;
+      const TAPETE = idDoBloco(Bloco.TAPETE);
+      ana.inventario.definir(0, { item: TAPETE, qtd: 1 });
+      porTapete(n, 'ana', T.x, T.z, 0);
+      expect(recusasDe(passo(n).get('ana'))).toEqual([]);
+      expect(contar(n, TAPETE)).toBe(0);
+      quebrar(n, 'ana', T.x + 1, T.z + 1, YP - 1);
+      const q = passo(n).get('ana')!;
+      expect(recusasDe(q)).toEqual([]);
+      expect(bloco(n, T.x + 1, YP - 1, T.z + 1)).toBe(Bloco.AR);
+      expect(n.estado.tapetes.tamanho).toBe(0);
+      expect(q.tapetesMudados).toEqual([{ x: T.x, y: YP, z: T.z, fora: true }]);
+      // volta para a mochila de quem pôs (um só, e nada no chão)
+      expect(ana.inventario.contar(TAPETE)).toBe(1);
+      expect(contar(n, TAPETE)).toBe(1);
+      // no criativo: o lote que tira o chão leva o tapete junto (sem item)
+      const m = abrir(modo);
+      porTapete(m, 'ana', T.x, T.z, 0);
+      passo(m);
+      expect(m.estado.tapetes.tamanho).toBe(1);
+      mandar(m, 'ana', { t: 'editar', lote: [{ x: T.x + 2, y: YP - 1, z: T.z, v: Bloco.AR }] });
+      const q2 = passo(m).get('ana')!;
+      expect(bloco(m, T.x + 2, YP - 1, T.z)).toBe(Bloco.AR);
+      expect(m.estado.tapetes.tamanho).toBe(0);
+      expect(q2.tapetesMudados).toEqual([{ x: T.x, y: YP, z: T.z, fora: true }]);
+      // trocar o chão por outro bloco que apoia não mexe no tapete
+      porTapete(m, 'ana', T.x, T.z + 3, 0);
+      passo(m);
+      mandar(m, 'ana', { t: 'editar', lote: [{ x: T.x, y: YP - 1, z: T.z + 3, v: Bloco.PEDRA_LISA }] });
+      passo(m);
+      expect(m.estado.tapetes.tamanho).toBe(1);
+      if (modo === 'nuvem') {
+        // a Bia tira o chão (dela) embaixo do tapete da Ana: ele volta para a mochila da Ana
+        const s = abrir(modo, { jogo: 'sobrevivencia' });
+        const a = s.estado.jogadores.get('ana')!;
+        a.inventario.definir(0, { item: TAPETE, qtd: 1 });
+        porTapete(s, 'ana', T.x, T.z, 0);
+        passo(s);
+        expect(s.estado.tapetes.tamanho).toBe(1);
+        s.estado.edicoes.definir(T.x + 1, YP - 1, T.z, Bloco.TABUAS, 0, s.estado.edicoes.donos.indice('bia'));
+        quebrar(s, 'bia', T.x + 1, T.z, YP - 1);
+        passo(s);
+        expect(bloco(s, T.x + 1, YP - 1, T.z)).toBe(Bloco.AR);
+        expect(s.estado.tapetes.tamanho).toBe(0);
+        expect(a.inventario.contar(TAPETE)).toBe(1);
+        expect(s.estado.jogadores.get('bia')!.inventario.contar(TAPETE)).toBe(0);
+      }
+    });
+
     it('não entra sem chão, em cima de outro tapete ou na água; ninguém fica preso', () => {
       let n = abrir(modo);
       n.estado.edicoes.definir(T.x + 2, YP - 1, T.z + 1, Bloco.AR);

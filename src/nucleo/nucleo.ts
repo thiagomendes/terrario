@@ -1327,7 +1327,29 @@ export function criarNucleo(op: OpcoesNucleo) {
         if (modo === 'sobrevivencia') soltarColheita(cima, x, y + 1, z);
       }
     }
+    // spec 039 (o tapete que perdeu o chão): a célula de chão embaixo de um tapete sumiu (uma
+    // explosão, o lote do criativo, uma amiga): o tapete sai inteiro e volta para o dono, para
+    // não ficar flutuando nem deixar a criança cair pelo buraco
+    if (!blocoApoia(bloco)) {
+      const t = tapetes.em(x, y + 1, z);
+      if (t) tapeteSemChao(t);
+    }
     return true;
+  }
+
+  /**
+   * Spec 039: o tapete sem chão sai inteiro. Na sobrevivência, volta para a mochila de quem o pôs
+   * (se ele está na sala; o que não couber, ou sem ele, cai ali, para ninguém perder o tapete).
+   */
+  function tapeteSemChao(t: Tapete): void {
+    tapetes.tirar(t.x, t.y, t.z);
+    tapetesMudados.push({ x: t.x, y: t.y, z: t.z, fora: true });
+    if (modo !== 'sobrevivencia') return;
+    const item = idDoBloco(Bloco.TAPETE);
+    const dono = donoDoTapete(t);
+    const j = dono ? jogadores.get(dono) : undefined;
+    const sobra = j ? j.inventario.adicionar(item, 1) : 1;
+    if (sobra > 0) mundoItens.soltar(item, sobra, t.x + 0.5, t.y + 0.2, t.z + 0.5, rngDrops);
   }
 
   function soltarColheita(b: number, x: number, y: number, z: number): void {
