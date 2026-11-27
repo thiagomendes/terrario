@@ -36,6 +36,12 @@ test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true
 const LENTO = Number(process.env.DESACELERAR_CPU ?? 4);
 const RODADAS = Number(process.env.RODADAS ?? 3);
 const SO = process.env.DESEMPENHO_039?.split(',');
+/**
+ * A resolução fixa (`?escala=`), sem o ajuste automático do celular: com ele, cada página começa
+ * num degrau diferente conforme os primeiros quadros, e a mesma cena dava de 39 a 66 quadros (a
+ * medida da T08). Padrão 0,75 (o degrau de partida do celular); ESCALA=auto volta o ajuste.
+ */
+const ESCALA = process.env.ESCALA ?? '0.75';
 
 /** Os blocos dos móveis do ramo (na main não existem: a casa mobiliada fica vazia). */
 const B = Bloco as unknown as Record<string, number | undefined>;
@@ -77,7 +83,7 @@ async function abrir(page: Page, url: string) {
       // sem armazenamento
     }
   });
-  await page.goto(url);
+  await page.goto(ESCALA === 'auto' ? url : `${url}&escala=${ESCALA}`);
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, { timeout: 240_000 });
   await page.evaluate(() => {
     document.querySelector('.entrada')?.setAttribute('hidden', '');

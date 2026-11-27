@@ -1,0 +1,68 @@
+Spec 039, T08: desempenho (27 nov 2026, 11h45 a 12h25 de Brasília)
+main 1eeca93a (worktree ../mb-039-main) contra o ramo 2762f4e0 (worktree limpo ../mb-039-ramo)
+Suíte e2e/desempenho-039.spec.ts, placa (RTX 3060 pela ponte do WSL), 1 trabalhador, sem vsync
+Celular em pé 390x844, toque, CPU 4x; cada medida numa página nova; main e ramo alternados,
+uma rodada dos 4 cenários por vez (main, ramo, main, ramo, main, ramo)
+
+Três séries:
+- A (11h45): a rodada 3 da main pegou outro contêiner na placa (o artista no mb-039: 16 a 43
+  quadros) e a do ramo caiu com o test-results do root. Descartada.
+- B (11h58), com o ajuste automático de resolução e conferência de contêiner alheio (nenhum).
+- C (12h12), com a resolução fixa (?escala=0.75, o novo padrão da suíte) e a mesma conferência.
+
+Série C, por rodada (quadros/s, maior quadro ms, chamadas girando / paradas, malhas, ativas)
+cenário          lado  r1                      r2                      r3
+casa-vazia       main  38,5  53  108/120 839/58  65,5  26  108/118      52,3  37  108/115
+casa-vazia       ramo  55,8  39  108/117 839/58  31,3  69  108/119      67,0  33  108/117
+casa-mobiliada   main  60,9  33  108/116 839/58  61,6  57  108/116      68,6  25  108/116
+casa-mobiliada   ramo  51,9  37  110/118 842/61  37,0 116  110/122      66,6  24  110/118
+cidade           main  48,1  42  114/116 616/77  42,8  52  114/116      64,8  27  113/116
+cidade           ramo  52,3 228  119/121 637/81  48,8  55  118/117      61,4  25  115/117
+povoado          main  51,4  89  145/138 539/83  54,9 111  146/130      69,0  80  144/135
+povoado          ramo  43,6 132  145/128 542/73  56,3  86  146/140      65,9 108  146/137
+
+Série B, quadros/s (main / ramo, rodadas 1 a 3)
+casa-vazia       49,3 65,5 40,6  /  63,3 43,5 39,0
+casa-mobiliada   33,0 59,6 49,0  /  61,6 56,6 52,1
+cidade           48,9 61,1 43,3  /  57,1 41,8 49,1
+povoado          62,3 54,0 60,4  /  61,0 47,6 52,0
+
+Medianas da série C (quadros/s; chamadas girando / paradas; maior quadro)
+cenário          main                    ramo                    diferença
+casa-vazia       52,3  108/118   53 ms   55,8  108/117   69 ms
+casa-mobiliada   61,6  108/116   57 ms   51,9  110/118  116 ms   (no ramo, contra a vazia: +2 / +1)
+cidade           48,1  114/116   52 ms   52,3  118/117  228 ms   +4 / +1 chamadas, +11 malhas
+povoado          54,9  145/135  111 ms   56,3  146/137  132 ms   +1 / +2 chamadas, +3 malhas
+
+As metas:
+- Chamadas paradas, casa mobiliada contra a vazia: +1 (mediana 118 contra 117; de +1 a +3 por
+  rodada). Girando: +2 (110 contra 108, igual em todas as rodadas). Malhas e ativas: +3. DENTRO
+  (no máximo +3).
+- Quadros: NÃO DÁ PARA DECIDIR OS 5% NESTA MÁQUINA. A mesma cena, no mesmo lado, vai de 31 a 69
+  quadros entre páginas (com e sem a resolução fixa; nenhum contêiner alheio na hora). As
+  medianas mudam de sinal entre as séries B e C (casa-mobiliada do ramo 56,6 na B e 51,9 na C;
+  cidade do ramo 49,1 e 52,3). A rodada mais calma de cada lado (a r3 da série C): casa
+  mobiliada contra vazia no ramo -0,6%; cidade -5,2% e povoado -4,5% contra a main. Conferir no
+  aparelho.
+- Camas na vista: a cidade passou de 437 células de cama para 874 (o pé de cada uma), o povoado
+  de 4 para 8.
+- Maior quadro: picos isolados nos dois lados (a main teve 136 e 215 ms na cidade nas séries B e
+  A; o ramo 139, 170 e 228). Nenhum padrão que só o ramo tenha.
+
+O custo do metaGerada (tests/nucleo/custo-camas.test.ts, MEDIR_DESEMPENHO=1, CPU sem freio)
+                                 main            ramo
+colisão, povoados do Doce Reino  438 ns/consulta 3014 ns (1066 sem o metadado gerado)   51 células
+  (38 na main: a cama ganhou o pé)
+colisão, prédios da Cidade       941 ns          1439 ns (717 sem)                     7670 células
+abrir um mundo com 51 200 edições e 1 600 camas de uma célula:
+  com a conversão                11 ms           156 ms (1 600 pés novos)
+  sem a conversão (já convertido) 12 ms          14 ms
+Leitura: a consulta de caixas de uma célula de cama ficou 7x mais cara (cada uma lê o metadado
+gerado de várias células, e cada leitura monta a chave em texto e confere a cidade, a vila, o
+baile e os povoados). A física só consulta as caixas das células sólidas de forma parcial em volta
+do corpo (umas poucas por quadro perto de uma cama: dezenas de microssegundos, menos de 1% de um
+quadro de 16 ms, até com a CPU 4x). A conversão custa uns 140 ms uma vez por mundo, ao abrir.
+Barato de melhorar, se o engenheiro quiser: guardar o último pedaço lido em metaGerada.
+
+Tempos: série A 6 min (descartada), série B 13 min, série C 13 min; o custo do metaGerada 25 s
+nos dois lados.
