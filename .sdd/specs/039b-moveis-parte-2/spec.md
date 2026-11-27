@@ -1,7 +1,7 @@
 ---
 id: 039b-moveis-parte-2
 title: 'Móveis e utensílios, parte 2: o fogão que cozinha, a geladeira que guarda, a mesa onde todos comem, a TV e o aparelho de som'
-status: DRAFT
+status: APPROVED
 base_branch: main
 branch: feat/039b-moveis-parte-2
 created_at: 2026-11-27T15:15:00Z
