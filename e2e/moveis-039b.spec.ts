@@ -19,7 +19,8 @@ import { abrirMundo, type Tamanho } from './guia-palco';
  *
  * Fotos em capturas-039b/t04/.
  */
-const PASTA = 'capturas-039b/t04';
+/** (as da T04 ficam em capturas-039b/t04; as do conserto do portão visual, aqui) */
+const PASTA = 'capturas-039b/t09/tela';
 mkdirSync(PASTA, { recursive: true });
 
 type P = { x: number; y: number; z: number };
@@ -83,10 +84,13 @@ const celulas = (p: Page, cs: P[]) =>
   );
 const esperado = (b: number, d: number, cs: { parte: number }[]) => cs.map((c) => [b, metaDoMovel(d, c.parte)]);
 
-/** Põe à mão o móvel `b` com a âncora em `a`, olhando para +z (a criança atrás dele). */
-async function porAMao(p: Page, b: number, a: P): Promise<boolean> {
+/**
+ * Põe à mão o móvel `b` com a âncora em `a`: a criança ao sul, olhando para +z (ou, `norte`, ao
+ * norte olhando para -z).
+ */
+async function porAMao(p: Page, b: number, a: P, de: 'sul' | 'norte' = 'sul'): Promise<boolean> {
   await naMao(p, `bloco:${b}`);
-  await ir(p, a.x + 0.5, a.z - 2.5, a.y);
+  await ir(p, a.x + 0.5, de === 'sul' ? a.z - 2.5 : a.z + 3.5, a.y);
   await p.waitForTimeout(300);
   await mirarAte(p, { ...a, y: a.y - 1 }, CIMA);
   return p.evaluate((a) => {
@@ -119,6 +123,19 @@ async function clicar(p: Page, sel: string, shift = false) {
   await p.waitForTimeout(150);
 }
 const slotInv = (i: number) => `.inventario .slot-inv[data-indice="${i}"]`;
+/** A dica aparece, inteira na tela, e (quando há lugar) logo embaixo da casa, centrada nela. */
+const dicaNaCasa = (p: Page, sel: string) =>
+  p.evaluate((sel) => {
+    const d = document.querySelector<HTMLElement>('.dica-item')!;
+    const c = document.querySelector<HTMLElement>(sel)!.getBoundingClientRect();
+    const r = d.getBoundingClientRect();
+    const meio = r.left + r.width / 2;
+    return {
+      visivel: !d.hidden,
+      inteira: r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight && r.right <= innerWidth,
+      embaixoDaCasa: r.top >= c.bottom && r.top - c.bottom < 12 && Math.abs(meio - (c.left + c.width / 2)) < 2,
+    };
+  }, sel);
 const itemEm = (p: Page, sel: string) =>
   p.evaluate((s) => document.querySelector<HTMLElement>(s)?.dataset.item ?? '', sel);
 
@@ -208,7 +225,19 @@ test('pôr e tocar no aparelho: a geladeira guarda (só comida), o fogão cozinh
   // a pipoca entra (shift: vai para a geladeira)
   await clicar(p, slotInv(0), true);
   await expect.poll(() => itemEm(p, '[data-externo="gel:0"]')).toBe('pipoca');
-  await p.waitForTimeout(800);
+  // a dica fica embaixo da casa certa (a da pipoca, na geladeira), inteira na tela
+  const gel0 = await centro(p, '[data-externo="gel:0"]');
+  await p.mouse.move(gel0.x + 2, gel0.y + 2);
+  await p.waitForTimeout(300);
+  expect(await dicaNaCasa(p, '[data-externo="gel:0"]')).toEqual({ visivel: true, inteira: true, embaixoDaCasa: true });
+  // na barra, rente à borda de baixo, a dica sobe para cima da casa e aparece inteira
+  const milho = await centro(p, slotInv(2));
+  await p.mouse.move(milho.x + 2, milho.y + 2);
+  await p.waitForTimeout(300);
+  expect(await dicaNaCasa(p, slotInv(2))).toMatchObject({ visivel: true, inteira: true });
+  await p.mouse.move(gel0.x + 2, gel0.y + 2);
+  await p.waitForTimeout(300);
+  await p.waitForTimeout(500);
   await p.screenshot({ path: `${PASTA}/geladeira-pc.png` });
   await p.keyboard.press('Escape');
   await expect.poll(() => overlay(p)).toBe('');
@@ -237,7 +266,10 @@ test('pôr e tocar no aparelho: a geladeira guarda (só comida), o fogão cozinh
   await expect
     .poll(() => p.evaluate(() => window.__brumaluz!.ligados!().some((e) => e.tipo === 'fogao')))
     .toBe(true);
-  await p.waitForTimeout(1500);
+  // a sombrinha do que vai sair (a pipoca), com a saída vazia, e a dica da barra de baixo inteira
+  expect(await p.evaluate(() => document.querySelector<HTMLElement>('[data-sombra-saida]')?.dataset.item)).toBe('pipoca');
+  await expect(p.locator('[data-sombra-saida]')).toBeVisible();
+  await p.waitForTimeout(1200);
   await p.screenshot({ path: `${PASTA}/fogao-cozinhando-pc.png` });
   await expect
     .poll(() => itemEm(p, '[data-externo="fog:saida"]'), { timeout: (TEMPO_FUNDIR + 6) * 1000 })
@@ -341,23 +373,26 @@ test('com amigas: quem chega vê o desenho da TV, e a mesa com duas sentadas com
   await ana.keyboard.press('Escape');
   const { cx, cz, Y } = await plataforma(ana);
   const y = Y + 1;
-  // a mesa (olhando para -z, crescendo para -x) com uma cadeira de cada lado; a TV atrás
+  // a cena como a criança monta, pelo colocar (portão visual: pelo lote, as cadeiras ficavam como
+  // vieram, de costas para a mesa): a mesa olhando para +z (as células x e x + 1), uma cadeira de
+  // cada lado, cada uma posta de um jeito qualquer (o núcleo vira a cadeira para a mesa), e a TV
   const MESA = { x: cx, y, z: cz };
   const TV = { x: cx + 1, y, z: cz + 5 };
-  await ana.evaluate(
-    ({ m, tv, b }) =>
-      window.__brumaluz!.editarLote!([
-        { ...m, v: b.mesa | (2 << 8) },
-        { x: m.x - 1, y: m.y, z: m.z - 1, v: b.cadeira | (0 << 8) },
-        { x: m.x, y: m.y, z: m.z + 1, v: b.cadeira | (2 << 8) },
-        { ...tv, v: b.tv | (2 << 8) },
-      ]),
-    { m: MESA, tv: TV, b: { mesa: Bloco.MESA, cadeira: Bloco.CADEIRA, tv: Bloco.TV } },
-  );
-  await expect.poll(() => celulas(ana, [MESA, TV])).toEqual([
-    [Bloco.MESA, metaDoMovel(2, 0)],
-    [Bloco.TV, metaDoMovel(2, 0)],
+  const cadeiraAna = { x: MESA.x, y, z: MESA.z - 1 };
+  const cadeiraBia = { x: MESA.x + 1, y, z: MESA.z + 1 };
+  expect(await porAMao(ana, Bloco.MESA, MESA)).toBe(true);
+  await expect.poll(() => celulas(ana, [MESA])).toEqual([[Bloco.MESA, metaDoMovel(0, 0)]]);
+  // a da Ana, posta de quem olha para +z; a da Bia, de quem vem do outro lado, olhando para -z
+  expect(await porAMao(ana, Bloco.CADEIRA, cadeiraAna)).toBe(true);
+  expect(await porAMao(ana, Bloco.CADEIRA, cadeiraBia, 'norte')).toBe(true);
+  // as duas de frente para a mesa (a frente da cadeira olha para -vetor(d)): a do sul é a 2, a do
+  // norte é a 0
+  await expect.poll(() => celulas(ana, [cadeiraAna, cadeiraBia])).toEqual([
+    [Bloco.CADEIRA, metaDoMovel(2, 0)],
+    [Bloco.CADEIRA, metaDoMovel(0, 0)],
   ]);
+  expect(await porAMao(ana, Bloco.TV, TV)).toBe(true);
+  await expect.poll(() => celulas(ana, [TV])).toEqual([[Bloco.TV, metaDoMovel(0, 0)]]);
   // a Ana liga a TV antes de a Bia chegar
   await tocar(ana, TV);
   const tvDe = (p: Page) => p.evaluate(() => window.__brumaluz!.ligados!().find((e) => e.tipo === 'tv') ?? null);
@@ -374,8 +409,6 @@ test('com amigas: quem chega vê o desenho da TV, e a mesa com duas sentadas com
   passo('a TV para quem chega');
 
   // as duas sentam (cada uma numa cadeira em volta da mesa)
-  const cadeiraAna = { x: MESA.x - 1, y, z: MESA.z - 1 };
-  const cadeiraBia = { x: MESA.x, y, z: MESA.z + 1 };
   const sentar = async (p: Page, c: P, de: P) => {
     await ir(p, de.x, de.z, y);
     await p.waitForTimeout(400);
@@ -387,9 +420,25 @@ test('com amigas: quem chega vê o desenho da TV, e a mesa com duas sentadas com
     }, c);
     await expect.poll(() => p.evaluate(() => window.__brumaluz!.moveisTela!().assento), { timeout: 5000 }).not.toBeNull();
   };
-  await sentar(ana, cadeiraAna, { x: cadeiraAna.x + 0.5, y, z: cadeiraAna.z - 2 });
+  await sentar(ana, cadeiraAna, { x: cadeiraAna.x + 0.5, y, z: cadeiraAna.z - 2.5 });
   await sentar(bia, cadeiraBia, { x: cadeiraBia.x + 0.5, y, z: cadeiraBia.z + 2.5 });
+  // a câmera de fora vem por cima do ombro (meio segundo) e cada uma olha para a mesa
   await ana.waitForTimeout(1200);
+  for (const [p, c] of [
+    [ana, cadeiraAna],
+    [bia, cadeiraBia],
+  ] as const) {
+    const a = await p.evaluate(() => window.__brumaluz!.moveisTela!().assento);
+    expect(a).not.toBeNull();
+    const [fx, fz] = [
+      [0, 1],
+      [1, 0],
+      [0, -1],
+      [-1, 0],
+    ][a!.d & 3];
+    // de frente para a mesa: a célula na frente de quem senta é a mesa
+    expect(await p.evaluate((q) => window.__brumaluz!.bloco!(q.x, q.y, q.z), { x: c.x - fx, y, z: c.z - fz })).toBe(Bloco.MESA);
+  }
   // a Ana põe a pipoca da mão na mesa: as duas comem (o prato e os coraçõezinhos para as duas)
   await naMao(ana, 'pipoca', 2, 0);
   await ana.evaluate((m) => {

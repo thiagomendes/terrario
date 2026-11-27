@@ -4405,18 +4405,28 @@ export function criarCena(
   function olharParaQuemSentou(a: AssentoNaTela): void {
     if (primeiraPessoa.ligada()) return;
     const deitadaNaCama = !!a.deitado && blocoEm(a.x, a.y, a.z) === Bloco.CAMA;
+    // spec 039b (portão visual): sentada à mesa (a mesa na frente dela), a câmera vem por cima do
+    // ombro, de três-quartos, olhando para onde ela olha: a mesa, os pratos e quem está do outro
+    // lado ficam à vista (de frente para ela, a cabeça tapava a mesa)
+    const [vx, vz] = [
+      [0, 1],
+      [1, 0],
+      [0, -1],
+      [-1, 0],
+    ][a.d & 3];
+    const aMesa = !a.deitado && blocoEm(a.x - vx, a.y, a.z - vz) === Bloco.MESA;
     // sentada, ela olha para -vetor(d): a câmera olha para +vetor(d), de frente para ela;
     // deitada na cama, a câmera vem do pé e olha para a cabeceira (-vetor(d))
-    const base = ((deitadaNaCama ? a.d + 2 : a.d) & 3) * (Math.PI / 2);
+    const base = ((deitadaNaCama || aMesa ? a.d + 2 : a.d) & 3) * (Math.PI / 2);
     const deYaw = camera.rotation.y;
-    let dYaw = (base + 0.62 - deYaw) % (Math.PI * 2);
+    let dYaw = (base + (aMesa ? 0.75 : 0.62) - deYaw) % (Math.PI * 2);
     if (dYaw > Math.PI) dYaw -= Math.PI * 2;
     if (dYaw < -Math.PI) dYaw += Math.PI * 2;
     giroAoSentar = {
       deYaw,
       dYaw,
       dePitch: camera.rotation.x,
-      atePitch: deitadaNaCama ? 0.75 : 0.42,
+      atePitch: deitadaNaCama ? 0.75 : aMesa ? 0.9 : 0.42,
       t0: performance.now() / 1000,
     };
   }

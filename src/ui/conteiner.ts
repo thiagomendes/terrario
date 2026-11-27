@@ -1,6 +1,8 @@
 import type { Slot } from '../jogo/inventario';
 import type { EstadoFornalha } from '../jogo/fornalha';
-import { mudancaAceita, type EstadoFogao } from '../jogo/fogao';
+import { mudancaAceita, noFogao, type EstadoFogao } from '../jogo/fogao';
+import { icone as iconePix } from './pixicones';
+import { iconeDoItem } from './icones';
 import { COMBUSTIVEL, FUNDICAO } from '../jogo/receitas';
 import { obterItem } from '../jogo/itens';
 import type { Inventario } from '../jogo/inventario';
@@ -24,8 +26,14 @@ export const CSS_CONTEINER = `
 .grade-bau { display: grid; grid-template-columns: repeat(9, var(--slot)); gap: 5px; }
 /* spec 039b: o ícone do móvel ao lado do nome (a geladeira e o fogão) e o fogão sem carvão */
 .painel-conteiner .rotulo-secao { display: flex; align-items: center; gap: 8px; }
-.painel-conteiner .icone-conteiner { width: 30px; height: 30px; image-rendering: pixelated; }
+.painel-conteiner .icone-conteiner { width: 40px; height: 40px; margin: -6px 0; image-rendering: pixelated; filter: drop-shadow(0 2px 1px rgba(90, 55, 20, 0.3)); }
 .painel-fogao { grid-template-columns: auto auto auto; }
+/* (portão visual) a seta em cima da barrinha e a sombrinha do que vai sair */
+.painel-fogao .meio-fogao { display: grid; justify-items: center; gap: 4px; }
+.painel-fogao .seta-fogao { font-size: 1.4rem; color: #e39a2b; }
+.painel-fogao .lugar-saida-fogao { position: relative; }
+.painel-fogao .sombra-saida { position: absolute; inset: 12%; width: 76%; height: 76%; opacity: 0.35; pointer-events: none; }
+.painel-fogao .sombra-saida[hidden] { display: none; }
 `;
 
 export const TAMANHO_BAU = 27;
@@ -321,14 +329,29 @@ export function criarPainelFogao(ui: InventarioUI, icone?: () => string) {
   const entrada = ui.criarSlot();
   entrada.dataset.externo = 'fog:entrada';
   entrada.title = 'Comida para cozinhar';
+  // (portão visual) a seta em cima da barrinha: a comida vai da entrada para a saída
+  const meio = document.createElement('div');
+  meio.className = 'meio-fogao';
+  const seta = iconePix('seta');
+  seta.classList.add('seta-fogao');
   const prog = document.createElement('div');
   prog.className = 'progresso';
   const progI = document.createElement('i');
   prog.appendChild(progI);
+  meio.append(seta, prog);
   const saida = ui.criarSlot();
   saida.classList.add('resultado');
   saida.dataset.externo = 'fog:saida';
-  corpo.append(entrada, prog, saida);
+  // a sombrinha do que vai sair (meio transparente), com a saída vazia e comida na entrada
+  const lugarSaida = document.createElement('div');
+  lugarSaida.className = 'lugar-saida-fogao';
+  const sombra = document.createElement('img');
+  sombra.className = 'sombra-saida';
+  sombra.alt = '';
+  sombra.hidden = true;
+  sombra.setAttribute('data-sombra-saida', '');
+  lugarSaida.append(saida, sombra);
+  corpo.append(entrada, meio, lugarSaida);
   raiz.append(rot, corpo);
   ui.areaExtra.appendChild(raiz);
 
@@ -339,6 +362,12 @@ export function criarPainelFogao(ui: InventarioUI, icone?: () => string) {
     ui.desenharSlot(entrada, f.entrada);
     ui.desenharSlot(saida, f.saida);
     progI.style.width = `${Math.min(1, f.progresso) * 100}%`;
+    const vai = !f.saida && f.entrada ? noFogao(f.entrada.item) : undefined;
+    sombra.hidden = !vai;
+    if (vai) {
+      sombra.src = iconeDoItem(vai);
+      sombra.dataset.item = vai;
+    }
   };
   ui.clicarExterno((el, cursor, botao) => {
     const a = el.dataset.externo ?? '';

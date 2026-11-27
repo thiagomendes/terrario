@@ -53,12 +53,17 @@ export function lugaresDaMesa(l: LeitorMoveis, mesa: MovelAchado): Celula[] {
 /**
  * A direção da cadeira posta em (x, y, z) colada a uma mesa (de frente para ela), ou null: não
  * há mesa inteira encostada. Com mesa em mais de um lado, vale o primeiro na ordem das direções.
+ *
+ * A frente da cadeira (e de quem senta nela) olha para -vetor(d), e o encosto fica do lado de
+ * +vetor(d): com a mesa em +vetor(k), a cadeira de frente para ela é a de direção k + 2. (Até o
+ * portão visual da 039b, voltava k: a criança sentava de costas para a mesa, com o encosto entre
+ * ela e o prato.)
  */
 export function direcaoParaAMesa(l: LeitorMoveis, x: number, y: number, z: number): number | null {
-  for (let d = 0; d < 4; d++) {
-    const [dx, dz] = vetorDoMovel(d);
+  for (let k = 0; k < 4; k++) {
+    const [dx, dz] = vetorDoMovel(k);
     if (l.bloco(x + dx, y, z + dz) !== Bloco.MESA) continue;
-    if (movelEm(l, x + dx, y, z + dz)) return d;
+    if (movelEm(l, x + dx, y, z + dz)) return (k + 2) & 3;
   }
   return null;
 }

@@ -4,7 +4,13 @@ import { encontrarNascimento, alturaTerreno } from '../../src/world/chunk';
 import { Bloco } from '../../src/world/blocks';
 import { sanear } from '../../src/nucleo/saneamento';
 import { indiceDonoDe } from '../../src/world/edicoes';
-import { celulasDoMovel, metaDoMovel, movelEm, type LeitorMoveis } from '../../src/jogo/moveis';
+import {
+  celulasDoMovel,
+  metaDoMovel,
+  movelEm,
+  vetorDoMovel,
+  type LeitorMoveis,
+} from '../../src/jogo/moveis';
 import { direcaoParaAMesa, lugaresDaMesa } from '../../src/jogo/mesa';
 import { DURA_MUSICA, TV_SOZINHA } from '../../src/jogo/ligados';
 import { ESPERA_CANAL } from '../../src/jogo/casa';
@@ -192,11 +198,25 @@ describe('a mesa, as regras puras', () => {
     const n = abrir('local');
     mesaCom(n, 0);
     const l = leitor(n);
-    // ao norte da mesa (z - 1): de frente para +z (0); a oeste: para +x (1); ao sul: para -z (2)
-    expect(direcaoParaAMesa(l, MESA.x, YP, MESA.z - 1)).toBe(0);
-    expect(direcaoParaAMesa(l, MESA.x - 1, YP, MESA.z)).toBe(1);
-    expect(direcaoParaAMesa(l, MESA.x + 1, YP, MESA.z + 1)).toBe(2);
-    expect(direcaoParaAMesa(l, MESA.x + 2, YP, MESA.z)).toBe(3);
+    // a frente da cadeira (e de quem senta) olha para -vetor(d), o encosto fica em +vetor(d):
+    // ao norte da mesa (z - 1), de frente para +z, é a direção 2; a oeste, de frente para +x, a
+    // 3; ao sul, de frente para -z, a 0; a leste, de frente para -x, a 1 (portão visual da 039b:
+    // antes, a criança sentava de costas para a mesa)
+    expect(direcaoParaAMesa(l, MESA.x, YP, MESA.z - 1)).toBe(2);
+    expect(direcaoParaAMesa(l, MESA.x - 1, YP, MESA.z)).toBe(3);
+    expect(direcaoParaAMesa(l, MESA.x + 1, YP, MESA.z + 1)).toBe(0);
+    expect(direcaoParaAMesa(l, MESA.x + 2, YP, MESA.z)).toBe(1);
+    // quem senta olha para a mesa: o encosto fica do outro lado
+    for (const [x, z] of [
+      [MESA.x, MESA.z - 1],
+      [MESA.x - 1, MESA.z],
+      [MESA.x + 1, MESA.z + 1],
+      [MESA.x + 2, MESA.z],
+    ]) {
+      const d = direcaoParaAMesa(l, x, YP, z)!;
+      const [fx, fz] = vetorDoMovel(d);
+      expect(l.bloco(x - fx, YP, z - fz), `${x},${z}`).toBe(Bloco.MESA);
+    }
     // longe da mesa: nada
     expect(direcaoParaAMesa(l, MESA.x + 4, YP, MESA.z)).toBeNull();
   });
@@ -210,8 +230,9 @@ for (const modo of ['local', 'nuvem'] as const)
       passo(n);
       porMovel(n, Bloco.MESA, MESA.x, MESA.z);
       passo(n);
-      // posta ao sul olhando para +z (as costas para a mesa): vira para -z
-      porMovel(n, Bloco.CADEIRA, MESA.x, MESA.z + 1, 0);
+      // posta ao sul de costas para a mesa (o encosto do lado dela, a direção 2): vira de frente
+      // para a mesa (a 0: a frente olha para -z)
+      porMovel(n, Bloco.CADEIRA, MESA.x, MESA.z + 1, 2);
       // longe da mesa: fica como veio
       porMovel(n, Bloco.CADEIRA, MESA.x + 4, MESA.z + 3, 3);
       // o colar: a mesa e a cadeira juntas, com a cadeira de costas, como estavam
@@ -226,7 +247,7 @@ for (const modo of ['local', 'nuvem'] as const)
       });
       passo(n);
       expect(bloco(n, MESA.x, MESA.z + 1)).toBe(Bloco.CADEIRA);
-      expect(meta(n, MESA.x, MESA.z + 1)).toBe(metaDoMovel(2, 0));
+      expect(meta(n, MESA.x, MESA.z + 1)).toBe(metaDoMovel(0, 0));
       expect(meta(n, MESA.x + 4, MESA.z + 3)).toBe(metaDoMovel(3, 0));
       expect(bloco(n, MESA.x, MESA.z + 4)).toBe(Bloco.CADEIRA);
       expect(meta(n, MESA.x, MESA.z + 4)).toBe(metaDoMovel(0, 0));
