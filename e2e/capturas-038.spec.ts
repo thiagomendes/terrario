@@ -1,4 +1,4 @@
-import { test, type Browser, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { assentar, criarMundo, TAMANHOS, type Tamanho } from './guia-palco';
 
@@ -711,5 +711,57 @@ test('T09: os consertos do portão visual (celular em pé)', async ({ browser })
   await estudio(page, 0.85, Math.PI / 2, 4.2, 0.3);
   await page.waitForTimeout(700);
   await foto(page, PASTA_T09, '8-moto-lado');
+  await page.context().close();
+});
+
+// ------------------------------------------------------------------ a nuvem no modo de voo
+test('a nuvem fofa voa junto e a bicicletinha desmonta ao voar (celular em pé)', async ({ browser }) => {
+  test.skip(!QUAL.includes('nuvem-voo'));
+  test.setTimeout(300_000);
+  const PASTA = 'capturas-038/nuvem-voo';
+  const { page, O } = await abrirGramado(browser, 'empe');
+  const montado = () => page.evaluate(() => window.__brumaluz!.personagem!.montado!());
+  const subir = async (ms: number) => {
+    await page.evaluate(() => window.__brumaluz!.controleDireto!.tecla('pular', true));
+    await page.waitForTimeout(ms);
+    await page.evaluate(() => window.__brumaluz!.controleDireto!.tecla('pular', false));
+  };
+  for (const [id, voaJunto] of [
+    ['nuvem-fofa', true],
+    ['bicicletinha', false],
+  ] as const) {
+    await noMeio(page, O, 0, 5);
+    await montarNo(page, MENINA, id);
+    await page.waitForTimeout(800);
+    await estudio(page, 0.8, 0.6, 4.4, 0.4);
+    await page.waitForTimeout(600);
+    await foto(page, PASTA, `${id}-1-no-chao`);
+    // liga o voo e sobe
+    await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      if (e.modoFoto!.ativo()) e.modoFoto!.alternar();
+      e.voar!(true);
+    });
+    await subir(700);
+    await page.waitForTimeout(600);
+    expect(await montado(), `${id} voando`).toBe(voaJunto ? id : null);
+    await estudio(page, 0.8, 0.6, 4.4, 0.4);
+    await page.waitForTimeout(600);
+    await foto(page, PASTA, `${id}-2-voando`);
+    await estudio(page, 0.8, Math.PI / 2, 4.4, 0.2);
+    await page.waitForTimeout(600);
+    await foto(page, PASTA, `${id}-3-voando-lado`);
+    // desliga o voo: desce até o chão
+    await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      if (e.modoFoto!.ativo()) e.modoFoto!.alternar();
+      e.voar!(false);
+    });
+    await page.waitForTimeout(2000);
+    expect(await montado(), `${id} de volta ao chão`).toBe(voaJunto ? id : null);
+    await estudio(page, 0.8, 0.6, 4.4, 0.4);
+    await page.waitForTimeout(600);
+    await foto(page, PASTA, `${id}-4-desceu`);
+  }
   await page.context().close();
 });

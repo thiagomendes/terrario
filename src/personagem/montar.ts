@@ -47,12 +47,18 @@ export function motivoSemMontar(s: SituacaoMontar): MotivoSemMontar | null {
   if (s.brinquedos.length) return 'brinquedo';
   if (s.dentroDeCasa) return 'casa';
   if (s.nadando) return 'nadando';
-  if (s.voando) return 'voando';
+  // (a nuvem fofa já flutua: ela voa junto, com a criança sentada, e desce junto; os brinquedos de
+  // chão desmontam ao voar)
+  if (s.voando && !voaJunto(a.premium.andar)) return 'voando';
   if (s.desmaiada) return 'desmaiada';
   if (s.provador) return 'provador';
   if (s.modoFoto) return 'foto';
   return null;
 }
+
+/** Os brinquedos de andar que voam junto com a criança (o modo de voo não a faz descer). */
+export const VOAM_JUNTO: readonly string[] = ['nuvem-fofa'];
+export const voaJunto = (andar: string | undefined): boolean => !!andar && VOAM_JUNTO.includes(andar);
 
 /** A criança pode montar (ou continuar montada) agora? */
 export const podeMontar = (s: SituacaoMontar): boolean => motivoSemMontar(s) === null;
