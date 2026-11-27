@@ -9,13 +9,15 @@
  *   afundar) e as costas no colchão. Só na cama, o corpo achata de frente para trás (o boneco de
  *   brinquedo é gordinho: 0,58 de fundo), e o edredom vai do queixo ao pé, 3 cm acima do corpo
  *   (`render/moveis`). De cima, a cara e o corpo ficam do mesmo tamanho.
- * - **Deitada na curtinha:** encolhidinha de lado, os joelhos dobrados, num tamanho que cabe numa
- *   célula, com o edredom.
+ * - **Deitada na curtinha:** encolhidinha, os joelhos dobrados, num tamanho que cabe numa célula,
+ *   com o edredom. De costas, como na cama nova: de lado, a cara sumia no edredom ou no travesseiro.
+ * - **Deitada no sofá** (de noite, sem cama; decisão do dono, 27 nov): de costas, encolhidinha, o
+ *   sofá inteiro, a cabeça na almofadinha do lado da âncora e a mantinha por cima do corpo.
  *
  * O cálculo das caixas é feito uma vez por assento (e por boneco); a cada quadro só se repõe o
  * que a pose de sempre desfaz.
  */
-import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { Bloco } from '../world/blocks';
@@ -43,7 +45,7 @@ export const ALTURA_ASSENTO = 0.64;
 /** Só na cama: quanto o corpo deitado achata de frente para trás. */
 export const ACHATA_DEITADA = 0.6;
 /** Na curtinha: o tamanho da criança encolhidinha (cabe numa célula). */
-const TAMANHO_CURTINHA = 0.66;
+const TAMANHO_CURTINHA = 0.58;
 /** No sofá (de noite, sem cama): encolhidinha, cabe entre os dois braços. */
 const TAMANHO_SOFA = 0.9;
 
@@ -127,26 +129,28 @@ export function criarPoseMovel(leitor: LeitorMoveis, moveis: RenderMoveis | null
   }
 
   /** As pernas, os braços e a cabeça de cada pose (a pose de sempre refaz isso a cada quadro). */
-  function juntas(j: Record<string, TransformNode>, tipo: 'sentada' | 'deitada' | 'curtinha'): void {
+  function juntas(j: Record<string, TransformNode>, tipo: 'sentada' | 'deitada' | 'sofa'): void {
+    if (tipo === 'sofa') {
+      // de costas no sofá, encolhidinha: os joelhos dobrados para cima, os braços junto do corpo
+      j.pernaE.rotation.x = -0.75;
+      j.pernaD.rotation.x = -0.75;
+      j.bracoE.rotation.set(0, 0, -0.05);
+      j.bracoD.rotation.set(0, 0, 0.05);
+      j.cabeca.rotation.set(0, 0, 0);
+      return;
+    }
     if (tipo === 'sentada') {
       j.pernaE.rotation.x = -1.45;
       j.pernaD.rotation.x = -1.45;
       j.bracoE.rotation.set(-0.35, 0, -0.12);
       j.bracoD.rotation.set(-0.35, 0, 0.12);
-    } else if (tipo === 'deitada') {
+    } else {
       // (os pés deitam um tico para a ponta da cama: as pontas dos sapatos não espetam o edredom)
       j.pernaE.rotation.x = 0.3;
       j.pernaD.rotation.x = 0.3;
       j.bracoE.rotation.set(0, 0, -0.05);
       j.bracoD.rotation.set(0, 0, 0.05);
       j.cabeca.rotation.set(0, 0, 0);
-    } else {
-      // encolhidinha: os joelhos para o peito e as mãos juntas na frente
-      j.pernaE.rotation.x = -1.3;
-      j.pernaD.rotation.x = -1.3;
-      j.bracoE.rotation.set(-1.0, 0, -0.1);
-      j.bracoD.rotation.set(-1.0, 0, 0.1);
-      j.cabeca.rotation.set(0.15, 0, 0);
     }
   }
 
@@ -181,57 +185,35 @@ export function criarPoseMovel(leitor: LeitorMoveis, moveis: RenderMoveis | null
       return { chave, pos: raiz.position.clone(), rot: raiz.rotation.clone(), esc: raiz.scaling.clone(), cabeca: null, deitado: null };
     }
     /**
-     * De lado (a curtinha e o sofá): o alto do boneco (+y) para `h`, a frente dele (+z) para `f` e
-     * o lado (x) em pé, encolhida no tamanho `k`; o lado de baixo na `superficie`, o meio do corpo
-     * no `meio` (na direção de `f`) e a cabeça, de lado, no `travesseiro`.
+     * De costas (a cama nova e o sofá): o alto do boneco (+y) para `h`, a frente (+z) para cima,
+     * achatada de frente para trás, no tamanho `k`; as costas na `superficie` e a nuca no
+     * `travesseiro`, o alto da cabeça em `alvoCabeca`.
      */
-    function deLado(
-      e: { hx: number; hz: number; fx: number; fz: number },
-      k: number,
-      alvoCabeca: { x: number; z: number },
-      superficie: number,
-      travesseiro: number,
-      meio: { x: number; z: number },
-    ) {
-      const Y = new Vector3(e.hx, 0, e.hz);
-      const Z = new Vector3(e.fx, 0, e.fz);
-      const X = Vector3.Cross(Y, Z);
-      const s = Math.sign(X.y) || 1;
-      const M = Matrix.FromValues(X.x, X.y, X.z, 0, Y.x, Y.y, Y.z, 0, Z.x, Z.y, Z.z, 0, 0, 0, 0, 1);
-      const rot = Quaternion.FromRotationMatrix(M).toEulerAngles();
-      // (o lado em pé achata um tanto: a coberta fica baixa; de frente, a cara continua redonda)
-      const esc = new Vector3(k * 0.62, k, k);
-      const baixo = s > 0 ? (ok(corpo.min.x) ? corpo.min.x : -0.45) : ok(corpo.max.x) ? corpo.max.x : 0.45;
-      const y = superficie - s * baixo * esc.x;
+    function deCostas(hx: number, hz: number, k: number, alvoCabeca: { x: number; z: number }, superficie: number, travesseiro: number) {
+      const sz = ACHATA_DEITADA * k;
+      const esc = new Vector3(k, k, sz);
+      const rot = new Vector3(-Math.PI / 2, Math.atan2(-hx, -hz), 0);
+      const costas = ok(corpo.min.z) ? corpo.min.z : -0.3;
+      const y = superficie - costas * sz;
       const alto = ok(cab.max.y) ? cab.max.y : 1.76;
-      const zm = ok(corpo.min.z) ? (corpo.min.z + corpo.max.z) / 2 : 0.1;
-      // ao longo de h, a cabeça na cabeceira; ao longo de f, o meio do corpo no meio
-      const ph = alvoCabeca.x * e.hx + alvoCabeca.z * e.hz - alto * k;
-      const pf = meio.x * e.fx + meio.z * e.fz - zm * k;
-      const pos = new Vector3(ph * e.hx + pf * e.fx, y, ph * e.hz + pf * e.fz);
-      const baixoCabeca = s > 0 ? (ok(cab.min.x) ? cab.min.x : -0.48) : ok(cab.max.x) ? cab.max.x : 0.48;
-      const cabeca = new Vector3((s * (travesseiro - (y + s * baixoCabeca * esc.x))) / esc.x, 0, 0);
+      const pos = new Vector3(alvoCabeca.x - hx * alto * k, y, alvoCabeca.z - hz * alto * k);
+      const nuca = ok(cab.min.z) ? cab.min.z : -0.5;
+      const cabeca = new Vector3(0, 0, (travesseiro - (y + nuca * sz)) / sz);
       return { pos, rot, esc, cabeca };
     }
-    // deitada no sofá (de noite, sem cama): encolhidinha de lado, o sofá inteiro, a cabeça no braço
-    // do lado da âncora, os joelhos para a frente do sofá
+    // deitada no sofá (de noite, sem cama): de costas, encolhidinha (os joelhos dobrados), o sofá
+    // inteiro, a cabeça na almofadinha do lado da âncora
     if (a.deitado && leitor.bloco(a.x, a.y, a.z) === Bloco.SOFA) {
       const m = movelEm(leitor, a.x, a.y, a.z);
       const d = m?.d ?? a.d;
       const anc = m?.ancora ?? { x: a.x, y: a.y, z: a.z };
       const [rx, rz] = VET[(d + 1) & 3];
       const [fx0, fz0] = VET[d & 3];
-      const cx = anc.x + 0.5 + rx * 0.5;
-      const cz = anc.z + 0.5 + rz * 0.5;
+      // (o meio do assento: entre os braços, um tico para a frente do encosto)
+      const cx = anc.x + 0.5 + rx * 0.5 - fx0 * 0.08;
+      const cz = anc.z + 0.5 + rz * 0.5 - fz0 * 0.08;
       const sup = a.y + ALTURA_ASSENTO;
-      const r = deLado(
-        { hx: -rx, hz: -rz, fx: -fx0, fz: -fz0 },
-        TAMANHO_SOFA,
-        { x: cx - rx * 0.76, z: cz - rz * 0.76 },
-        sup,
-        sup + 0.04,
-        { x: cx - fx0 * 0.05, z: cz - fz0 * 0.05 },
-      );
+      const r = deCostas(-rx, -rz, TAMANHO_SOFA, { x: cx - rx * 0.76, z: cz - rz * 0.76 }, sup, sup + 0.1);
       raiz.position.copyFrom(r.pos);
       raiz.rotation.copyFrom(r.rot);
       raiz.scaling.copyFrom(r.esc);
@@ -244,7 +226,6 @@ export function criarPoseMovel(leitor: LeitorMoveis, moveis: RenderMoveis | null
     const alvo = { x: a.x + 0.5 + hx * cabeceira, z: a.z + 0.5 + hz * cabeceira };
     const colchao = a.y + MEDIDA_CAMA.colchao;
     const travesseiro = colchao + (curtinha ? 0.14 * 1.25 : MEDIDA_CAMA.travesseiro);
-    const alto = ok(cab.max.y) ? cab.max.y : 1.76;
     let pos: Vector3;
     let rot: Vector3;
     let esc: Vector3;
@@ -252,22 +233,13 @@ export function criarPoseMovel(leitor: LeitorMoveis, moveis: RenderMoveis | null
     let cabeca: Vector3;
     if (!curtinha) {
       // de costas: o alto do boneco (+y) vai para a cabeceira, a frente (+z) para cima, achatada
-      const sz = ACHATA_DEITADA;
-      esc = new Vector3(1, 1, sz);
-      rot = new Vector3(-Math.PI / 2, Math.atan2(-hx, -hz), 0);
-      const costas = ok(corpo.min.z) ? corpo.min.z : -0.3;
-      const y = colchao - costas * sz;
-      pos = new Vector3(alvo.x - hx * alto, y, alvo.z - hz * alto);
-      const nuca = ok(cab.min.z) ? cab.min.z : -0.5;
-      cabeca = new Vector3(0, 0, (travesseiro - (y + nuca * sz)) / sz);
+      ({ pos, rot, esc, cabeca } = deCostas(hx, hz, 1, alvo, colchao, travesseiro));
     } else {
       // de lado, encolhidinha e pequenininha: o alto (+y) para a cabeceira, os joelhos (+z) para o
       // lado de fora da cama
-      const r = deLado({ hx, hz, fx: -hz, fz: hx }, TAMANHO_CURTINHA, alvo, colchao, travesseiro, {
-        x: a.x + 0.5,
-        z: a.z + 0.5,
-      });
-      ({ pos, rot, esc, cabeca } = r);
+      // (de lado, a cara sumia no edredom ou no travesseiro: de costas, com os joelhos dobrados, a
+      // cara fica para cima, como na cama nova)
+      ({ pos, rot, esc, cabeca } = deCostas(hx, hz, TAMANHO_CURTINHA, alvo, colchao, travesseiro));
     }
     const delta0 = paraOPai(cabeca);
     raiz.position.copyFrom(pos);
@@ -300,7 +272,7 @@ export function criarPoseMovel(leitor: LeitorMoveis, moveis: RenderMoveis | null
       const meta = leitor.meta(a.x, a.y, a.z);
       const curtinha = !!a.deitado && parteDoMeta(meta) === PARTE_CURTINHA;
       const noSofa = !!a.deitado && leitor.bloco(a.x, a.y, a.z) === Bloco.SOFA;
-      const tipo = !a.deitado ? 'sentada' : curtinha || noSofa ? 'curtinha' : 'deitada';
+      const tipo = !a.deitado ? 'sentada' : noSofa || curtinha ? 'sofa' : 'deitada';
       juntas(b.juntas, tipo);
       const chave = `${a.x},${a.y},${a.z},${a.d},${a.px},${a.pz},${tipo}`;
       if (b.arrumado?.chave !== chave) {
