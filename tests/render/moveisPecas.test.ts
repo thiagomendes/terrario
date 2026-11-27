@@ -58,6 +58,8 @@ describe('os modelos dos móveis (spec 039, T05)', () => {
     expect(Object.keys(montarModeloMovel(Bloco.PIA).partes).sort()).toEqual(['agua', 'bolhas']);
     expect(Object.keys(montarModeloMovel(Bloco.CAMA).partes).sort()).toEqual(['cobertor', 'edredom']);
     expect(Object.keys(montarModeloMovel(Bloco.CAMA, true).partes).sort()).toEqual(['cobertor', 'edredom']);
+    // (a almofadinha do sofá: em pé no canto, ela vira o travesseiro de quem deita ali)
+    expect(Object.keys(montarModeloMovel(Bloco.SOFA).partes).sort()).toEqual(['almofada', 'edredom']);
     expect(montarModeloMovel(Bloco.SOFA).partes.edredom?.topo).toBeGreaterThan(0);
   });
 

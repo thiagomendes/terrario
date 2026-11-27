@@ -768,11 +768,12 @@ export const REGISTRO_BLOCOS: readonly DefinicaoBloco[] = [
     luz: 12,
     semItem: true,
   }),
+  // (a lua do criado-mudo alcança o quarto como o abajur alcança a sala: nunca escuro total)
   def(
     Bloco.CRIADO_MUDO_ACESO,
     'criado-mudo aceso',
     'tabuas',
-    madeira({ ...movel, dureza: 0.6, emissivo: true, luz: 7, semItem: true }),
+    madeira({ ...movel, dureza: 0.6, emissivo: true, luz: 11, semItem: true }),
   ),
 ];
 

@@ -742,7 +742,11 @@ export function modeloNaMao(
       vd.applyToMesh(m);
       m.material = mats.corVertice(0.3) ?? mats.cor('#ffffff', 0.3);
       m.scaling.setAll(k);
-      add(m, -((x0 + x1) / 2) * k, -(y1 / 2) * k, -((z0 + z1) / 2) * k);
+      // a frente do móvel (as portas, a torneira, as almofadas) virada para quem olha o ícone e
+      // segura; a cama fica como o ícone de antes (o pé para a frente)
+      const virar = bloco === Bloco.CAMA ? 1 : -1;
+      if (virar < 0) m.rotation.y = Math.PI;
+      add(m, virar * -((x0 + x1) / 2) * k, -(y1 / 2) * k, virar * -((z0 + z1) / 2) * k);
       return { no, malhas, ferramenta: false };
     }
   }

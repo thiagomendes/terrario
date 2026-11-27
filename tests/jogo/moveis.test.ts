@@ -147,7 +147,8 @@ describe('a tabela dos móveis', () => {
     expect(acesoOuApagado(Bloco.CRIADO_MUDO_ACESO)).toBe(Bloco.CRIADO_MUDO);
     expect(acesoOuApagado(Bloco.SOFA)).toBeNull();
     expect(obterBloco(Bloco.ABAJUR_ACESO)?.luz).toBe(12);
-    expect(obterBloco(Bloco.CRIADO_MUDO_ACESO)?.luz).toBe(7);
+    // (portão visual da 039: a lua alcança o quarto como o abajur alcança a sala)
+    expect(obterBloco(Bloco.CRIADO_MUDO_ACESO)?.luz).toBe(11);
     expect(obterBloco(Bloco.ABAJUR)?.luz ?? 0).toBe(0);
     // o aceso não vira item (quebrado, devolve o apagado)
     expect(obterBloco(Bloco.ABAJUR_ACESO)?.semItem).toBe(true);

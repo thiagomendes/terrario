@@ -37,7 +37,8 @@ import {
 import { celulasDoTapete, type CamadaTapetes } from '../../jogo/tapetes';
 import { criarPlasticos } from '../formas';
 import { criarPaletaLuz } from '../vila/luzes';
-import { EDREDOM, montarModeloMovel, type ModeloMovel, type ParteModelo } from './pecas';
+import { EDREDOM, almofadaDeitada, montarModeloMovel, type ModeloMovel, type ParteModelo } from './pecas';
+import { formaDaCoberta, montarCoberta, type CaixaCorpo } from './coberta';
 
 /** Até onde os móveis são desenhados (blocos, do meio do pedaço à criança, mais a meia diagonal). */
 export const DISTANCIA_MOVEIS = 32;
@@ -87,12 +88,31 @@ export interface RenderMoveis {
   /** A água da pia da âncora (x, y, z), ligada ou desligada (só na tela de quem está perto). */
   agua(x: number, y: number, z: number, ligada: boolean): void;
   /**
-   * Alguém deitado na cama da âncora (x, y, z): o edredom aparece, com o alto em `topo` (mundo),
-   * e o cobertor esticado sai. `null`: ninguém mais deitado ali.
+   * Alguém deitado na cama (ou no sofá) da âncora (x, y, z): a coberta macia aparece por cima do
+   * corpo (`corpo`: as caixas de cada pedaço do corpo deitado, no mundo, sem a cabeça, e a da
+   * cabeça), e o cobertor esticado sai. `topo` null: ninguém mais deitado ali.
    */
-  deitado(x: number, y: number, z: number, topo: number | null, quem: string): void;
+  deitado(
+    x: number,
+    y: number,
+    z: number,
+    topo: number | null,
+    quem: string,
+    corpo?: { pedacos: readonly CaixaCorpo[]; cabeca: CaixaCorpo },
+  ): void;
   /** O que mexe agora (testes): a âncora, quem está deitado e as partes acesas. */
-  mexendo(): Array<{ ancora: string; deitados: Record<string, number>; k: number; agua: boolean; partes: Record<string, [boolean, number]> }>;
+  mexendo(): Array<{
+    ancora: string;
+    deitados: Record<string, number>;
+    k: number;
+    agua: boolean;
+    partes: Record<string, [boolean, number]>;
+    /** Quanto o corpo de quem está deitado passa da coberta (pelos lados e pelos pés; 0: nada). */
+    fora: number;
+    coberta: boolean;
+    /** As caixas (no referencial do móvel) da cabeça e do corpo todo de cada um deitado ali. */
+    caixas: Array<{ cabeca: number[]; corpo: number[] }>;
+  }>;
   /** Quantos pedaços, malhas, triângulos, móveis e tapetes vivos (testes e medida). */
   contagem(): { pedacos: number; malhas: number; triangulos: number; moveis: number; tapetes: number; mexendo: number };
   descartar(): void;
@@ -138,6 +158,10 @@ interface Mexendo {
   agua: boolean;
   /** Quem está deitado e o alto do corpo (o maior). */
   deitados: Map<string, number>;
+  /** As caixas do corpo (e a da cabeça) de cada um que está deitado (no referencial do móvel). */
+  corpos: Map<string, { pedacos: readonly CaixaCorpo[]; cabeca: CaixaCorpo }>;
+  /** A coberta macia por cima de quem está deitado (refeita quando alguém deita ou levanta). */
+  coberta: Mesh | null;
 }
 
 const chaveC = (cx: number, cz: number) => `${cx},${cz}`;
@@ -421,7 +445,7 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
       malhas.push(...malhaDaParte(`moveis-${nome}-${k}`, p, pn));
       partes[nome] = pn;
     }
-    mx = { inst: i, no, malhas, partes, k: 0, alvo: 0, agua: false, deitados: new Map() };
+    mx = { inst: i, no, malhas, partes, k: 0, alvo: 0, agua: false, deitados: new Map(), corpos: new Map(), coberta: null };
     mexendo.set(k, mx);
     return mx;
   }
@@ -431,6 +455,7 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
   }
   function largarSeParado(k: string, mx: Mexendo): void {
     if (mx.k > 0 || mx.alvo > 0 || mx.agua || mx.deitados.size > 0) return;
+    mx.coberta?.dispose();
     for (const m of mx.malhas) m.dispose();
     for (const n of Object.values(mx.partes)) n.dispose();
     mx.no.dispose();
@@ -455,17 +480,86 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
       if (mx.agua && P.bolhas) P.bolhas.scaling.y = 0.8 + 0.3 * Math.abs(Math.sin(performance.now() / 200));
     }
     if (P.edredom) {
+      // a coberta macia (feita do corpo) toma o lugar do edredom de caixa; sem o corpo (um amigo
+      // antigo), o de caixa estica até o alto dele
       const deitado = mx.deitados.size > 0;
-      P.edredom.setEnabled(deitado);
+      P.edredom.setEnabled(deitado && !mx.coberta);
+      // (a almofadinha do sofá sai do canto: ela está debaixo da cabeça, junto da coberta)
+      P.almofada?.setEnabled(!(deitado && mx.coberta));
       P.cobertor?.setEnabled(false);
-      if (deitado) {
-        // a altura do edredom (e da manta) segue o corpo deitado (uns 3 cm por cima)
+      if (deitado && !mx.coberta) {
         const alto = modelo(mx.inst.bloco, mx.inst.curtinha).partes.edredom?.topo ?? (EDREDOM.altura - EDREDOM.beirada) * 1.25;
         const topo = Math.max(...mx.deitados.values());
         const quer = topo + 0.03 - (mx.inst.cy + P.edredom.position.y);
         P.edredom.scaling.y = Math.max(0.4, Math.min(3, quer / alto));
       }
     }
+  }
+
+  /** Refaz a coberta macia por cima de todos que estão deitados ali (o corpo de cada um). */
+  function refazerCoberta(mx: Mexendo): void {
+    mx.coberta?.dispose();
+    mx.coberta = null;
+    const f = formaDaCoberta(mx.inst.bloco, mx.inst.curtinha);
+    const todos = [...mx.corpos.values()];
+    const corpos = todos.flatMap((c) => c.pedacos);
+    if (!f || !corpos.length || mx.deitados.size === 0) return;
+    const cab = todos[0].cabeca;
+    const vd = montarCoberta(f, corpos, cab);
+    if (f.almofada && Number.isFinite(cab[0])) {
+      // a almofadinha deitada debaixo da cabeça: do assento até um tico acima da nuca (a cabeça
+      // afunda nela), um pouco maior que a cabeça para os lados
+      const alto = Math.max(0.05, cab[1] + 0.025 - f.base);
+      const w = f.eixo === 'x' ? Math.min(0.42, cab[3] - cab[0] + 0.04) : cab[3] - cab[0] + 0.12;
+      const d = f.eixo === 'x' ? Math.min(f.c1 - f.c0 - 0.06, cab[5] - cab[2] + 0.12) : Math.min(0.42, cab[5] - cab[2] + 0.04);
+      const al = almofadaDeitada(w, alto, d);
+      const cx = (cab[0] + cab[3]) / 2;
+      const cz = f.eixo === 'x' ? Math.min(Math.max((cab[2] + cab[5]) / 2, f.c0 + d / 2), f.c1 - d / 2) : (cab[2] + cab[5]) / 2;
+      const P = al.positions as number[];
+      for (let i = 0; i < P.length; i += 3) {
+        P[i] += cx;
+        P[i + 1] += f.base - 0.01;
+        P[i + 2] += cz;
+      }
+      vd.merge(al);
+    }
+    const m = new Mesh(`moveis-coberta-${mx.inst.ancora.x},${mx.inst.ancora.y},${mx.inst.ancora.z}`, scene);
+    vd.applyToMesh(m);
+    m.material = matCorpo;
+    m.isPickable = false;
+    m.parent = mx.no;
+    op.aoCriar?.(m);
+    mx.coberta = m;
+  }
+  /** Quanto o corpo passa dos limites da coberta (nos lados e no comprimento; a cabeça não conta). */
+  function foraDaCoberta(mx: Mexendo): number {
+    const f = formaDaCoberta(mx.inst.bloco, mx.inst.curtinha);
+    if (!f) return 0;
+    let fora = 0;
+    for (const { pedacos } of mx.corpos.values())
+      for (const b of pedacos) {
+        const [a0, a1, c0, c1] = f.eixo === 'z' ? [b[2], b[5], b[0], b[3]] : [b[0], b[3], b[2], b[5]];
+        fora = Math.max(fora, f.a0 - a0, a1 - f.a1, f.c0 - c0, c1 - f.c1);
+      }
+    return Math.round(fora * 1000) / 1000;
+  }
+  /** As caixas do corpo (no mundo) para o referencial do móvel (o giro é de quartos de volta). */
+  function paraOMovel(i: Instancia, corpo: readonly CaixaCorpo[]): CaixaCorpo[] {
+    const c = Math.round(Math.cos(i.giro));
+    const s = Math.round(Math.sin(i.giro));
+    return corpo.map(([x0, y0, z0, x1, y1, z1]) => {
+      // (o mundo para o móvel: desfaz o giro; x' = x c - z s, z' = x s + z c)
+      const xs = [x0 - i.cx, x1 - i.cx];
+      const zs = [z0 - i.cz, z1 - i.cz];
+      const lx: number[] = [];
+      const lz: number[] = [];
+      for (const x of xs)
+        for (const z of zs) {
+          lx.push(x * c - z * s);
+          lz.push(x * s + z * c);
+        }
+      return [Math.min(...lx), y0 - i.cy, Math.min(...lz), Math.max(...lx), y1 - i.cy, Math.max(...lz)] as const;
+    });
   }
 
   /**
@@ -609,19 +703,29 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
       if (!mx || !mx.partes.agua) return;
       mx.agua = ligada;
     },
-    deitado(x, y, z, topo, quem) {
+    deitado(x, y, z, topo, quem, corpo) {
       const i = instanciaEm(x, y, z);
       const k = i ? chaveA(i.ancora.x, i.ancora.y, i.ancora.z) : chaveA(x, y, z);
       // quem deitou em outra cama saiu desta
-      for (const [kk, mx] of mexendo) if (kk !== k) mx.deitados.delete(quem);
+      for (const [kk, mx] of mexendo)
+        if (kk !== k && mx.deitados.delete(quem)) {
+          mx.corpos.delete(quem);
+          refazerCoberta(mx);
+        }
       if (topo === null) {
-        mexendo.get(k)?.deitados.delete(quem);
+        const mx = mexendo.get(k);
+        if (mx?.deitados.delete(quem)) {
+          mx.corpos.delete(quem);
+          refazerCoberta(mx);
+        }
         return;
       }
       const mx = mexer(x, y, z);
       if (!mx || !mx.partes.edredom) return;
       const antes = mx.deitados.size > 0;
       mx.deitados.set(quem, topo);
+      if (corpo) mx.corpos.set(quem, { pedacos: paraOMovel(mx.inst, corpo.pedacos), cabeca: paraOMovel(mx.inst, [corpo.cabeca])[0] });
+      refazerCoberta(mx);
       if (!antes) refazerPedacoDe(mx.inst);
     },
     mexendo() {
@@ -631,6 +735,12 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
         k: mx.k,
         agua: mx.agua,
         partes: Object.fromEntries(Object.entries(mx.partes).map(([n, p]) => [n, [p.isEnabled(), p.scaling.y] as [boolean, number]])),
+        fora: foraDaCoberta(mx),
+        coberta: !!mx.coberta,
+        caixas: [...mx.corpos.values()].map((c) => ({
+          cabeca: c.cabeca.map((v) => Math.round(v * 100) / 100),
+          corpo: [0, 1, 2, 3, 4, 5].map((i) => Math.round((i < 3 ? Math.min : Math.max)(...c.pedacos.map((b) => b[i])) * 100) / 100),
+        })),
       }));
     },
     contagem() {

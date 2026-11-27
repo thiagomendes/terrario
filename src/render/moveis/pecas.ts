@@ -42,8 +42,10 @@ export const COR_MOVEL = {
   grafite: '#3a3944',
   cromo: '#d4d8e2',
   quente: '#ffe2a0',
-  lua: '#e9dcae',
+  lua: '#f2d675',
   luaAcesa: '#fff1b0',
+  manta: '#fcedcf',
+  mantaSombra: '#f0d9ae',
 } as const;
 const M = COR_MOVEL;
 
@@ -117,6 +119,11 @@ class RefEscala extends Ref {
   override barra(p: V3, q: V3, lado: number, cor: string, luz = false): void {
     const [a, c, e] = this.esc;
     super.barra([p[0] * a, p[1] * c, p[2] * e], [q[0] * a, q[1] * c, q[2] * e], lado * Math.min(a, e), cor, luz);
+  }
+  override placa(perfil: Array<[number, number]>, esp: number, x: number, y: number, z: number, cor: string, luz = false): void {
+    const [a, c, e] = this.esc;
+    const k = Math.min(a, c);
+    super.placa(perfil.map(([u, v]) => [u * k, v * k] as [number, number]), esp * e, x * a, y * c, z * e, cor, luz);
   }
   override prisma(n: number, r: number, larg: number, x: number, y: number, z: number, cor: string, eixo: 'x' | 'y' | 'z' = 'z', luz = false): void {
     const [a, c, e] = this.esc;
@@ -212,6 +219,7 @@ function desenhar(o: Oficina, bloco: number, curtinha: boolean): void {
   switch (bloco) {
     case Bloco.SOFA:
       sofa(o.r);
+      almofadaDoSofa(o);
       return mantaDoSofa(o);
     case Bloco.CADEIRA:
       return cadeira(o.r);
@@ -254,9 +262,34 @@ function sofa(r: Ref): void {
     r.prisma(10, 0.13, 0.9, s * 0.87, 0.64, 0, M.coral, 'z');
     r.prisma(10, 0.08, 0.92, s * 0.87, 0.64, 0, M.coralEscuro, 'z');
   }
-  // a almofadinha manteiga no canto
-  r.caixa(0.34, 0.32, 0.12, -0.6, 0.48, -0.05, M.manteiga, 0.07);
-  r.caixa(0.06, 0.06, 0.02, -0.6, 0.62, 0.015, M.creme, 0.02);
+}
+
+/**
+ * A almofadinha manteiga em pé no canto do sofá (uma parte parada no lugar dela): com alguém
+ * deitado, ela sai do canto e vira o travesseiro debaixo da cabeça (`almofadaDeitada`).
+ */
+function almofadaDoSofa(o: Oficina): void {
+  o.parte(
+    'almofada',
+    [-0.6, 0.64, -0.05],
+    (p) => {
+      p.caixa(0.34, 0.32, 0.12, 0, -0.16, 0, M.manteiga, 0.07);
+      p.caixa(0.06, 0.06, 0.02, 0, -0.02, 0.065, M.creme, 0.02);
+    },
+    { repouso: true },
+  );
+}
+
+/**
+ * A almofadinha do sofá deitada debaixo da cabeça de quem dorme ali (na origem: o meio dela no
+ * chão; `w` em x, `d` em z, `h` de alto), com o botão creme em cima. Já na escala do mundo.
+ */
+export function almofadaDeitada(w: number, h: number, d: number): VertexData {
+  const dd = desenho();
+  const r = new RefEscala(dd, NA_ORIGEM, [1, 1, 1]);
+  r.caixa(w, h, d, 0, 0, 0, M.manteiga, Math.min(0.07, h * 0.45));
+  r.caixa(0.07, 0.015, 0.07, 0, h - 0.004, 0, M.creme, 0.006);
+  return dd.corpo.juntar();
 }
 
 /**
@@ -265,27 +298,81 @@ function sofa(r: Ref): void {
  * assento. Só aparece com alguém deitado; a pose estica a altura dela ao corpo.
  */
 function mantaDoSofa(o: Oficina): void {
-  const H = 0.4;
-  const B = 0.1;
-  // (a cabeça fica no braço do lado da âncora, em +x aqui; a manta cobre do pescoço aos pés)
-  const x0 = -0.8;
-  const x1 = 0.04;
-  const cx = (x0 + x1) / 2;
-  const w = x1 - x0;
+  // (a cabeça fica na almofadinha do lado da âncora, em +x aqui; a manta vai do pescoço aos pés,
+  // com o morrinho dos joelhos dobrados e a beirada caindo na frente do assento)
+  const alto = 0.26;
   o.parte(
     'edredom',
     [0, 0.49, 0.06],
-    (p) => {
-      p.caixa(w, H, 0.72, cx, -B, 0, M.creme, 0.1);
-      // a beirada que cai na frente do assento
-      p.caixa(w - 0.04, 0.2, 0.05, cx, -0.24, 0.37, M.creme, 0.02);
-      for (let i = 0; i < 2; i++)
-        for (let k = 0; k < 2; k++)
-          if ((i + k) % 2 === 0) p.caixa(0.3, 0.012, 0.26, x0 + 0.24 + i * 0.36, H - B, -0.16 + k * 0.32, M.coral, 0);
-      p.caixa(w - 0.04, 0.03, 0.05, cx, H - B - 0.03, 0.34, M.coral, 0.01);
-    },
-    { topo: H - B },
+    (p) =>
+      coberta(p, 'x', {
+        ini: -0.8,
+        fim: -0.02,
+        largura: 0.76,
+        alto,
+        cair: 0.1,
+        cor: M.manta,
+        sombra: M.mantaSombra,
+        xadrez: M.coral,
+        dobra: { lado: 'fim', cor: M.coral },
+        montes: [
+          { meio: -0.22, comp: 0.36, alto: 0.05 },
+          { meio: -0.56, comp: 0.26, alto: 0.12 },
+        ],
+        frente: 0.3,
+      }),
+    { topo: alto },
   );
+}
+
+/**
+ * Uma coberta fofa de brinquedo (o edredom e a manta): a parte baixa, larga, que cai pelos lados
+ * até o colchão (ou o assento), o morro do corpo por cima, mais estreito e bem redondo, os
+ * morrinhos (os ombros, os joelhos, os pés), a dobra virada na ponta da cabeça e, na manta, a
+ * beirada que cai na frente do assento. `eixo`: ao longo de que eixo a coberta corre (z na cama,
+ * x no sofá); a largura vai no outro. O alto do morro (acima do pivô) é `alto`.
+ */
+function coberta(
+  p: Ref,
+  eixo: 'x' | 'z',
+  o: {
+    ini: number;
+    fim: number;
+    largura: number;
+    alto: number;
+    cair: number;
+    cor: string;
+    sombra: string;
+    xadrez?: string;
+    dobra?: { lado: 'ini' | 'fim'; cor: string };
+    montes: Array<{ meio: number; comp: number; alto: number }>;
+    frente?: number;
+  },
+): void {
+  /** Uma caixa com o comprimento `c` no eixo da coberta e a largura `l` no outro. */
+  const cx = (c: number, h: number, l: number, meio: number, y: number, cor: string, b: number, lado = 0) =>
+    eixo === 'z' ? p.caixa(l, h, c, lado, y, meio, cor, b) : p.caixa(c, h, l, meio, y, lado, cor, b);
+  const comp = o.fim - o.ini;
+  const meio = (o.ini + o.fim) / 2;
+  // a parte baixa (cai pelos lados) e o morro do corpo, redondo
+  cx(comp, o.alto * 0.55 + o.cair, o.largura, meio, -o.cair, o.sombra, 0.06);
+  cx(comp - 0.04, o.alto * 0.62, o.largura * 0.84, meio, o.alto * 0.38, o.cor, 0.14);
+  for (const m of o.montes) cx(m.comp, m.alto + 0.08, o.largura * 0.66, m.meio, o.alto - 0.08, o.cor, 0.09);
+  // os quadradinhos (ou os retalhos) por cima do morro, longe das pontas
+  if (o.xadrez)
+    for (let i = 0, a = o.ini + 0.16; a < o.fim - 0.12; i++, a += 0.2)
+      for (const s of [-1, 1])
+        if ((i + (s > 0 ? 1 : 0)) % 2 === 0) cx(0.14, 0.012, o.largura * 0.26, a, o.alto - 0.002, o.xadrez, 0, s * o.largura * 0.2);
+  // a dobra virada na ponta da cabeça (o peito): mais alta que o morro, de quina redonda
+  if (o.dobra) {
+    const a = o.dobra.lado === 'ini' ? o.ini + 0.07 : o.fim - 0.07;
+    cx(0.14, o.alto * 0.4 + 0.06, o.largura * 0.9, a, o.alto * 0.68, o.dobra.cor, 0.06);
+  }
+  // a beirada que cai na frente do assento (a manta do sofá)
+  if (o.frente) {
+    const z = o.largura / 2 - 0.02;
+    if (eixo === 'x') p.caixa(comp - 0.06, o.frente, 0.05, meio, -o.cair - o.frente + 0.1, z, o.sombra, 0.02);
+  }
 }
 
 /** O tapete de pista (3 × 2): o gramadinho menta, a estrada em volta e o carrinho estacionado. */
@@ -359,6 +446,11 @@ function pia(o: Oficina): void {
     r.caixa(0.41, 0.62, 0.03, s * 0.215, 0.14, 0.29, M.menta, 0.03);
     r.prisma(8, 0.025, 0.03, s * 0.06, 0.62, 0.31, M.cromo, 'z');
   }
+  // as costas: o painel menta com os frisos creme e o rodapé, e o verso do azulejo com a faixa
+  r.caixa(0.78, 0.6, 0.02, 0, 0.16, -0.325, M.menta, 0.02);
+  for (const y of [0.34, 0.56]) r.caixa(0.7, 0.025, 0.012, 0, y, -0.34, M.creme, 0);
+  r.caixa(0.9, 0.08, 0.02, 0, 0.06, -0.33, M.grafite, 0.01);
+  r.caixa(0.92, 0.06, 0.012, 0, 1.12, -0.335, M.menta, 0);
   r.caixa(0.96, 0.06, 0.66, 0, 0.86, 0, M.branco, 0.03);
   // a cuba: o fundo cinza azulado e a borda de cromo
   r.caixa(0.52, 0.012, 0.36, 0, 0.92, 0.04, '#a8bccb', 0);
@@ -436,7 +528,11 @@ function cama(o: Oficina): void {
     },
     { repouso: true },
   );
-  edredom(o, 0.44, EDREDOM.inicio, EDREDOM.fim);
+  // do peito (o queixo fica logo acima) aos pés: o morro dos ombros e o dos pés
+  edredom(o, 0.44, 0.0, 0.9, [
+    { meio: 0.24, comp: 0.4, alto: 0.04 },
+    { meio: 0.8, comp: 0.16, alto: 0.05 },
+  ]);
 }
 
 /**
@@ -472,7 +568,8 @@ function camaCurtinha(o: Oficina): void {
     },
     { repouso: true },
   );
-  edredom(o, 0.44, -0.12, 0.47);
+  // a criança encolhidinha: do peito aos pés, com o morrinho dos joelhos dobrados
+  edredom(o, 0.44, 0.06, 0.42, [{ meio: 0.28, comp: 0.18, alto: 0.07 }]);
 }
 
 /**
@@ -480,21 +577,33 @@ function camaCurtinha(o: Oficina): void {
  * corpo aparece no meio), a dobra do lençol perto do queixo e a beirada caindo até o colchão. Só
  * a cabeça fica de fora, no travesseiro. A pose ajusta a altura dele ao corpo deitado.
  */
-function edredom(o: Oficina, colchao: number, z0: number, z1: number): void {
-  const { altura: H, beirada: B } = EDREDOM;
-  o.parte('edredom', [0, colchao, 0], (p) => desenharEdredom(p, H, B, z0, z1), { topo: H - B });
-}
-function desenharEdredom(p: Ref, H: number, B: number, z0: number, z1: number): void {
-  {
-    p.caixa(1.0, H, z1 - z0, 0, -B, (z0 + z1) / 2, M.cobertor, 0.1);
-    // o lombinho do corpo, mansinho
-    p.caixa(0.84, 0.04, Math.min(0.5, (z1 - z0) * 0.45), 0, H - B - 0.02, z0 + 0.3, M.cobertor, 0.02);
-    p.caixa(0.98, 0.08, 0.14, 0, H - B - 0.05, z0 + 0.04, '#ffffff', 0.04);
-    // os retalhos de cima
-    for (let i = 0, z = z0 + 0.36; z < z1 - 0.12; i++, z += 0.32)
-      for (const x of [-0.24, 0.24])
-        if ((i + (x > 0 ? 1 : 0)) % 2 === 0) p.caixa(0.36, 0.012, 0.22, x, H - B + (i === 0 ? 0.02 : 0), z, M.cobertorEscuro, 0);
-  }
+function edredom(
+  o: Oficina,
+  colchao: number,
+  z0: number,
+  z1: number,
+  montes: Array<{ meio: number; comp: number; alto: number }>,
+): void {
+  const alto = EDREDOM.altura - EDREDOM.beirada;
+  o.parte(
+    'edredom',
+    [0, colchao, 0],
+    (p) =>
+      coberta(p, 'z', {
+        ini: z0,
+        fim: z1,
+        largura: 1.0,
+        alto,
+        cair: EDREDOM.beirada + 0.04,
+        cor: M.cobertor,
+        sombra: M.cobertorEscuro,
+        xadrez: M.cobertorEscuro,
+        // a dobra branca do lençol virada por cima, no peito
+        dobra: { lado: 'ini', cor: '#ffffff' },
+        montes,
+      }),
+    { topo: alto },
+  );
 }
 
 /** O guarda-roupa de duas portas (2 × 2): mel, as portas abrem e mostram as roupinhas no cabide. */
@@ -508,6 +617,11 @@ function guardaRoupa(o: Oficina): void {
   for (const s of [-1, 1]) r.caixa(0.06, A - 0.08, D, s * (W / 2 - 0.03), 0.08, 0, M.mel, 0.03);
   r.caixa(W, 0.08, D, 0, 0.08, 0, M.mel, 0.02);
   r.caixa(W - 0.1, A - 0.16, 0.04, 0, 0.12, -D / 2 + 0.02, M.melEscuro, 0.01);
+  // as costas de madeira: as tábuas de pé (mel, com o friso escuro entre elas), a travessa do
+  // meio e o rodapé, para o guarda-roupa ter cara de móvel de qualquer lado
+  for (let i = 0; i < 4; i++) r.caixa(W / 4 - 0.04, A - 0.24, 0.02, -W / 2 + W / 8 + (i * W) / 4, 0.16, -D / 2 - 0.005, M.mel, 0.01);
+  r.caixa(W - 0.06, 0.08, 0.025, 0, 0.95, -D / 2 - 0.012, M.melClaro, 0.01);
+  r.caixa(W, 0.1, 0.03, 0, 0.06, -D / 2 - 0.01, M.melEscuro, 0.01);
   r.caixa(W + 0.08, 0.1, D + 0.06, 0, A - 0.02, 0, M.melEscuro, 0.04);
   r.caixa(0.06, A - 0.2, D - 0.06, 0, 0.16, 0, M.mel, 0.01);
   // dentro: o cabideiro e as três camisetas (coral, azul e manteiga), e as prateleiras
@@ -548,11 +662,30 @@ function criadoMudo(r: Ref, aceso: boolean): void {
   r.caixa(0.46, 0.16, 0.03, 0, 0.32, 0.22, M.melClaro, 0.02);
   r.caixa(0.46, 0.16, 0.03, 0, 0.12, 0.22, M.melClaro, 0.02);
   for (const y of [0.4, 0.2]) r.prisma(8, 0.025, 0.03, 0, y, 0.24, M.melEscuro, 'z');
-  r.caixa(0.14, 0.04, 0.14, 0.05, 0.54, -0.02, M.creme, 0.015);
-  const cor = aceso ? M.luaAcesa : M.lua;
-  const y = 0.58;
-  r.prisma(10, 0.09, 0.06, 0.05, y + 0.03, -0.02, cor, 'y', aceso);
-  r.prisma(10, 0.12, 0.08, 0.05, y + 0.1, -0.02, cor, 'y', aceso);
-  r.prisma(10, 0.11, 0.06, 0.05, y + 0.17, -0.02, cor, 'y', aceso);
-  r.prisma(10, 0.07, 0.04, 0.05, y + 0.22, -0.02, cor, 'y', aceso);
+  // a luminária de lua: o pezinho creme e a lua em crescente amarelinha, de pé, virada para a
+  // frente (apagada também se lê como uma luz; acesa, brilha morna)
+  r.prisma(8, 0.07, 0.03, 0.05, 0.555, -0.02, M.creme, 'y');
+  r.barra([0.05, 0.57, -0.02], [0.05, 0.62, -0.02], 0.025, M.creme);
+  r.placa(perfilCrescente(0.13), 0.06, 0.06, 0.74, -0.02, aceso ? M.luaAcesa : M.lua, aceso);
+}
+
+/** A lua em crescente (as pontas para a direita), em volta de (0, 0), com o raio `r`. */
+export function perfilCrescente(r: number): Array<[number, number]> {
+  const pts: Array<[number, number]> = [];
+  const n = 18;
+  // a borda de fora (da ponta de cima à de baixo, pela esquerda) e a de dentro, de volta
+  const a0 = Math.PI * 0.32;
+  for (let i = 0; i <= n; i++) {
+    const a = a0 + ((Math.PI * 2 - 2 * a0) * i) / n;
+    pts.push([Math.cos(a) * r, Math.sin(a) * r]);
+  }
+  const ri = r * 0.78;
+  const cx = r * 0.42;
+  const b0 = Math.PI * 0.42;
+  for (let i = n; i >= 0; i--) {
+    const a = b0 + ((Math.PI * 2 - 2 * b0) * i) / n;
+    pts.push([cx + Math.cos(a) * ri, Math.sin(a) * ri]);
+  }
+  // (o contorno no sentido anti-horário, como a estrela: a de fora vai, a de dentro volta)
+  return pts;
 }

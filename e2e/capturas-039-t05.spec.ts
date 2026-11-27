@@ -1,4 +1,4 @@
-import { test, type Browser, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Page } from '@playwright/test';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { Bloco } from '../src/world/blocks';
 import { assentar, criarMundo, TAMANHOS, type Tamanho } from './guia-palco';
@@ -527,6 +527,18 @@ async function telas(p: Palco, sub: string, comVitrine: boolean) {
     await assento(p, a);
     await olhar(p, q, false);
     await foto(p, `${n}-dia`, sub);
+    if (a.deitado) {
+      // nada do corpo passa da coberta (pelos lados e pelos pés), e a coberta é a macia
+      const m = await p.page.evaluate(() => window.__brumaluz!.moveis!.mexendo().filter((x) => Object.keys(x.deitados).length));
+      console.log(`COBERTA ${sub} ${n} ${JSON.stringify(m.map((x) => ({ fora: x.fora, coberta: x.coberta, caixas: x.caixas })))}`);
+      expect.soft(m.length).toBe(1);
+      expect.soft(m[0]?.coberta).toBe(true);
+      expect.soft(m[0]?.fora).toBeLessThanOrEqual(0.01);
+      // e de outro lado (nada atravessa nada)
+      // (de cima, do lado oposto: a casa não tem a parede da frente, mas tem as outras)
+      await olhar(p, { ...q, yaw: -q.yaw * 0.8, pitch: 1.0 }, false);
+      await foto(p, `${n}-outro-lado`, sub);
+    }
   }
   // o que mexe (só na tela de quem tocou; a T06 liga ao toque): as portas do guarda-roupa e a água
   await assento(p, null);
@@ -538,8 +550,12 @@ async function telas(p: Palco, sub: string, comVitrine: boolean) {
   await p.page.waitForTimeout(1200);
   await olhar(p, { alvo: [11, 1.0, 3.1], yaw: -0.25, pitch: 0.2, largura: 2.8, altura: 2.4 });
   await foto(p, 'guarda-aberto-dia', sub);
-  await olhar(p, { alvo: [-1.5, 1.05, 3.4], yaw: 0.2, pitch: 0.5, largura: 1.6, altura: 1.5 });
+  // (a pia de frente, a câmera um tico acima da bancada: a água caindo e a cuba à vista)
+  await olhar(p, { alvo: [-1.5, 1.05, 3.4], yaw: 0, pitch: 0.32, largura: 1.5, altura: 1.4 });
   await foto(p, 'pia-agua-dia', sub);
+  // o criado-mudo de dia, de perto (a lua em crescente apagada)
+  await olhar(p, { alvo: [6.5, 0.7, 3.4], yaw: 0.35, pitch: 0.3, largura: 1.4, altura: 1.3 });
+  await foto(p, 'criado-dia', sub);
   await p.page.evaluate((O) => {
     const m = window.__brumaluz!.moveis!;
     m.portas(O[0] + 10, O[1], O[2] + 3, false);
@@ -561,7 +577,12 @@ async function telas(p: Palco, sub: string, comVitrine: boolean) {
   await assento(p, { ...NO_SOFA, deitado: true });
   await olhar(p, POSES[4][2], false);
   await foto(p, 'deitada-sofa-noite', sub);
+  await assento(p, NA_CURTINHA);
+  await olhar(p, POSES[3][2], false);
+  await foto(p, 'deitada-curtinha-noite', sub);
   await assento(p, null);
+  await olhar(p, { alvo: [6.5, 0.7, 3.4], yaw: 0.35, pitch: 0.3, largura: 1.4, altura: 1.3 });
+  await foto(p, 'criado-noite', sub);
   // cada móvel nas quatro direções (de dia)
   await hora(p, DIA);
   if (comVitrine)
@@ -569,6 +590,13 @@ async function telas(p: Palco, sub: string, comVitrine: boolean) {
       await olhar(p, vitrineOlhar(i));
       await foto(p, `vitrine-${VITRINE[i].nome}`, sub);
     }
+  // as costas da pia e do guarda-roupa (na vitrine, os de direção 0 olham para a casa)
+  const [pcx, pcz] = vitrineEm(4, 0);
+  await olhar(p, { alvo: [pcx + 0.5, 0.75, pcz + 0.5], yaw: Math.PI - 0.5, pitch: 0.25, largura: 1.8, altura: 1.7 });
+  await foto(p, 'pia-costas', sub);
+  const [gcx, gcz] = vitrineEm(5, 0);
+  await olhar(p, { alvo: [gcx + 1, 1.0, gcz + 0.5], yaw: Math.PI - 0.5, pitch: 0.2, largura: 2.8, altura: 2.4 });
+  await foto(p, 'guarda-costas', sub);
   // de dentro, na primeira pessoa, com o teto
   await teto(p.page, p.O, true);
   for (const [n, x, z, a] of DENTRO) {
@@ -590,6 +618,20 @@ async function telas(p: Palco, sub: string, comVitrine: boolean) {
   }, [Bloco.SOFA, Bloco.CAMA, Bloco.CADEIRA, Bloco.CRIADO_MUDO, Bloco.ABAJUR, Bloco.TAPETE, Bloco.PIA, Bloco.GUARDA_ROUPA]);
   await deDentro(p, -5.2, -2.2, [-8.6, 0.0, 1.0]);
   await foto(p, 'barra-e-mao', sub);
+  // o catálogo do criativo na aba casa (os ícones de brinquedo chegam aos poucos)
+  try {
+    await p.page.evaluate(() => document.body.classList.add('toque-ativo'));
+    await p.page.locator('[data-botao-mochila]').dispatchEvent('click');
+    await p.page.waitForTimeout(800);
+    await p.page.locator('.catalogo [data-aba-categoria="casa"]').dispatchEvent('click');
+    await p.page.waitForTimeout(5000);
+    await foto(p, 'catalogo-casa', sub);
+    await p.page.locator('[data-botao-mochila]').dispatchEvent('click');
+    await p.page.keyboard.press('Escape');
+    await p.page.waitForTimeout(800);
+  } catch (e) {
+    console.log(`moveis sem o catálogo: ${String(e).slice(0, 200)}`);
+  }
   await p.page.evaluate(() => {
     const e = window.__brumaluz!;
     for (let i = 0; i < 9; i++) e.inventario!.definir(i, null);
@@ -597,8 +639,12 @@ async function telas(p: Palco, sub: string, comVitrine: boolean) {
     for (const el of Array.from(document.body.querySelectorAll<HTMLElement>('*')))
       if (el !== cena && !el.contains(cena)) el.style.visibility = 'hidden';
   });
-  await p.page.evaluate(() => window.__brumaluz!.primeiraPessoa!.ligar(false));
+  // o quarto de noite, de dentro, com tudo apagado (nunca escuro total)
   await luzes(p, false);
+  await hora(p, NOITE);
+  await deDentro(p, DENTRO[2][1], DENTRO[2][2], DENTRO[2][3]);
+  await foto(p, 'quarto-dentro-noite-apagado', sub);
+  await p.page.evaluate(() => window.__brumaluz!.primeiraPessoa!.ligar(false));
   await teto(p.page, p.O, false);
   await hora(p, DIA);
 }
@@ -624,8 +670,10 @@ test('prancha: junta as fotos das três telas (depois delas)', async ({ browser 
   await prancha(browser);
 });
 async function prancha(browser: Browser) {
-  const img = (n: string) => `data:image/jpeg;base64,${readFileSync(`${PASTA}/empe/${n}.jpg`, 'base64')}`;
-  const imgPc = (n: string) => `data:image/jpeg;base64,${readFileSync(`${PASTA}/computador/${n}.jpg`, 'base64')}`;
+  const img = (n: string) =>
+    existsSync(`${PASTA}/empe/${n}.jpg`) ? `data:image/jpeg;base64,${readFileSync(`${PASTA}/empe/${n}.jpg`, 'base64')}` : '';
+  const imgPc = (n: string) =>
+    existsSync(`${PASTA}/computador/${n}.jpg`) ? `data:image/jpeg;base64,${readFileSync(`${PASTA}/computador/${n}.jpg`, 'base64')}` : '';
   const q = (src: string, legenda: string) => `<figure><img src="${src}"><figcaption>${legenda}</figcaption></figure>`;
   const linha = (xs: string[], cls = '') => `<div class="linha ${cls}">${xs.join('')}</div>`;
   const pc = existsSync(`${PASTA}/computador/casa-dia.jpg`);
@@ -639,27 +687,20 @@ async function prancha(browser: Browser) {
     figure img { width: 100%; border-radius: 10px; display: block; }
     figcaption { font-size: 16px; color: #6a5d7a; padding: 4px 4px 1px; }
   </style></head><body>
-    <h1>039 · T05: os móveis no jogo</h1>
-    <p class="sub">A casa sem o teto e sem a parede da frente (como uma casa de bonecas) para as fotos de fora; com o teto, de dentro.</p>
-    ${pc ? `<h2>A casa (computador)</h2>${linha([q(imgPc('casa-dia'), 'de dia'), q(imgPc('casa-noite'), 'de noite: o abajur e a lua acesos')])}` : ''}
-    <h2>Os cômodos (celular em pé)</h2>
-    ${linha([q(img('sala-dia'), 'sala: o sofá em cima do tapete'), q(img('meio-dia'), 'a pia e as cadeiras'), q(img('quarto-dia'), 'quarto: a cama nova e a curtinha'), q(img('sala-noite'), 'sala de noite')])}
-    <h2>Sentada e deitada</h2>
-    ${linha([q(img('sentada-sofa-dia'), 'no sofá'), q(img('sentada-cadeira-dia'), 'na cadeira'), q(img('deitada-cama-dia'), 'na cama'), q(img('deitada-curtinha-dia'), 'na curtinha')])}
-    ${linha([q(img('deitada-cama-noite'), 'dormindo de noite'), q(img('deitada-sofa-noite'), 'no sofá, de noite, sem cama'), q(img('quarto-noite'), 'o quarto de noite'), q(img('quarto-dentro-noite'), 'de dentro, de noite')])}
-    <h2>O que mexe (a T06 liga ao toque)</h2>
-    ${linha([q(img('guarda-aberto-dia'), 'as portas do guarda-roupa abertas'), q(img('pia-agua-dia'), 'a água da pia'), q(img('barra-e-mao'), 'os ícones na barra e o sofá na mão')])}
-    <h2>De dentro (primeira pessoa)</h2>
-    ${linha([q(img('sala-dentro-dia'), 'sala'), q(img('meio-dentro-dia'), 'a pia'), q(img('quarto-dentro-dia'), 'quarto'), q(img('sala-dentro-noite'), 'sala de noite')])}
-    ${
-      pc
-        ? `<h2>Cada móvel nas quatro direções (computador)</h2>
-    ${linha(VITRINE.slice(0, 2).map((v) => q(imgPc(`vitrine-${v.nome}`), v.nome)))}
-    ${linha(VITRINE.slice(2, 4).map((v) => q(imgPc(`vitrine-${v.nome}`), v.nome)))}
-    ${linha(VITRINE.slice(4, 6).map((v) => q(imgPc(`vitrine-${v.nome}`), v.nome)))}
-    ${linha(VITRINE.slice(6).map((v) => q(imgPc(`vitrine-${v.nome}`), v.nome)))}`
-        : ''
-    }
+    <h1>039 · os móveis: o portão visual, 2ª volta</h1>
+    <p class="sub">Deitar e sentar refeitos, as costas da pia e do guarda-roupa, os ícones, a lua do criado-mudo e a luz do quarto. A casa sem o teto para as fotos de fora; com o teto, de dentro.</p>
+    <h2>Deitada no sofá (de noite, sem cama)</h2>
+    ${linha([q(img('deitada-sofa-dia'), 'a mantinha creme do pescoço aos pés'), q(img('deitada-sofa-noite'), 'de noite'), ...(pc ? [q(imgPc('deitada-sofa-noite'), 'de noite, no computador')] : [])])}
+    <h2>A cama curtinha e a cama nova</h2>
+    ${linha([q(img('deitada-curtinha-dia'), 'curtinha'), q(img('deitada-curtinha-noite'), 'curtinha de noite'), q(img('deitada-cama-dia'), 'cama nova'), q(img('deitada-cama-noite'), 'dormindo de noite')])}
+    ${pc ? linha([q(imgPc('deitada-curtinha-dia'), 'curtinha, computador'), q(imgPc('deitada-cama-dia'), 'cama nova, computador')]) : ''}
+    <h2>Sentada</h2>
+    ${linha([q(img('sentada-sofa-dia'), 'no sofá, no meio do lugar'), q(img('sentada-cadeira-dia'), 'na cadeira'), ...(pc ? [q(imgPc('sentada-sofa-dia'), 'no sofá, computador')] : [])])}
+    <h2>As costas, a água, a lua e os ícones</h2>
+    ${linha([q(img('pia-costas'), 'a pia de costas'), q(img('guarda-costas'), 'o guarda-roupa de costas'), q(img('pia-agua-dia'), 'a água da pia'), q(img('criado-dia'), 'a lua apagada'), q(img('criado-noite'), 'a lua acesa')])}
+    ${linha([q(img('barra-e-mao'), 'os ícones na barra e o sofá na mão'), q(img('catalogo-casa'), 'o catálogo na aba casa'), q(img('quarto-dentro-noite'), 'o quarto de noite, a lua acesa'), q(img('quarto-dentro-noite-apagado'), 'o quarto de noite, tudo apagado')])}
+    <h2>A casa</h2>
+    ${linha([q(img('sala-dia'), 'sala'), q(img('meio-dia'), 'a pia e as cadeiras'), q(img('quarto-dia'), 'quarto'), q(img('sala-noite'), 'sala de noite')])}
     <div style="height:16px"></div>
   </body></html>`;
   const p2 = await browser.newPage({ viewport: { width: 1080, height: 800 } });
