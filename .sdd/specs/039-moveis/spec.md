@@ -1,6 +1,6 @@
 ---
 id: 039-moveis
-title: 'Móveis e utensílios: 13 móveis de verdade e interativos, para todos os mundos, com a cama nova de dois blocos'
+title: 'Móveis e utensílios, parte 1: a cama nova de dois blocos, sentar e deitar, e os móveis de brincar, para todos os mundos'
 status: DRAFT
 base_branch: main
 branch: feat/039-moveis
@@ -13,120 +13,178 @@ checks:
 ---
 
 ## Contexto
-O dono, em 26 nov 2026, sobre a casa por dentro: "a casinha fica meio pobre". Ele pediu:
-- móveis de verdade, com relevo e no estilo dos nossos brinquedos, e não cubos pintados;
-- cozinha, sala, TV e aparelho de som, "pensando fora da caixa";
-- móveis interativos, em que um toque faz alguma coisa;
-- **um conjunto geral, que vale em todos os mundos.** As versões temáticas (sofá de bolo, cama-cápsula, fogão a lenha) ficam na "Riqueza nos mundos antigos" do backlog.
+O dono, em 26 nov 2026, disse que "a casinha fica meio pobre" por dentro. Ele pediu:
+- **móveis de verdade**, com relevo e no estilo dos nossos brinquedos, em vez de cubos pintados;
+- **interativos:** cada toque faz uma coisa;
+- **um conjunto geral, que vale em todos os mundos.** As versões temáticas ficam na "Riqueza nos mundos antigos".
 
-A cama nova saiu da 038 e veio para cá. Sobre a de hoje, o dono disse: "o ícone fica bonitinho, mas na hora que você coloca é um terror".
+A cama nova saiu da 038 e veio para cá. Sobre a cama de hoje, o dono disse: "o ícone fica bonitinho, mas na hora que você coloca é um terror".
+
+**Em duas partes** (o dono decidiu em 26 nov, depois da revisão do engenheiro):
+- **Parte 1 (esta spec):** a regra dos móveis de várias células, a cama nova (com a conversão das camas que já existem), sentar e deitar, e os móveis de brincar (sofá, cadeira, criado-mudo, abajur, tapete, pia e guarda-roupa), com as receitas e as abas do criativo.
+- **Parte 2 (spec à parte, depois da rodada em família da parte 1):** fogão, geladeira, mesa, TV e aparelho de som. São os que guardam coisas ou que todos na sala veem junto. Leva o que a revisão apontou para eles: os contêineres próprios, o estado dos toques no núcleo e a mesa com várias crianças. O que o dono já decidiu para eles está em "Decisões do dono".
 
 ## O que existia
 ### O estudo e o esboço (26 nov 2026, branch `esboco/039-moveis`)
-- O estudo está em `referencia/estudo-moveis.md`. Ele cobre:
-  - o que existe hoje;
-  - os 13 móveis;
-  - a conta de proporção com o boneco;
-  - as receitas;
-  - o criativo;
-  - pôr e quebrar;
-  - o desempenho.
-- O código do esboço está em `src/esboco/moveis.ts` e `moveisPecas.ts`, ligado com `?esboco=moveis`. As fotos e as duas pranchas estão em `capturas-039/esboco/` e `volta2/`.
-- O esboço mediu 15.678 triângulos para os 13 móveis com tudo ligado, desenhados com o `Ref` das peças da Casa anos 80.
+- O estudo está em `referencia/estudo-moveis.md`. Ele cobre os 13 móveis, a conta de proporção com o boneco, as receitas, o criativo, pôr e quebrar, e o desempenho.
+- O esboço está em `src/esboco/moveis.ts` e `moveisPecas.ts`, ligado com `?esboco=moveis`. As duas voltas de fotos estão em `capturas-039/esboco/` e `volta2/`.
 
-### O jogo hoje (`main` 6a47f14, `VERSAO_REDE` 18)
-- **A cama** (`CAMA`, id 56) é uma laje de uma célula com textura (`cama_topo` e `cama_lado` em `src/art/atlas.ts`). Ela marca o lugar de nascer e serve para dormir; a noite passa quando todos dormem. O ícone e a mão já mostram uma cama comprida e bonita (`render/itensBrinquedo.ts`).
-- **A porta** ocupa duas células: o núcleo só aceita `extras` no `colocar` para ela, e quebrar uma metade leva a outra.
-- **A Casa anos 80** (026) é o único interior mobiliado do jogo. As peças dela são desenhadas com o `Ref` (`render/vila/`), numa malha de corpo e numa de luzes por pedaço. O toque na TV e no disco é do núcleo, e todos na sala veem o mesmo.
-- **Os povoados, o sítio e as plantas da Cidade Grande** põem camas de uma célula nas casas prontas.
-- **O criativo** tem um catálogo numa grade só (`ui/inventario.ts`). **A mesa de montar** tem o livro de receitas por ícone (`ui/criacao.ts`).
+### O jogo hoje (`main` 4229a003, `VERSAO_REDE` 18)
+- **A cama** (`CAMA`, id 56) é uma laje de uma célula com textura. Usar a cama marca o lugar de nascer. De noite, a criança pede para dormir, e a noite passa quando todos pedem dentro da janela `ESPERA_TODOS` (`nucleo.ts:2101-2120`). Hoje não se vê a criança deitada. O ícone e a mão já mostram uma cama comprida (`render/itensBrinquedo.ts`).
+- **A porta** é o único bloco de duas células:
+  - o `colocar` só aceita `extras` para ela (`nucleo.ts:1549-1559`);
+  - quebrar uma metade leva a outra (`outraMetadeDaPorta`, `jogo/permissao.ts:189`);
+  - o saneamento aceita no máximo 1 `extra` (`saneamento.ts:127`);
+  - o `recusar` só devolve a célula de cima e a de baixo (`nucleo.ts:1283`, `2063`).
+- **O parque** (`jogo/parque.ts`, `nucleo/parque.ts`): o núcleo já é dono de cadeiras, com quem está sentado em cada uma.
+- **Os geradores:**
+  - os povoados (`world/construcoes.ts:42`) e o sítio (`sitio.ts:81`, `117`, `140`) põem camas sem metadado: o `Pincel` só recebe o id, e o `metaGerada` só existe para as plantas `cidade`, `bairro` e `baile` (`world/chunk.ts:887-893`);
+  - as plantas da Cidade Grande põem a cama com `B` na paleta (`plantas/paleta.ts:61`), e há um andar que se repete (`plantas/geminada.ts:115`).
+- **A paridade 36/36** grava camas em duas sessões (`e2e/paridade.spec.ts:960-976` e `1061-1080`). Os hashes por tema incluem povoados e sítio.
+- **As ferramentas do criativo:**
+  - colar: `jogo/construcao.ts:138`;
+  - preencher e espelho: `render/cena.ts:3330` e `7017-7070`;
+  - o desfazer;
+  - o `editarLote` (`nucleo.ts:1593`).
+- **A luz é por id de bloco** (`world/luz.ts:11`), e o núcleo usa a luz para a lavoura crescer.
+- **O livro de receitas** tem as categorias blocos, ferramentas, decoração, comida, materiais e luz (`receitas.ts:30`). O catálogo do criativo é uma grade só (`ui/inventario.ts`).
+- **Os ids de bloco** vão até 127 (`CALDEIRAO`), e o limite é 255.
 
-## Decisões do dono (26 nov 2026, pelas pranchas do esboço)
+## Decisões do dono (26 nov 2026, pelas pranchas e pela aba de perguntas)
 | Pergunta | Decisão |
 |---|---|
-| Os móveis | Os 13 do estudo:<br>- **sala:** sofá, TV, aparelho de som, tapete de pista e abajur;<br>- **cozinha:** fogão, geladeira, pia, mesa e cadeira;<br>- **quarto:** cama nova de dois blocos, guarda-roupa e criado-mudo. |
-| Os estilos | Os recomendados: a cama do ícone (madeira em degrau, cobertor vermelho de retalhos), o sofá gordinho coral e a TV de rack com moldura azul. |
-| A escala | A da segunda volta, pela conta de proporção com o boneco: a bancada entre o queixo e os olhos, a mesa no peito de quem está sentado, a cama cabe a criança inteira. |
-| De onde vêm | No criativo, no inventário. Na sobrevivência, com receitas na mesa de montar. **Não custam moedinhas.** |
-| O criativo | Uma fileira de abas de ícone em cima do catálogo: tudo, blocos, casa, comida, ferramentas e luz. |
-| Os toques com regra | Os quatro:<br>- o fogão cozinha como a fornalha;<br>- a geladeira guarda comida;<br>- o guarda-roupa abre a troca de roupa;<br>- a mesa junta para comer. |
-| O ferro | Os cinco móveis de ferro (geladeira, fogão, pia, TV e som) pedem ferro de verdade, depois da caverna. |
-| A mesa | Uma comida posta na mesa alimenta todo mundo sentado em volta, até 4. |
-| As camas antigas | Viram a cama nova de dois blocos onde couber. Onde não couber, viram a "cama curtinha", com o desenho novo numa célula. Nada some. |
+| Os móveis | 13 no total. Parte 1: cama nova, sofá, cadeira, criado-mudo, abajur, tapete, pia e guarda-roupa. Parte 2: fogão, geladeira, mesa, TV e aparelho de som. |
+| Os estilos | Os recomendados: a cama do ícone (madeira em degrau, cobertor vermelho de retalhos), o sofá gordinho coral e a TV de rack azul. |
+| A escala | A da segunda volta, pela conta com o boneco: os assentos a 0,64, o colchão a 0,55, a bancada a 1,06, e o guarda-roupa até os dois blocos. |
+| De onde vêm | No criativo, pelo inventário. Na sobrevivência, por receita na mesa de montar. Não custam moedinhas. |
+| O criativo | Abas de ícone em cima do catálogo. |
+| Os toques com regra | O guarda-roupa abre a troca de roupa (parte 1). O fogão cozinha, a geladeira guarda e a mesa junta para comer (parte 2). |
+| O ferro | Os móveis de ferro pedem ferro de verdade. Na parte 1, só a pia tem ferro (a torneira). |
+| A mesa (parte 2) | Uma comida posta alimenta todos sentados em volta, até 4. |
+| As camas antigas | Viram a cama nova onde couber. Onde não couber, ficam como a "cama curtinha", com o desenho novo numa célula. Nada some. |
+| Dividir | Duas partes, cada uma publicada. |
 
-## Decisões do orquestrador (pequenas, contadas ao dono)
-- **O fogão** cozinha sem carvão. A fornalha continua para os minérios.
-- **A geladeira** tem 9 lugares, só de comida, e a comida não estraga.
-- **O guarda-roupa** abre a troca de roupa direto nas roupas, sem o botão "Jogar" da tela de criar a criança.
-- **Os toques de brincadeira:**
-  - a TV liga e troca de desenho, com 4 desenhos novos e nossos (os da Casa anos 80 são da Vila Neon) e desliga sozinha;
-  - o som toca uma musiquinha nova, curta e mansa;
-  - a pia faz água e bolhas;
-  - o abajur e o criado-mudo acendem;
-  - o tapete faz o carrinho dar a volta;
-  - o sofá, a cadeira e a cama fazem a criança sentar ou deitar de verdade.
-- **Com amigos:** a TV e o som tocam o mesmo para todos, como na Casa anos 80, com uma esperinha entre dois toques.
-- **A criança deitada:** só na cama, o corpo achata e o edredom vai do queixo ao pé, como na segunda volta. Hoje a tela só escurece; daqui para a frente, vê-se a criança deitada.
+## Decisões do orquestrador (pequenas, contadas ao dono; ajustadas na revisão de 26 nov)
+- **A âncora:** só a âncora viaja. As outras células saem sempre do núcleo.
+- **A cama curtinha** é a mesma `CAMA` com a parte "curtinha" no metadado. Ela continua marcando o lugar de nascer e servindo para dormir.
+- **O desenho pode passar da célula:** o encosto do sofá (1,35), a cabeceira (1,35) e o encosto da cadeira passam da altura de uma célula, só no desenho. A célula de cima continua livre. A colisão fica na célula, como a cerca, sem mudar o andador das plantas.
+- **O tapete** fica rente ao chão e não segura nada. Por cima dele vão móveis e blocos: o bloco posto em cima de uma célula do tapete leva o tapete inteiro para a mochila, sem apagar só um pedaço.
+- **O abajur e o criado-mudo acesos** são outro id de bloco (como a `FORNALHA_ACESA`), editados pelo núcleo e salvos. Assim a luz é a mesma para todos e para a lavoura.
+- **A pia:** a água e as bolhas aparecem só na tela de quem está perto, sem salvar e sem núcleo. Um toque liga e outro desliga, ou ela desliga sozinha em 6 s.
+- **O guarda-roupa:** as portas abrem só na tela de quem tocou e abrem a troca de roupa direto nas roupas, sem o botão "Jogar". As outras crianças veem as portas paradas.
+- **Nascer na cama:** a criança nasce ao lado da cama, na célula livre mais perto, nunca em cima da cabeceira.
 - **Fica para depois:** a estante de livros, a banheira, o berço do bichinho e o quadro de pintar.
 
 ## O que muda
-### 1. O núcleo e a rede: móveis de mais de uma célula
-- **Os 13 blocos novos**, com a forma e o tamanho em células de cada um. A cama nova usa o mesmo `CAMA`.
-- **O `colocar` aceita `extras`** com as células do móvel, só elas e exatamente elas.
-  - A célula de pé é a do toque.
-  - As outras saem do tamanho do móvel e da direção do olhar: a cama vai para a frente; o sofá, a mesa, a TV e o guarda-roupa, para a direita; a geladeira e o abajur, para cima.
-  - Todas as células têm de estar livres, com a proteção e a regra da 037 (nada em cima de gente ou bicho, e apoiado).
-  - Cada célula guarda o bloco, com a direção e qual parte ela é. Quebrar qualquer parte leva o móvel inteiro, que vira um item só.
-- **Muda o protocolo: `VERSAO_REDE` vai para 19.** A 027 parte 2 tinha reservado a 19; a que sair primeiro fica com ela, e a outra sobe. O servidor publica antes do site, pelo passo do `CLAUDE.md`.
-- **Os toques com regra no núcleo:**
-  - o fogão cozinha;
-  - a geladeira guarda (como um baú só de comida);
-  - a mesa alimenta quem está sentado em volta.
-- **O sentar e o deitar** viram um estado da criança, como o `montado` da 036, para os amigos verem.
-- **As camas antigas:**
-  - nos mundos já salvos, a conversão roda ao carregar o pedaço;
-  - nos geradores (povoados, sítio, Cidade Grande), a cama nova já sai com as duas células;
-  - a paridade de cada tema muda de propósito, com os hashes novos registrados.
+### 1. A regra dos móveis de várias células (núcleo, aparelho e rede)
+- **A tabela de cada móvel**, num arquivo só, puro, em `src/jogo/moveis.ts`, usado pelo núcleo, pela previsão e pelo desenho:
 
-### 2. O desenho
-- **Os móveis** saem do esboço para o jogo. O corpo parado de todos os móveis de um pedaço fica numa malha só, mais uma de luzes, como as peças da Vila Neon. O que mexe (portas, tela, cobertor, notinhas, água, vapor) só ganha malha quando é tocado ou quando a criança está perto.
-- **A colisão** é por caixas, com o tamanho de cada móvel.
-- **O ícone e a mão** de cada móvel seguem o modelo, como o ícone da cama de hoje.
-- **A pose de sentar e a de deitar** valem para a criança e os amigos, nas duas câmeras (na primeira pessoa, "dormindo" já tem câmera própria).
+  | Móvel | Células (largura × fundo × altura) | Para onde cresce, a partir da âncora | Partes |
+  |---|---|---|---|
+  | Cama | 1 × 2 × 1 | para a frente de quem põe | 0 cabeceira (âncora), 1 pé; a curtinha é a parte 2, sozinha |
+  | Sofá | 2 × 1 × 1 | para a direita de quem põe | 0 esquerda (âncora), 1 direita |
+  | Cadeira | 1 × 1 × 1 | | 0 |
+  | Criado-mudo | 1 × 1 × 1 | | 0 |
+  | Abajur | 1 × 1 × 2 | para cima | 0 pé (âncora), 1 cúpula |
+  | Tapete | 3 × 2 × 0 (rente) | para a direita e para a frente | 0 a 5, com a 0 de âncora |
+  | Pia | 1 × 1 × 2 | para cima | 0 bancada (âncora), 1 torneira |
+  | Guarda-roupa | 2 × 1 × 2 | para a direita e para cima | 0 a 3, com a 0 de âncora |
+- **O metadado:** a direção fica nos bits 0 e 1, e o colar só gira esses (`construcao.ts:154-157`). A parte fica nos bits 2 a 4.
+- **O `colocar`:**
+  - o cliente manda só a âncora, com a parte 0;
+  - o núcleo recusa o `colocar` com parte diferente de 0;
+  - o núcleo calcula as células pela tabela e confere os `extras` contra a lista dele;
+  - o limite de `extras` no saneamento sobe de 1 para 5;
+  - todas as células têm de estar livres, com a proteção e a regra da 037 (nunca em cima de gente ou bicho, e apoiado);
+  - o núcleo grava as partes ele mesmo;
+  - o `recusar` devolve todas as células.
+- **Quebrar** qualquer parte leva o móvel inteiro, que vira um item só. Uma função pura em `src/jogo/`, como a `outraMetadeDaPorta`, lê a peça, acha a âncora e só aceita as células com o mesmo bloco, a mesma direção, a parte esperada e o mesmo dono.
+- **A peça solta** (parte sem âncora válida):
+  - ao abrir o mundo, vira ar;
+  - o `editarLote` e a previsão dele descartam as partes que não são âncora, e cada âncora vira o móvel inteiro, se couber, ou fica de fora;
+  - assim, o colar, o espelho, o preencher e o desfazer funcionam sozinhos;
+  - quebrar uma peça solta não devolve item.
+- **Do lado do aparelho:** a previsão de pôr, quebrar e usar com várias células (`cena.ts:3262-3345`); o fantasma do móvel inteiro, vermelho se não couber; o espelho do criativo, que repete o móvel inteiro.
+- **A rede:** a `VERSAO_REDE` vai para **19**. A 039 vem antes no backlog e fica com ela. A 027, partes 2 e 3, passa para 20 e 21; o mesmo commit atualiza a `027/spec.md:219` e as `tasks.md` T29 e T36.
+- **Não há volta:** depois que o servidor 19 converte um mundo, um servidor 18 leria cada metade como uma cama inteira. Por isso:
+  - a sala de teste da nuvem é conferida antes do site;
+  - o servidor publica antes do site, pelo passo do `CLAUDE.md`.
 
-### 3. As receitas e o criativo
-- **As 13 receitas** do estudo, com o ferro de verdade, numa categoria nova do livro: **Casa**. Nenhuma grade repete outra receita, e o teste das receitas confere isso.
-- **As abas de ícone** em cima do catálogo do criativo: tudo, blocos, casa, comida, ferramentas e luz. Os ícones são os mesmos do livro. A aba "casa" cabe sem rolar no celular em pé.
+### 2. A cama nova e as camas que já existem
+- **Nos geradores:** o `Pincel` e o `metasGeradasDoChunk` passam a valer para os povoados e o sítio (direção e parte), e as plantas da Cidade Grande também. A cama nova sai com as duas células. O núcleo e o aparelho leem o mesmo metadado, e um teste prova isso. O custo da geração é medido.
+- **Nos mundos salvos**, a conversão roda **só no núcleo**, uma vez por mundo, ao abrir, sobre as edições de `CAMA`. Ela fica marcada em `extras` (`extras.camas: 2`).
+  - O pé só entra em ar, sem comer flor nem água, com apoio, sem ninguém em cima, passando pela proteção do dono da cama.
+  - O pé fica com o dono da cabeceira, sem evento de colocação e sem som.
+  - A direção é a que a cama já tem; a cena grava a direção (`cena.ts:3628`).
+  - Onde não couber, fica a cama curtinha.
+- **Nas camas geradas**, se a célula do pé já tem edição de outro bloco, a edição fica e a cama vira curtinha. Regra: uma célula de estrutura com edição de outro bloco segue a regra da edição, porque ela não pode virar `USAVEL` e prender o bloco da criança.
+- **As obras do canteiro** (`world/obras.ts:340-360`): se alguma planta de obra tiver cama, a colher põe as duas partes.
+- **Teste:** um salvamento da `main` abre no aparelho e na sala de teste da nuvem, e todas as camas viram a nova ou a curtinha, sem nada sumir e com o lugar de nascer mantido.
 
-### 4. Os sons e a ligação
-- **Os sons curtos** de cada toque, pela régua da 019: as portas, a TV ligando, a água, o fogão e o sentar.
-- **A musiquinha nova do aparelho de som**, feita em código.
-- **A troca de roupa** do guarda-roupa, direto nas roupas.
+### 3. Sentar e deitar (como as cadeiras do parque)
+- **O núcleo é dono dos assentos:** o sofá tem 2, a cadeira 1 e a cama 1, cada um com um dono. A criança senta pelo `usar`, com alcance.
+- **Ela levanta:**
+  - ao andar ou pular;
+  - ao morrer, ao teleportar ou ao "voltar para casa";
+  - quando o móvel quebra;
+  - ao sair da sala ou perder a conexão.
+- **O sentado** não é salvo e vai no jogador visto, também para quem entra no meio. Quem está montado desce antes. Quem está comendo continua comendo sentado.
+- **Deitar e dormir:** a cama passa a deitar a criança. A regra de dormir vira "todos deitados na cama, de noite".
+  - Se alguém levanta antes de as outras deitarem, a espera continua para quem ficou deitado.
+  - Quem não tem cama por perto não segura a noite dos outros, como hoje.
+- **A pose de sentar e a de deitar** valem para a criança e para os amigos, nas duas câmeras. Na cama, o corpo achata e o edredom vai do queixo ao pé, como na segunda volta.
 
-### 5. O esboço sai
-`src/esboco/moveis.ts`, `moveisPecas.ts` e o e2e do esboço saem quando a spec ficar pronta. As fotos ficam.
+### 4. O desenho
+- **Os oito móveis da parte 1** saem do esboço, com a escala da segunda volta.
+- **O desenho por pedaço:**
+  - o corpo parado de todos os móveis de um pedaço vai numa malha só, mais uma de luzes, como as peças da Vila Neon;
+  - a forma de cada móvel em cada direção é montada uma vez e copiada;
+  - o desenho sai junto com a remalha do pedaço, nunca a colisão sem o desenho, e no máximo um pedaço por quadro (`render/vila/index.ts:6-8`).
+- **O que mexe** (as portas do guarda-roupa, a água da pia, o edredom) só ganha malha própria quando é tocado ou com alguém deitado.
+- **Os móveis só são desenhados até uma distância**, por exemplo 32 blocos.
+- **O ícone e a mão** de cada móvel seguem o modelo.
+
+### 5. As receitas e o criativo
+- **As receitas dos oito móveis** são as do estudo (seção 8). A cama mantém a de hoje (`LLL` / `TTT`). Elas ficam numa categoria nova do livro, **Casa**, para onde a cama sai de "decoração". Nenhuma grade repete outra receita, e o teste das receitas confere.
+- **As abas do criativo:**
+  - são as mesmas categorias do livro: tudo, blocos, casa, comida, ferramentas, luz, decoração e materiais;
+  - o item sem receita vai para a aba do seu tipo, por uma tabela;
+  - a aba "casa" cabe sem rolar no celular em pé.
+
+### 6. Os sons e o esboço
+- **Os sons curtos** (sentar, deitar, as portas do guarda-roupa, a água, o clique do abajur) seguem a régua da 019. Toca no máximo um som de móvel por vez perto da criança.
+- **O esboço sai do código.** O código da parte 2 fica guardado no ramo do esboço.
 
 ## Experiência medida (para não frustrar)
-- **Pôr um móvel:** o fantasma mostra o móvel inteiro, em todas as células, antes de pôr. Se alguma célula não couber, ele fica vermelho e nada acontece. Num toque, o móvel aparece em menos de 0,2 s.
-- **O toque:** a resposta começa em menos de 0,15 s, e a TV, a geladeira e o guarda-roupa abrem em menos de 0,5 s.
-- **Desempenho:** no celular em pé, com a CPU 4× mais lenta, numa casa com os 13 móveis:
-  - no máximo +4 chamadas de desenho paradas;
-  - uns 16 mil triângulos;
-  - os quadros não caem mais de 5% contra a casa vazia.
+- **Pôr:** o fantasma mostra o móvel inteiro antes de pôr, e fica vermelho se não couber. Num toque, o móvel aparece em menos de 0,2 s.
+- **O toque:** a resposta começa em menos de 0,15 s.
+  - Sentar e deitar levam menos de 0,4 s.
+  - O guarda-roupa abre a troca de roupa em menos de 0,5 s.
+- **Desempenho**, no celular em pé com a CPU 4×, medido na placa:
+  - numa casa com os oito móveis: no máximo +3 chamadas de desenho paradas e os quadros caindo no máximo 5% contra a casa vazia;
+  - a Cidade Grande e um povoado vistos de longe, com as camas novas: os quadros caindo no máximo 5% contra a `main`.
 - **Nada some:**
-  - as camas antigas viram a nova sem perder o lugar de nascer;
+  - as camas antigas viram a nova ou a curtinha, e o lugar de nascer continua;
   - os móveis voltam ao recarregar, também num mundo da nuvem;
-  - quebrar devolve o item.
-- **Com amigos:** a amiga vê o móvel posto, a TV no mesmo desenho, a criança sentada ou deitada e a mesa comendo junto.
+  - quebrar devolve o item, só um.
+- **Com amigos:**
+  - a amiga vê o móvel posto, a criança sentada ou deitada, e a luz do abajur;
+  - a noite passa com todos deitados;
+  - testado com de 2 a 4 jogadores, no modo nuvem (`confiar: false`).
+
+## A paridade
+- **As duas sessões que põem a cama** (`paridade.spec.ts:960-976`, `1061-1080`) são regravadas. Uma comparação prova que a única diferença é a célula do pé e o metadado.
+- **As outras 24 sessões** conferem sem regravar.
+- **Os hashes por tema que mudam** (o `paridade-base`, o `paridade-cinco` e o `paridade-povoados`) ficam listados. Um teste prova que a Vila Neon e a Festa não mudam, porque não têm cama.
+- **Os nomes novos** saem do `hashTextos`, como a 027 fez (`paridade-cinco.test.ts:422`).
 
 ## Cuidados (crianças e legais; ver `.sdd/cuidados-legais.md`)
-- **O fogão** é de brinquedo: um anel laranja manso, sem fogo de verdade, sem fumaça escura e sem barulho alto.
-- **A TV** tem desenhos nossos, mansos, sem personagem conhecido e sem susto.
-- **Nada de porta batendo nem de escuro total.** O criado-mudo acende devagar.
-- **Os móveis são originais**, sem cara de outro jogo nem de marca de móvel ou de eletrodoméstico.
-- **Nada de arco-íris.**
+- **Nada que assuste:** nada de porta batendo nem de escuro total, e o criado-mudo acende devagar.
+- **Originais:** os móveis não têm cara de outro jogo nem de marca.
+- **Cores:** nada de arco-íris.
 
 ## Fora desta spec
-- Os móveis temáticos de cada mundo, que ficam na "Riqueza nos mundos antigos".
-- A estante de livros, a banheira, o berço do bichinho e o quadro de pintar.
-- O teto que some ao entrar nas casas dos povoados, como a câmera de casa de bonecas da Casa anos 80.
+- **A parte 2:** fogão, geladeira, mesa, TV e som.
+- **Os móveis temáticos** de cada mundo.
+- **Para depois:** a estante, a banheira, o berço do bichinho e o quadro.
+- **O teto que some** ao entrar nas casas dos povoados.
