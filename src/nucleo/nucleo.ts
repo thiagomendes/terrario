@@ -43,10 +43,12 @@ import {
   definirEscolhaDoCanto,
   encontrarNascimento,
   estiloMundo,
+  metaGerada,
   olharDoNascimento,
   pontoDeNascer,
   povoadoNaColuna,
 } from '../world/chunk';
+import { VERSAO_CAMAS, converterCamas } from './camas';
 import {
   ESPERA_MESMO_BICHO,
   MAX_BAU_BANCA,
@@ -125,6 +127,7 @@ import {
   metaDoMovel,
   movelEm,
   pecaSolta,
+  vetorDoMovel,
   type LeitorMoveis,
 } from '../jogo/moveis';
 import { decidirLote, gruposDoLote } from '../jogo/loteMoveis';
@@ -159,6 +162,7 @@ import type { DadosMundo, ModoJogo } from '../jogo/mundos';
 import { DURACAO_DIA, HORA_INICIAL, noiteNaHora, normalizarHora } from '../jogo/tempo';
 import { criarGerador } from '../audio/variacao';
 import {
+  blocoApoia,
   blocoOcupa,
   corpoNaCelula,
   corposDoRetrato,
@@ -2239,6 +2243,31 @@ export function criarNucleo(op: OpcoesNucleo) {
   }
 
   /**
+   * Spec 039 (T03): onde a criança nasce, ao lado da cama: a célula livre mais perto (dois de
+   * altura livres e chão sólido embaixo), primeiro dos lados da cabeceira, depois dos lados do
+   * pé, depois depois do pé e, por último, atrás da cabeceira. null se a cama está cercada.
+   */
+  function ladoDaCama(celulas: readonly Cel[], d: number): { x: number; z: number } | null {
+    const naCama = (x: number, z: number) => celulas.some((c) => c.x === x && c.z === z);
+    const livre = (x: number, y: number, z: number) =>
+      !blocoOcupa(mundo.bloco(x, y, z)) &&
+      !blocoOcupa(mundo.bloco(x, y + 1, z)) &&
+      !obterBloco(mundo.bloco(x, y, z))?.liquido &&
+      blocoApoia(mundo.bloco(x, y - 1, z));
+    const ultima = celulas[celulas.length - 1];
+    const tentativas: [Cel, number][] = [];
+    for (const c of celulas) tentativas.push([c, d + 1], [c, d + 3]);
+    tentativas.push([ultima, d], [celulas[0], d + 2]);
+    for (const [c, dir] of tentativas) {
+      const [dx, dz] = vetorDoMovel(dir);
+      const x = c.x + dx;
+      const z = c.z + dz;
+      if (!naCama(x, z) && livre(x, c.y, z)) return { x: x + 0.5, z: z + 0.5 };
+    }
+    return null;
+  }
+
+  /**
    * Spec 037: fechar a porta ou a porteira aberta em (x, y, z) prenderia um corpo (a criança,
    * um amigo, um bicho)? As duas metades da porta contam.
    */
@@ -2301,7 +2330,11 @@ export function criarNucleo(op: OpcoesNucleo) {
       j.conteiner = { tipo: 'fornalha', abertura, x, y, z };
       j.conteinerSujo = true;
     } else if (b === Bloco.CAMA) {
-      j.spawn = { x: x + 0.5, z: z + 0.5 };
+      // spec 039: a cama inteira (de qualquer parte); a peça solta não é cama
+      const cama = movelEm(leitorMoveis, x, y, z);
+      if (!cama) return;
+      // nasce ao lado da cama, na célula livre mais perto (nunca em cima da cabeceira)
+      j.spawn = ladoDaCama(cama.celulas, cama.d) ?? { x: x + 0.5, z: z + 0.5 };
       if (noiteNaHora(hora) < 0.4) {
         j.eventos.push({ e: 'sono', dormiu: false });
         return;
@@ -3490,6 +3523,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     // teve grava a lista vazia, senão a cópia do aparelho, que junta os extras de antes, traria
     // de volta o tapete tirado)
     if (tapetes.tamanho > 0 || 'tapetes' in extras) out['tapetes'] = tapetes.salvar();
+    // spec 039 (T03): as camas deste mundo já são as novas (a conversão não roda de novo)
+    out['camas'] = VERSAO_CAMAS;
     // spec 014: as obras do canteiro (mundo sem obra começada grava igual a antes)
     if (obras.size > 0) out['obras'] = obrasSalvas();
     // spec 023: a alma de cada jogador neste mundo (mundo sem alma grava igual a antes)
@@ -3522,6 +3557,34 @@ export function criarNucleo(op: OpcoesNucleo) {
         ...(o.feita ? { feita: true as const } : {}),
       };
     return r;
+  }
+
+  // spec 039 (T03): as camas de uma célula dos mundos de antes viram a cama nova (ou a
+  // curtinha), uma vez por mundo e antes da regra da peça solta; quem entra recebe as células no
+  // primeiro quadro
+  if (extras['camas'] !== VERSAO_CAMAS) {
+    const corposDoMundo = corposDoRetrato(null, [], populacao.lista);
+    const gravada = (x: number, y: number, z: number) =>
+      blocosMudados.push({
+        x,
+        y,
+        z,
+        v: edicoes.obterValor(x, y, z) ?? empacotar(mundo.bloco(x, y, z), edicoes.obterMeta(x, y, z)),
+      });
+    converterCamas({
+      edicoes,
+      bloco: (x, y, z) => mundo.bloco(x, y, z),
+      gerado: (x, y, z) => mundo.gerado(x, y, z),
+      metaGerada: (x, y, z) => metaGerada(x, y, z, semente),
+      regra,
+      ocupada: (c) => corposDoMundo.some((k) => corpoNaCelula(c, k)),
+      gravar(x, y, z, b, meta, dono) {
+        if (edicoes.definir(x, y, z, b, meta, dono)) gravada(x, y, z);
+      },
+      remover(x, y, z) {
+        if (edicoes.remover?.(x, y, z)) gravada(x, y, z);
+      },
+    });
   }
 
   // spec 039: ao abrir o mundo, a peça solta de um móvel (a parte sem o móvel inteiro em

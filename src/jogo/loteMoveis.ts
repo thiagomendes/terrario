@@ -20,8 +20,8 @@ import { celulaDoLote, recusaQuebrar, type MundoDaRegra, type RecusaProtecao } f
 import { blocoOcupa, corpoNaCelula, type Corpo } from './construir';
 import { substituivel } from './plantio';
 import {
-  celulasDoMovel,
-  ehMetaDeAncora,
+  celulasDaAncora,
+  ehAncora,
   ehMovel,
   metaDoMovel,
   movelEm,
@@ -81,7 +81,7 @@ export function gruposDoLote(lote: readonly EntradaLote[], l: LeitorMoveis): Gru
     const b = e.v & 255;
     const meta = (e.v >> 8) & 255;
     if (b === Bloco.TAPETE) continue;
-    if (ehMovel(b) && !ehMetaDeAncora(meta)) {
+    if (ehMovel(b) && !ehAncora(b, meta)) {
       partesPedidas.set(chave(e.x, e.y, e.z), e.v & 0xffff);
       continue;
     }
@@ -115,7 +115,7 @@ export function gruposDoLote(lote: readonly EntradaLote[], l: LeitorMoveis): Gru
     if (tomadas.has(k) || pedido.get(k)?.v !== a.v) continue;
     const b = a.v & 255;
     const d = (a.v >> 8) & 3;
-    const celulas = celulasDoMovel(b, a.x, a.y, a.z, d);
+    const celulas = celulasDaAncora(b, a.x, a.y, a.z, (a.v >> 8) & 255);
     comMovel.add(k);
     let cabe = true;
     for (const c of celulas.slice(1)) {

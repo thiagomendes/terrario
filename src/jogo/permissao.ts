@@ -89,10 +89,20 @@ export function recusaQuebrar(
   if (p === Protecao.OBRA) return { motivo: 'obra', lugar: 'cidade' };
   // por garantia: chão onde a geração deixou ar é o bloco de quem pôs (nunca fica preso)
   const chaoVazio = p === Protecao.CHAO && m.gerado(x, y, z) === Bloco.AR;
-  if (naoQuebra(p) && !chaoVazio) return doMundo(m, x, z, 'mundo');
+  if (naoQuebra(p) && !chaoVazio && !camaDaGeracaoTrocada(m, x, y, z))
+    return doMundo(m, x, z, 'mundo');
   const dono = m.dono(x, y, z);
   if (podeMexer(quem, dono, m.donoDoMundo)) return null;
   return deAlguem(m, dono!, motivoDoBloco(m.bloco(x, y, z)) ?? 'amigo');
+}
+
+/**
+ * Spec 039 (T03): a célula onde a geração põe a cama (a cabeceira ou o pé da cama nova) com outro
+ * bloco por cima, de uma edição antiga (a criança construiu ali antes da cama de duas células):
+ * ela segue a regra da edição, e não a do usável do mundo, para nunca prender o bloco da criança.
+ */
+function camaDaGeracaoTrocada(m: MundoDaRegra, x: number, y: number, z: number): boolean {
+  return m.gerado(x, y, z) === Bloco.CAMA && m.bloco(x, y, z) !== Bloco.CAMA;
 }
 
 /** Baú e fornalha são contêineres (abrir segue a mesma regra); o resto, null. */
@@ -124,7 +134,7 @@ export function recusaColocar(
       ? { motivo: 'obra', lugar: 'cidade', certo: pl.bloco }
       : { motivo: 'obra', lugar: 'cidade' };
   }
-  if (naoColoca(p)) {
+  if (naoColoca(p) && !camaDaGeracaoTrocada(m, x, y, z)) {
     // conserto: o bloco que a geração pôs volta ao buraco da estrutura
     const conserto = p !== Protecao.PASSAGEM && bloco !== Bloco.AR && bloco === m.gerado(x, y, z);
     if (!conserto) return doMundo(m, x, z, p === Protecao.PASSAGEM ? 'passagem' : 'mundo');

@@ -8,7 +8,7 @@ import {
   vetorDirecao,
 } from './formas';
 import type { Edicoes } from './edicoes';
-import { pecaSolta, type LeitorMoveis } from '../jogo/moveis';
+import { ehMovel, pecaSolta, type LeitorMoveis } from '../jogo/moveis';
 import type { Solido } from '../player/fisica';
 
 /**
@@ -77,7 +77,7 @@ export function criarMundoSolido(
     // porteira fechada segura como a cerca: uma caixa inteira de 1,5 bloco, sem vãos
     if (b === Bloco.PORTEIRA) return [colisaoPorteira(meta)];
     // spec 039: a peça solta de um móvel não segura ninguém (não é móvel)
-    if (obterBloco(b)?.forma === 'movel' && pecaSolta(leitorMoveis, x, y, z)) return [];
+    if ((b === Bloco.TAPETE || ehMovel(b)) && pecaSolta(leitorMoveis, x, y, z)) return [];
     const caixas = caixasDoBloco(b, meta, (d) => {
       const [dx, dz] = vetorDirecao(d);
       return cercaConecta(bloco(x + dx, y, z + dz));

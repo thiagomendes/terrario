@@ -770,11 +770,17 @@ export function pintarEstruturas(
   // povoado da região, se alcançar este chunk (e então sem ruína)
   const plano = planoQueTocaOChunk(cx, cz, semente);
   if (plano) {
-    construirPovoado(plano, estilo.povoado ?? FORMAS_PADRAO, (wx, y, wz, id) => {
+    // spec 039: com o metadado (a direção e a parte da cama de duas células)
+    construirPovoado(plano, estilo.povoado ?? FORMAS_PADRAO, (wx, y, wz, id, meta) => {
       const x = wx - x0;
       const z = wz - z0;
       if (x < 0 || x >= TAM_X || z < 0 || z >= TAM_Z || y < 1 || y >= ALTURA) return;
-      blocos[indice(x, y, z)] = id;
+      const i = indice(x, y, z);
+      blocos[i] = id;
+      if (metas) {
+        if (meta) metas.set(i, meta);
+        else metas.delete(i);
+      }
     });
     return { tipo: 'povoado', plano };
   }
@@ -852,13 +858,22 @@ function guardarMetas(
   m: ReadonlyMap<number, number>,
 ): void {
   conferirVersaoMetas();
-  const k = `${cx},${cz},${semente}`;
+  const k = chaveMetas(cx, cz, semente);
   metasGeradas.delete(k);
   metasGeradas.set(k, m);
   if (metasGeradas.size > 512) metasGeradas.delete(metasGeradas.keys().next().value as string);
 }
+/**
+ * Spec 039: a chave leva a planta e o relevo (o servidor abre mundos de temas diferentes com a
+ * mesma semente: o povoado de um não é o do outro), como a memória dos planos.
+ */
+const chaveMetas = (cx: number, cz: number, semente: number) =>
+  `${cx},${cz},${semente},${TERRENO_NATURAL.planta},${chaveDoRelevo()}`;
 
-/** Metadados que a geração deu no chunk (índice local → metadado). */
+/**
+ * Metadados que a geração deu no chunk (índice local → metadado). Spec 039: os povoados e o
+ * sítio também (a direção e a parte da cama de duas células).
+ */
 export function metasGeradasDoChunk(
   cx: number,
   cz: number,
@@ -870,11 +885,12 @@ export function metasGeradasDoChunk(
   if (
     !(cidade && cidadeNoChunk(cidade, cx, cz)) &&
     !(vila && vilaNoChunk(vila, cx, cz)) &&
-    !(baile && baileNoChunk(baile, cx, cz))
+    !(baile && baileNoChunk(baile, cx, cz)) &&
+    !planoQueTocaOChunk(cx, cz, semente)
   )
     return SEM_METAS;
   conferirVersaoMetas();
-  const k = `${cx},${cz},${semente}`;
+  const k = chaveMetas(cx, cz, semente);
   const ja = metasGeradas.get(k);
   if (ja) return ja;
   const m = new Map<number, number>();
@@ -886,8 +902,9 @@ export function metasGeradasDoChunk(
 /** Metadado que a geração deu à célula (0 se nenhum). */
 export function metaGerada(x: number, y: number, z: number, semente: number): number {
   const planta = estilo.povoado?.planta;
-  if ((planta !== 'cidade' && planta !== 'bairro' && planta !== 'baile') || y < 0 || y >= ALTURA)
-    return 0;
+  // spec 039: os povoados (e o sítio) também têm metadado: a cama de duas células
+  const comPlantas = planta === 'cidade' || planta === 'bairro' || planta === 'baile';
+  if ((!comPlantas && !povoadosLigados) || y < 0 || y >= ALTURA) return 0;
   const cx = Math.floor(x / TAM_X);
   const cz = Math.floor(z / TAM_Z);
   return metasGeradasDoChunk(cx, cz, semente).get(indice(x - cx * TAM_X, y, z - cz * TAM_Z)) ?? 0;

@@ -201,12 +201,13 @@ describe('sítio: construções', () => {
       return n;
     };
     for (const p of sitios()) {
-      expect(conta(lote(p, 'fazenda'), Bloco.CAMA)).toBe(1);
+      // spec 039: a cama nova tem duas células (a cabeceira e o pé)
+      expect(conta(lote(p, 'fazenda'), Bloco.CAMA)).toBe(2);
       expect(conta(lote(p, 'fazenda'), Bloco.FORNALHA_ACESA)).toBe(1);
-      expect(conta(lote(p, 'celeiro'), Bloco.CAMA)).toBe(1);
+      expect(conta(lote(p, 'celeiro'), Bloco.CAMA)).toBe(2);
       expect(conta(lote(p, 'celeiro'), Bloco.MESA_TRABALHO)).toBe(1);
       expect(conta(lote(p, 'celeiro'), Bloco.BAU)).toBe(1);
-      expect(conta(lote(p, 'ferraria'), Bloco.CAMA)).toBe(1);
+      expect(conta(lote(p, 'ferraria'), Bloco.CAMA)).toBe(2);
       expect(conta(lote(p, 'ferraria'), Bloco.FORNALHA)).toBe(1);
       expect(conta(lote(p, 'silo'), Bloco.BAU)).toBe(1);
       // o baú do celeiro está onde o plano diz

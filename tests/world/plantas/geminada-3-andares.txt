@@ -25,8 +25,8 @@ MPMLJMJM
 M......M
 M.....EM
 M......M
-M......M
-MBKX...M
+Mr.....M
+MRKX...M
 MMLLLJMM
 y=3
        }
@@ -66,7 +66,7 @@ MX.....M
 M.....EM
 M......M
 MK.....M
-MB.....M
+MBb....M
 MMJLJLMM
 y=7
        }
@@ -106,7 +106,7 @@ MX.....M
 M.....EM
 M......M
 MK.....M
-MB.....M
+MBb....M
 MMJJLLMM
 y=11
        }

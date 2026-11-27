@@ -29,7 +29,15 @@ import {
 import { construirMapaEmissivo } from './emissivo';
 import { criarTintaProtecao } from './tintaProtecao';
 import { decidirLote, gruposDoLote } from '../jogo/loteMoveis';
-import type { LeitorMoveis } from '../jogo/moveis';
+import {
+  celulasDoMovel,
+  ehMovel,
+  metaDoMovel,
+  movelEm,
+  pecaSolta,
+  type LeitorMoveis,
+} from '../jogo/moveis';
+import { celulasDoTapete, recusaPorTapete } from '../jogo/tapetes';
 import {
   ehConteiner,
   outraMetadeDaPorta,
@@ -3254,17 +3262,42 @@ export function criarCena(
     enviarTelemetria(true);
     enviar({ t: 'editar', id, lote });
   }
+  /**
+   * Spec 039: pôr o tapete na camada rente ao chão: a mesma regra do núcleo antes de prever (as
+   * seis células livres, com chão e a proteção), e o tapete aparece na hora.
+   */
+  function porTapete(x: number, y: number, z: number, meta: number): boolean {
+    const d = meta & 3;
+    const r = recusaPorTapete(regra, cliente.tapetes, voce, x, y, z, d, Bloco.TAPETE, ALTURA);
+    if (r) {
+      if ('protecao' in r) return recusarProtegido(r.protecao);
+      barramento.emitir('recusa', { motivo: 'colocar' });
+      return false;
+    }
+    const id = proximoId();
+    cliente.preverTapete(id, { x, y, z, d, dono: meuIndiceDono() ?? 0 });
+    enviarTelemetria(true);
+    const extras = celulasDoTapete(x, y, z, d)
+      .slice(1)
+      .map((c) => ({ x: c.x, y: c.y, z: c.z }));
+    enviar({ t: 'colocar', id, x, y, z, bloco: Bloco.TAPETE, meta: d, slot: hotbar.ativo, extras });
+    return true;
+  }
+
   function editarRegistrando(
     x: number,
     y: number,
     z: number,
     b: number,
     meta = 0,
-    extras: { x: number; y: number; z: number }[] = [],
+    /** As outras células (a metade de cima da porta; spec 039, as partes do móvel, com o meta). */
+    extras: { x: number; y: number; z: number; meta?: number }[] = [],
   ): boolean {
     const lote: Edicao[] = [];
     const antes = valorEm(x, y, z);
     const quebra = b === Bloco.AR;
+    // spec 039: o móvel vai inteiro para o núcleo (todas as outras células, sempre)
+    const movelPosto = !quebra && ehMovel(b);
     // spec 016: a mesma regra do núcleo (o que o mundo fez, o que é do amigo, a passagem)
     const protegido = quebra
       ? recusaQuebrar(regra, voce, x, y, z)
@@ -3290,6 +3323,8 @@ export function criarCena(
     }
     // a outra metade da porta, conferida antes de a primeira sumir da previsão
     const outraMetade = quebra ? outraMetadeDaPorta(regra, voce, x, y, z) : null;
+    // spec 039: quebrar qualquer parte do móvel leva o móvel inteiro (o núcleo faz o mesmo)
+    const movelQuebrado = quebra ? movelEm(leitorMoveis, x, y, z) : null;
     const id = proximoId();
     // o replantio fica com o dono que a lavoura já tinha (o núcleo faz igual)
     if (quebra && b !== Bloco.AR) cliente.prever(id, x, y, z, b, meta);
@@ -3309,12 +3344,19 @@ export function criarCena(
       prever(id, x, outraMetade, z, Bloco.AR);
       lote.push({ x, y: outraMetade, z, antes: a, depois: Bloco.AR });
     }
+    for (const q of movelQuebrado?.celulas ?? []) {
+      if (q.x === x && q.y === y && q.z === z) continue;
+      const a = valorEm(q.x, q.y, q.z);
+      prever(id, q.x, q.y, q.z, Bloco.AR);
+      lote.push({ x: q.x, y: q.y, z: q.z, antes: a, depois: Bloco.AR });
+    }
     const extrasFeitos: { x: number; y: number; z: number }[] = [];
     for (const e of extras) {
       const a = valorEm(e.x, e.y, e.z);
-      if (prever(id, e.x, e.y, e.z, b, meta)) {
-        lote.push({ ...e, antes: a, depois: empacotar(b, meta) });
-        extrasFeitos.push(e);
+      const me = e.meta ?? meta;
+      if (prever(id, e.x, e.y, e.z, b, me) || movelPosto) {
+        lote.push({ x: e.x, y: e.y, z: e.z, antes: a, depois: empacotar(b, me) });
+        extrasFeitos.push({ x: e.x, y: e.y, z: e.z });
       }
     }
     enviarTelemetria(true);
@@ -3620,7 +3662,15 @@ export function criarCena(
   function metaColocacao(bloco: number): number {
     const d = direcaoDoYaw(camera.rotation.y);
     const forma = obterBlocoDef(bloco)?.forma;
-    if (forma === 'escada' || forma === 'porta' || forma === 'cama' || forma === 'porteira')
+    // spec 039: o móvel também segue o olhar (a frente olha para a criança; o pé da cama vai
+    // para a frente dela)
+    if (
+      forma === 'escada' ||
+      forma === 'porta' ||
+      forma === 'cama' ||
+      forma === 'porteira' ||
+      forma === 'movel'
+    )
       return d;
     return obterBlocoDef(bloco)?.tiles.frente ? (d + 2) & 3 : 0;
   }
@@ -3675,6 +3725,27 @@ export function criarCena(
             return false;
           }
           return editarRegistrando(x, y, z, b, meta, [{ x, y: y + 1, z }]);
+        }
+        // spec 039: o tapete vai para a camada rente ao chão (a mesma regra do núcleo)
+        if (b === Bloco.TAPETE) return porTapete(x, y, z, meta);
+        // spec 039: o móvel ocupa as células da tabela; se alguma não estiver livre, o "não"
+        // curtinho da 037 (o núcleo confere as mesmas)
+        if (ehMovel(b)) {
+          const celulas = celulasDoMovel(b, x, y, z, meta & 3);
+          const livres = celulas.every(
+            (c) =>
+              c.y >= 0 &&
+              c.y < ALTURA &&
+              (substituivel(blocoEm(c.x, c.y, c.z)) || pecaSolta(leitorMoveis, c.x, c.y, c.z)),
+          );
+          if (!livres) {
+            barramento.emitir('recusa', { motivo: 'colocar' });
+            return false;
+          }
+          const partes = celulas
+            .slice(1)
+            .map((c) => ({ x: c.x, y: c.y, z: c.z, meta: metaDoMovel(meta, c.parte) }));
+          return editarRegistrando(x, y, z, b, meta, partes);
         }
         return editarRegistrando(x, y, z, b, meta);
       },

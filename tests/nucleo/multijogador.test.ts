@@ -3,6 +3,7 @@ import { criarNucleo, type Nucleo } from '../../src/nucleo/nucleo';
 import { encontrarNascimento, alturaTerreno } from '../../src/world/chunk';
 import { Bloco } from '../../src/world/blocks';
 import { idDoBloco } from '../../src/jogo/itens';
+import { PARTE_CURTINHA, metaDoMovel } from '../../src/jogo/moveis';
 import { aparenciaPadrao } from '../../src/personagem/aparencia';
 import type { Comando, Telemetria } from '../../src/nucleo/protocolo';
 
@@ -226,10 +227,11 @@ describe('núcleo com vários jogadores', () => {
       meta: 0,
       slot: 0,
     });
-    // sem a cama no inventário, o bloco não sai na sobrevivência: põe pelo atalho
+    // sem a cama no inventário, o bloco não sai na sobrevivência: põe pelo atalho (spec 039: a
+    // cama de uma célula é a curtinha; a de uma célula sem parte seria peça solta)
     n.comando('ana', { t: 'depurar', d: { f: 'hora', hora: 0.9 } });
     const edicoes = n.estado.edicoes;
-    edicoes.definir(X + 1, Y, Z + 2, Bloco.CAMA);
+    edicoes.definir(X + 1, Y, Z + 2, Bloco.CAMA, metaDoMovel(0, PARTE_CURTINHA));
     n.comando('ana', { t: 'usar', x: X + 1, y: Y, z: Z + 2 });
     for (let i = 0; i < 60; i++) n.passo();
     expect(n.estado.hora).toBeGreaterThan(0.85);

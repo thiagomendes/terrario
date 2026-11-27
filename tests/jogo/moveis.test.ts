@@ -89,8 +89,15 @@ describe('a tabela dos móveis', () => {
     expect(ehMovel(Bloco.TAPETE)).toBe(false);
     expect(FORMA_CAMA.partes.length).toBe(2);
     expect(FORMA_CAMA.curtinha).toBe(2);
-    // a cama continua de uma célula até a T03 (as camas antigas não viram peça solta)
-    expect(ehMovel(Bloco.CAMA)).toBe(false);
+    // T03: a cama entra na regra (a de uma célula dos mundos de antes passa pela conversão)
+    expect(ehMovel(Bloco.CAMA)).toBe(true);
+    expect(formaDoMovel(Bloco.CAMA)).toBe(FORMA_CAMA);
+    // as caixas: as duas partes e a curtinha
+    expect(FORMA_CAMA.caixas).toHaveLength(3);
+    expect(pos(celulasDoMovel(Bloco.CAMA, 2, 3, 4, 0))).toEqual([
+      [2, 3, 4],
+      [2, 3, 5],
+    ]);
     // os ids novos vêm depois do 127 e não mudam os de antes
     expect(Bloco.CALDEIRAO).toBe(127);
     expect([

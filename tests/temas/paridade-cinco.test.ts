@@ -116,7 +116,8 @@ const ESPERADO: Record<Id, Hashes> = {
     atlas: 'b537276ea011f90a',
     emissivos: '78cb9703a7c6fc08',
     mapaEmissivo: '5e3ec88724d11d41',
-    terreno: ['0ffd672eb7c509b8', 'a080aeb40a60e8c2', '080dfb5e4c2d3bab'],
+    // spec 039: a cama de duas células (sem ela, `TERRENO_ANTES_DA_039`)
+    terreno: ['cd764037f6a7af8c', 'f293ac4a102d2a27', '85cb0466c20d8e32'],
     criaturas: 'e47cfbb8c9c2d984',
     movimento: '94323f1ba615535d',
     vozes: 'f4f8405fae239ae8',
@@ -133,7 +134,8 @@ const ESPERADO: Record<Id, Hashes> = {
     atlas: '09e1e6f3cabac84b',
     emissivos: 'ed7e226f7c9ab3ca',
     mapaEmissivo: '260ad22d32be7daa',
-    terreno: ['470567cc62d4e52e', '53da1926a130b50d', '8046e97251f310dc'],
+    // spec 039: a cama de duas células (sem ela, `TERRENO_ANTES_DA_039`)
+    terreno: ['d6fcd976a5dccb80', 'b973ea2eeaa83628', 'b8e9ad8d3f631615'],
     criaturas: 'ffe75501b668e003',
     movimento: 'ecf31e61218ef0eb',
     vozes: '4be67bc6b597972f',
@@ -150,7 +152,8 @@ const ESPERADO: Record<Id, Hashes> = {
     atlas: '5d8b67fd98c0e82e',
     emissivos: '2a48dd4f2946ef28',
     mapaEmissivo: '9e2efa78f4a13f88',
-    terreno: ['05d901f1bec4f3e0', 'f572b5adfc8dd326', '1e76727229b9d2dd'],
+    // spec 039: a cama de duas células (sem ela, `TERRENO_ANTES_DA_039`)
+    terreno: ['459a0c0d2069b8dd', '8c969c138327e163', '21865e0053d24231'],
     criaturas: 'cdff6aaacf1aa290',
     movimento: '751c23bc33aaccfe',
     vozes: 'f07597c53cf23967',
@@ -167,7 +170,8 @@ const ESPERADO: Record<Id, Hashes> = {
     atlas: '11a679fb8d8dea71',
     emissivos: '57e50da08c57eb22',
     mapaEmissivo: '2e4360fdfb0c0c69',
-    terreno: ['fa6bccd24b0e1141', '38ed59e046ebe2cb', '7b48e4731cfda503'],
+    // spec 039: a cama de duas células (sem ela, `TERRENO_ANTES_DA_039`)
+    terreno: ['fc58f2cb763a6910', 'cb7ab081b853267f', '611bf1f53b107b1f'],
     criaturas: '0b47cafa6b750b67',
     movimento: 'ad84e02a8567f7ba',
     vozes: '33ce3a2598c097b7',
@@ -181,6 +185,21 @@ const ESPERADO: Record<Id, Hashes> = {
     resto: 'b13b5fb3b924c0d9',
   },
 };
+
+/**
+ * Spec 039 (T03): o terreno de antes da cama nova (os hashes que valiam até a 038). Os povoados,
+ * o sítio e as plantas da Cidade Grande desenham agora a cama de duas células, com a direção e a
+ * parte no metadado; `semACamaNova` tira o pé e esse metadado, e o terreno tem de dar estes
+ * hashes. A Vila Neon não tem cama: o hash dela não mudou (e não está aqui).
+ */
+const TERRENO_ANTES_DA_039: Partial<Record<Id, [string, string, string]>> = {
+  'cidade-grande': ['0ffd672eb7c509b8', 'a080aeb40a60e8c2', '080dfb5e4c2d3bab'],
+  'rancho-alegre': ['470567cc62d4e52e', '53da1926a130b50d', '8046e97251f310dc'],
+  'doce-reino': ['05d901f1bec4f3e0', 'f572b5adfc8dd326', '1e76727229b9d2dd'],
+  'exploracao-lunar': ['fa6bccd24b0e1141', '38ed59e046ebe2cb', '7b48e4731cfda503'],
+};
+/** Os terrenos sem a cama nova, calculados junto com os hashes de cada tema. */
+const terrenosSemCama = new Map<Id, [string, string, string]>();
 
 /**
  * O canto do Doce Reino, por semente (na ordem de `SEMENTES`), em dois hashes: os lugares (o
@@ -317,7 +336,33 @@ function emOrdem(chaves: Set<string>): [number, number][] {
 /** Os moradores dos planos achados: id do povoado (como o núcleo dá) -> [n, profissão]. */
 type Moradores = Map<string, [number, Profissao][]>;
 
-async function hashTerreno(j: Jogo, semente: number, moradores: Moradores): Promise<string> {
+/**
+ * Spec 039 (T03): o pedaço como a geração era antes da cama nova: o pé da cama (a célula de parte
+ * 1) volta a ser o ar de dentro da casa, e o metadado das camas sai (a cabeceira não tinha).
+ */
+function semACamaNova(
+  j: Jogo,
+  blocos: Uint8Array,
+  metas: [number, number][],
+): [Uint8Array, [number, number][]] {
+  const b = blocos.slice();
+  const fica: [number, number][] = [];
+  for (const [i, m] of metas) {
+    if (b[i] !== j.Bloco.CAMA) {
+      fica.push([i, m]);
+      continue;
+    }
+    if (((m >> 2) & 7) === 1) b[i] = j.Bloco.AR;
+  }
+  return [b, fica];
+}
+
+async function hashTerreno(
+  j: Jogo,
+  semente: number,
+  moradores: Moradores,
+  semCamaNova = false,
+): Promise<string> {
   const { chunk, povoado } = j;
   const partes: (Uint8Array | string)[] = [];
   const n = chunk.encontrarNascimento(semente);
@@ -363,9 +408,12 @@ async function hashTerreno(j: Jogo, semente: number, moradores: Moradores): Prom
   // na Cidade, na Vila e no Rancho o nascer é no meio (ou ao lado) do lugar: tem que haver um
   expect(!!urbano || !!perto, 'sem bairro, cidade nem povoado perto do nascer').toBe(true);
   for (const [cx, cz] of emOrdem(chaves)) {
-    partes.push(`${cx},${cz};`, chunk.gerarChunk(cx, cz, semente));
-    // a direção dos degraus, portas, bancos e placas (só a Cidade e a Vila têm)
-    const metas = [...chunk.metasGeradasDoChunk(cx, cz, semente)].sort((a, b) => a[0] - b[0]);
+    let blocos = chunk.gerarChunk(cx, cz, semente);
+    // a direção dos degraus, portas, bancos e placas (a Cidade e a Vila) e, da spec 039, a da
+    // cama de duas células (os povoados e o sítio também)
+    let metas = [...chunk.metasGeradasDoChunk(cx, cz, semente)].sort((a, b) => a[0] - b[0]);
+    if (semCamaNova) [blocos, metas] = semACamaNova(j, blocos, metas);
+    partes.push(`${cx},${cz};`, blocos);
     if (metas.length) partes.push(JSON.stringify(metas));
   }
   return sha(partes);
@@ -460,6 +508,10 @@ async function calcular(id: Id): Promise<Hashes> {
   const terreno: string[] = [];
   const moradores: Moradores = new Map();
   for (const s of SEMENTES) terreno.push(await hashTerreno(j, s, moradores));
+  // spec 039: o mesmo terreno sem a cama nova (os moradores à parte: o hash dos nomes não muda)
+  const semCama: string[] = [];
+  for (const s of SEMENTES) semCama.push(await hashTerreno(j, s, new Map(), true));
+  terrenosSemCama.set(id, semCama as [string, string, string]);
   return {
     atlas: await sha([atlas.pixels.subarray(0, oitoLinhas)]),
     emissivos: await sha([emissivos]),
@@ -485,6 +537,9 @@ describe('spec 034: os cinco mundos que ficam são os mesmos de antes', () => {
     it(`${id}: atlas, terreno com povoados em 3 sementes e dados do tema`, async () => {
       const obtido = await calcular(id);
       expect(obtido).toEqual(ESPERADO[id]);
+      // spec 039 (T03): a prova de que o terreno só mudou pela cama nova (o pé e o metadado):
+      // sem eles, é o hash de antes; a Vila Neon não tem cama e não muda
+      expect(terrenosSemCama.get(id)).toEqual(TERRENO_ANTES_DA_039[id] ?? ESPERADO[id].terreno);
     }, 120_000);
 
   it('o canto do Doce Reino: os lugares e os chunks da caixa, em 3 sementes', async () => {

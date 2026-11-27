@@ -6,13 +6,24 @@
  * lanternas na praça. O tema escolhe só a forma.
  */
 import { Bloco } from './blocks';
-import type { FormaCasa, FormaMarco, FormasPovoado, Lote, PlanoPovoado } from './povoado';
+import {
+  paraAPorta,
+  type FormaCasa,
+  type FormaMarco,
+  type FormasPovoado,
+  type Lote,
+  type PlanoPovoado,
+} from './povoado';
 import { construirLoteDoSitio } from './sitio';
+import { pintarCama } from '../jogo/moveis';
 
 const TAM_LOTE = 7;
 
-/** Escreve um bloco em coordenadas de mundo, se cair no chunk. */
-export type Pincel = (wx: number, y: number, wz: number, id: number) => void;
+/**
+ * Escreve um bloco em coordenadas de mundo, se cair no chunk. Spec 039: com o metadado (só a
+ * cama de duas células usa: a direção e a parte; sem ele, 0).
+ */
+export type Pincel = (wx: number, y: number, wz: number, id: number, meta?: number) => void;
 
 /** Bloco de trabalho de cada oficina (o mesmo em todo tema). */
 export const BLOCO_OFICINA = {
@@ -39,7 +50,8 @@ function mobilia(l: Lote, em: Pincel): void {
   };
   const [ax, az] = fundo(2);
   const [tx, tz] = fundo(4);
-  if (l.tipo === 'casa') em(ax, y, az, Bloco.CAMA);
+  // spec 039: a cama de duas células, com o pé para a porta (no meio do miolo, fora da passagem)
+  if (l.tipo === 'casa') pintarCama(em, ax, y, az, paraAPorta(l));
   else if (l.tipo === 'oficina') em(ax, y, az, BLOCO_OFICINA[l.profissao!]);
   else em(ax, y, az, Bloco.BAU);
   em(tx, y, tz, Bloco.TOCHA);

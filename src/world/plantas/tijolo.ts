@@ -93,7 +93,7 @@ const ANDAR: Camada[] = [
     'M.....EM',
     'M......M',
     'MK.....M',
-    'MB.....M',
+    'MBb....M',
     'MMJJJJMM',
   ],
   [

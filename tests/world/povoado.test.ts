@@ -223,7 +223,8 @@ describe('povoados: terreno e construções', () => {
     for (const p of povoados(2)) {
       const n = funcionais(p, bloco);
       const casas = p.lotes.filter((l) => l.tipo === 'casa').length;
-      expect(n[Bloco.CAMA]).toBe(casas);
+      // spec 039: a cama nova tem duas células (a cabeceira e o pé)
+      expect(n[Bloco.CAMA]).toBe(casas * 2);
       expect(n[Bloco.BAU]).toBe(1);
       expect(n[Bloco.MESA_TRABALHO]).toBe(1);
       expect(n[Bloco.FORNALHA]).toBe(1);

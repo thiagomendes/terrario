@@ -32,6 +32,11 @@ export interface FormaMovel {
    * para ela, em -z). A colisão vai até 1,0: o encosto que passa disso é só desenho.
    */
   caixas: readonly (readonly CaixaMovel[])[];
+  /**
+   * A parte que é um móvel inteiro sozinha, numa célula (a cama curtinha: a cama de antes onde a
+   * nova não coube). As caixas dela vêm depois das das partes.
+   */
+  curtinha?: number;
 }
 
 const P = 1 / 16;
@@ -124,8 +129,8 @@ export const FORMA_TAPETE: FormaMovel = {
 
 /**
  * A cama nova (1 × 2: a cabeceira é a âncora e o pé vai para a frente de quem põe; a curtinha
- * é a parte 2, sozinha numa célula). Fica fora de `MOVEIS` até a T03 ligar: com ela na regra,
- * as camas de uma célula que já estão nos mundos seriam peças soltas antes de a conversão rodar.
+ * é a parte 2, sozinha numa célula). A cama de uma célula dos mundos de antes passa pela
+ * conversão do núcleo (`nucleo/camas.ts`) antes da regra da peça solta: vira a nova ou a curtinha.
  */
 export const FORMA_CAMA: FormaMovel & { curtinha: number } = {
   largura: 1,
@@ -135,9 +140,11 @@ export const FORMA_CAMA: FormaMovel & { curtinha: number } = {
     [0, 0, 0],
     [0, 0, 1],
   ],
-  caixas: [[[0, 0, 0, 1, 9 * P, 1]], [[0, 0, 0, 1, 9 * P, 1]]],
+  caixas: [[[0, 0, 0, 1, 9 * P, 1]], [[0, 0, 0, 1, 9 * P, 1]], [[0, 0, 0, 1, 9 * P, 1]]],
   curtinha: 2,
 };
+/** Spec 039: a parte da cama curtinha (a de antes, numa célula só). */
+export const PARTE_CURTINHA = FORMA_CAMA.curtinha;
 
 /**
  * Os nomes dos móveis, os mesmos em todos os mundos (o conjunto é geral; os temáticos ficam
@@ -165,6 +172,8 @@ const MOVEIS: ReadonlyMap<number, FormaMovel> = new Map([
   [Bloco.ABAJUR_ACESO, ABAJUR],
   [Bloco.PIA, PIA],
   [Bloco.GUARDA_ROUPA, GUARDA_ROUPA],
+  // spec 039 (T03): a cama de duas células (e a curtinha)
+  [Bloco.CAMA, FORMA_CAMA],
 ]);
 
 /** A forma do móvel de célula (undefined: não é móvel; o tapete não é de célula). */
@@ -189,7 +198,34 @@ export function ehMetaDeAncora(meta: number): boolean {
   return meta >> 2 === 0;
 }
 
+/**
+ * A peça de `b` com este metadado começa um móvel inteiro (a âncora; ou a cama curtinha, que é
+ * inteira numa célula)? É o que o lote do criativo aceita.
+ */
+export function ehAncora(b: number, meta: number): boolean {
+  if (ehMetaDeAncora(meta)) return true;
+  const f = MOVEIS.get(b);
+  return f?.curtinha !== undefined && meta >> 5 === 0 && parteDoMeta(meta) === f.curtinha;
+}
+
+/** As células do móvel que começa em (x, y, z) com este metadado (a curtinha: só ela). */
+export function celulasDaAncora(
+  b: number,
+  x: number,
+  y: number,
+  z: number,
+  meta: number,
+): CelulaDoMovel[] {
+  const f = MOVEIS.get(b);
+  if (f?.curtinha !== undefined && parteDoMeta(meta) === f.curtinha)
+    return [{ x, y, z, parte: f.curtinha }];
+  return celulasDoMovel(b, x, y, z, meta & 3);
+}
+
 /** Vetor (dx, dz) da direção `d` (o mesmo de `world/formas.ts`). */
+export function vetorDoMovel(d: number): readonly [number, number] {
+  return vetor(d);
+}
 function vetor(d: number): readonly [number, number] {
   switch (d & 3) {
     case 1:
@@ -230,6 +266,21 @@ export function celulasDaForma(
   }));
 }
 
+/**
+ * Spec 039 (T03): a cama nova pintada pela geração (povoados, sítio): a cabeceira (a âncora)
+ * em (x, y, z), olhando para `d`, e o pé na célula da frente, cada uma com a parte no metadado.
+ */
+export function pintarCama(
+  em: (x: number, y: number, z: number, id: number, meta: number) => void,
+  x: number,
+  y: number,
+  z: number,
+  d: number,
+): void {
+  for (const c of celulasDaForma(FORMA_CAMA, x, y, z, d))
+    em(c.x, c.y, c.z, Bloco.CAMA, metaDoMovel(d, c.parte));
+}
+
 /** As células do móvel `b` com a âncora em (x, y, z) (vazio se não for móvel). */
 export function celulasDoMovel(
   b: number,
@@ -268,8 +319,12 @@ export function movelEm(l: LeitorMoveis, x: number, y: number, z: number): Movel
   if (!f) return null;
   const meta = l.meta(x, y, z);
   const parte = parteDoMeta(meta);
-  if (meta >> 5 !== 0 || parte >= f.partes.length) return null;
+  if (meta >> 5 !== 0) return null;
   const d = meta & 3;
+  // a cama curtinha é um móvel inteiro numa célula só
+  if (f.curtinha !== undefined && parte === f.curtinha)
+    return { bloco: b, d, ancora: { x, y, z }, celulas: [{ x, y, z, parte }] };
+  if (parte >= f.partes.length) return null;
   // a âncora: volta da célula da parte pelo deslocamento dela
   const [fx, fz] = vetor(d);
   const [rx, rz] = vetor(d + 1);

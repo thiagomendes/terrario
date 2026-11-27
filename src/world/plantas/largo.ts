@@ -95,7 +95,7 @@ const ANDAR: Camada[] = [
     'ME.............J',
     'M..............J',
     'M.........K....M',
-    'M.........BX...J',
+    'M........qQX...J',
     'MMMMMMMMMMMMMMMM',
   ],
   [
@@ -160,7 +160,9 @@ const PEDRAS: Record<ModeloLargo, [number, number]> = {
 function janelasDaEscola(c: Camada[]): Camada[] {
   return c.map((camada) =>
     camada.map((l) =>
-      l === 'MJJMJJMJJMJJMJJM' ? 'MJJJJMJJJJMJJJJM' : l.replace('BX', 'XX').replace('K', 'X'),
+      l === 'MJJMJJMJJMJJMJJM'
+        ? 'MJJJJMJJJJMJJJJM'
+        : l.replace('qQX', '.XX').replace('K', 'X'),
     ),
   );
 }
