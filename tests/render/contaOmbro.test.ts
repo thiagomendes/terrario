@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   ACOES,
+  BOCA_NA_TELA,
   BRACO,
+  MAO_NA_BOCA_MAX,
+  bracoDeDentro,
+  comerDeAntes,
+  maoNaTela,
+  poseDaBoca,
   FATOR_MAO,
   FOLGA_INTERFACE_PX,
   FOV_BRACO,
@@ -21,6 +27,7 @@ import {
   type Tela,
   type Vec3,
 } from '../../src/render/contaOmbro';
+import { DURACAO_REFEICAO, MORDIDAS } from '../../src/jogo/refeicao';
 
 /** A busca bruta do esboço aprovado (cada distância de 0,006), para comparar. */
 function acharOmbroBruto(tela: Tela) {
@@ -194,6 +201,78 @@ describe('a conta do ombro da primeira pessoa (spec 037)', () => {
     // a mão na metade de baixo, do lado direito, como em pé
     expect(m[0].y).toBeGreaterThan(t.h * 0.55);
     expect(m[0].x).toBeGreaterThan(t.w * 0.75);
+  });
+
+  it('comendo de dentro, a comida vai até a boca (embaixo, no meio), com a mão inteira na tela e fora da interface', () => {
+    for (const k of ['empe', 'deitado', 'pc']) {
+      const t = INTERFACE[k];
+      const r = acharOmbro(t)!;
+      const tela: Tela = r.baixa ? { ...t, baixa: true } : t;
+      const boca = poseDaBoca(r.ombro, tela, r.segurar)!;
+      expect(boca, k).not.toBeNull();
+      const segura = maoNaTela(r.ombro, r.segurar[0], r.segurar[1], tela)!;
+      const antes = maoNaTela(r.ombro, ...comerDeAntes(r.segurar), tela)!;
+      const q = maoNaTela(boca.ombro, boca.pose[0], boca.pose[1], tela)!;
+      const alvo = [BOCA_NA_TELA.x * t.w, BOCA_NA_TELA.y * t.h];
+      const longe = (m: { x: number; y: number; r: number }) => Math.hypot(m.x - alvo[0], m.y - ITEM_ACIMA * m.r - alvo[1]);
+      console.log(k, JSON.stringify({ segura, antes, boca: q, ombro: boca.ombro, longeAntes: longe(antes), longe: longe(q) }));
+      // a comida sai do canto e vem para o meio da tela (no máximo um décimo da tela para a
+      // direita, quando a interface ocupa o meio de baixo), da altura dos olhos para baixo, e
+      // chega perto do rosto (a mão bem maior); o comer de antes só balançava no canto
+      expect(q.x - t.w / 2, k).toBeGreaterThanOrEqual(-1);
+      expect(q.x - t.w / 2, k).toBeLessThanOrEqual(t.w * (t.w > t.h ? 0.25 : 0.1) + 1);
+      expect(q.y - ITEM_ACIMA * q.r, k).toBeGreaterThanOrEqual(t.h * 0.4 - 1);
+      expect(segura.x - q.x, k).toBeGreaterThan(t.w * 0.14);
+      expect(q.r / segura.r, k).toBeGreaterThan(1.3);
+      expect(Math.abs(antes.x - segura.x), k).toBeLessThan(t.w * 0.1);
+      // o ombro, com a manga, continua fora da tela (e o caminho reto até ele também: fora da
+      // beira direita é um semiespaço)
+      expect(foraDaTela(boca.ombro, MEIA_MANGA, tela)).toBeGreaterThanOrEqual(4);
+      for (let f = 0; f <= 1; f += 0.1) {
+        const o: Vec3 = [0, 1, 2].map((i) => r.ombro[i] + (boca.ombro[i] - r.ombro[i]) * f) as Vec3;
+        expect(foraDaTela(o, MEIA_MANGA, tela), `${k} ${f}`).toBeGreaterThanOrEqual(4);
+      }
+      // a mão inteira na tela, não muito maior que segurando
+      expect(q.x - q.r).toBeGreaterThanOrEqual(0);
+      expect(q.x + q.r).toBeLessThanOrEqual(t.w);
+      expect(q.y + q.r).toBeLessThanOrEqual(t.h);
+      expect(q.r).toBeLessThanOrEqual(MAO_NA_BOCA_MAX * segura.r + 1e-9);
+      // a mão e a comida fora da interface (na tela baixa, a comida inteira na tela)
+      if (r.baixa) {
+        expect(q.x + ITEM_CAIXA_BAIXA.direita * q.r).toBeLessThanOrEqual(t.w - 4);
+        expect(q.y - ITEM_CAIXA_BAIXA.cima * q.r).toBeGreaterThanOrEqual(4);
+      } else
+        for (const o of t.obstaculos!) {
+          const fora = (x: number, y: number, rr: number) => {
+            const cx = Math.max(o[0], Math.min(x, o[2]));
+            const cy = Math.max(o[1], Math.min(y, o[3]));
+            return Math.hypot(x - cx, y - cy) >= rr + FOLGA_INTERFACE_PX;
+          };
+          expect(fora(q.x, q.y, q.r), `${k} mão`).toBe(true);
+          expect(fora(q.x, q.y - ITEM_ACIMA * q.r, ITEM_RAIO * q.r), `${k} comida`).toBe(true);
+        }
+    }
+  });
+
+  it('comendo de dentro, a mão vai à boca em cada mordida, volta um tico entre elas e desce no fim', () => {
+    // na hora de cada mordida (o "nhac" e o som), a comida está na boca
+    for (const m of MORDIDAS) expect(bracoDeDentro(m)).toBeGreaterThan(0.97);
+    // entre uma e outra, ela sai da boca e volta (o movimento de comer, três vezes)
+    for (let k = 0; k < 2; k++) {
+      const meio = (MORDIDAS[k] + MORDIDAS[k + 1]) / 2;
+      expect(bracoDeDentro(meio)).toBeLessThan(0.6);
+      expect(bracoDeDentro(meio)).toBeGreaterThan(0.3);
+    }
+    // antes de comer e no fim, segurando
+    expect(bracoDeDentro(0)).toBe(0);
+    expect(bracoDeDentro(DURACAO_REFEICAO + 0.1)).toBe(0);
+    // sem tranco: de quadro em quadro (1/60 s), a mão anda pouco
+    let antes = 0;
+    for (let t = 0; t <= DURACAO_REFEICAO + 0.2; t += 1 / 60) {
+      const v = bracoDeDentro(t);
+      expect(Math.abs(v - antes), `t ${t.toFixed(2)}`).toBeLessThan(0.15);
+      antes = v;
+    }
   });
 
   it('sem solução (uma tela onde a mão não cabe acima dos botões), devolve null: a mão some', () => {

@@ -18,6 +18,7 @@ import {
   salvarAparencia,
   CHAVE_APARENCIA,
 } from '../../src/personagem/persistencia';
+import { IDS_ANDAR } from '../../src/personagem/brinquedoAndar';
 
 const comBrinquedo = (extra: Partial<Aparencia> = {}): Aparencia => ({
   ...aparenciaPadrao(),
@@ -129,6 +130,17 @@ describe('036: o "pode montar"', () => {
     expect(precisaDescer(situacao({ brinquedos: ['roda-gigante'] }))).toBe(false);
     expect(brinquedoMontado(montada)).toBe('bicicletinha');
     expect(brinquedoMontado(comBrinquedo())).toBeNull();
+  });
+
+  it('voando: a nuvem fofa voa junto (não desce nem impede montar); os brinquedos de chão desmontam', () => {
+    for (const andar of IDS_ANDAR) {
+      const montada = comBrinquedo({ premium: { andar }, montado: true });
+      const voa = andar === 'nuvem-fofa';
+      expect(precisaDescer(situacao({ aparencia: montada, voando: true })), andar).toBe(!voa);
+      expect(podeMontar(situacao({ aparencia: comBrinquedo({ premium: { andar } }), voando: true })), andar).toBe(voa);
+      // os outros motivos continuam valendo para a nuvem
+      expect(precisaDescer(situacao({ aparencia: montada, voando: true, nadando: true })), andar).toBe(true);
+    }
   });
 
   it('cada brinquedo de tema se registra, e o "pode montar" passa a valer para ele', () => {
