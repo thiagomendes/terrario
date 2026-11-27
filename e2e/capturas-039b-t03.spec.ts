@@ -38,7 +38,8 @@ const valor = (b: number, m = 0) => b | (m << 8);
 const MOVEIS_DA_CASA: Array<{ b: number; dx: number; dz: number; d: number; parte?: number }> = [
   { b: Bloco.SOFA, dx: -9, dz: 3, d: 0 },
   { b: Bloco.ABAJUR, dx: -10, dz: 3, d: 0 },
-  { b: Bloco.TV, dx: -9, dz: -1, d: 2 },
+  // (a TV na parede do lado, de frente para a sala: quem a pôs olhava para a parede, -x)
+  { b: Bloco.TV, dx: -11, dz: 0, d: 3 },
   { b: Bloco.SOM, dx: -5, dz: 3, d: 0 },
   { b: Bloco.FOGAO, dx: -3, dz: 3, d: 0 },
   { b: Bloco.PIA, dx: -2, dz: 3, d: 0 },
@@ -55,7 +56,7 @@ const MOVEIS_DA_CASA: Array<{ b: number; dx: number; dz: number; d: number; part
   { b: Bloco.CAMA, dx: 9, dz: 0, d: 3, parte: 2 },
 ];
 const TAPETES_DA_CASA = [{ dx: -9, dz: 2, d: 0 }];
-const TV: V3 = [-9, 0, -1];
+const TV: V3 = [-11, 0, 0];
 const SOM: V3 = [-5, 0, 3];
 const FOGAO: V3 = [-3, 0, 3];
 const GELADEIRA: V3 = [-1, 0, 3];
@@ -367,17 +368,19 @@ async function ligar(p: Palco, l: Ligar) {
     { O: p.O, l, A: { tv: TV, som: SOM, fogao: FOGAO, geladeira: GELADEIRA } },
   );
 }
-async function prato(p: Palco, item: string, quantos: number) {
+/** A comida posta na mesa; `quem`: onde está cada um que come (coordenadas da casa). */
+async function prato(p: Palco, item: string, quantos: number, quem: Array<[number, number]>) {
   await p.page.evaluate(
-    ({ O, M, item, quantos }) =>
-      (window.__brumaluz!.moveis! as unknown as { prato(x: number, y: number, z: number, i: string, q: number): void }).prato(
+    ({ O, M, item, quantos, quem }) =>
+      window.__brumaluz!.moveis!.prato(
         O[0] + M[0],
         O[1],
         O[2] + M[2],
         item,
         quantos,
+        quem.map(([x, z]) => ({ x: O[0] + x, z: O[2] + z })),
       ),
-    { O: p.O, M: MESA, item, quantos },
+    { O: p.O, M: MESA, item, quantos, quem },
   );
 }
 async function assento(p: Palco, a: { x: number; z: number; d: number; px: number; pz: number } | null) {
@@ -392,8 +395,9 @@ const CASA: Olhar = { alvo: [0.5, 0.9, 1.0], yaw: 0, pitch: 0.42, largura: 26, a
 const SALA: Olhar = { alvo: [-8, 0.9, 1.2], yaw: 0.3, pitch: 0.5, largura: 8.4, altura: 4.4 };
 const COZINHA: Olhar = { alvo: [-0.8, 0.9, 1.8], yaw: -0.1, pitch: 0.42, largura: 7.6, altura: 3.8 };
 const PERTO = {
-  // (a TV olha para o fundo, para o sofá: a câmera de cima, de dentro da sala, por cima da parede)
-  tv: { alvo: [-9.0, 1.1, -0.5], yaw: Math.PI - 0.25, pitch: 0.6, largura: 2.4, altura: 2.0 },
+  // (a TV na parede do lado, de frente para a sala: a câmera de dentro da sala, de três-quartos)
+  tv: { alvo: [-10.5, 1.1, 1.0], yaw: Math.PI / 2 - 0.3, pitch: 0.35, largura: 2.4, altura: 2.0 },
+  tvLonge: { alvo: [-10.5, 1.1, 1.0], yaw: Math.PI / 2 - 0.4, pitch: 0.3, largura: 9, altura: 5 },
   som: { alvo: [-4.5, 0.4, 3.4], yaw: -0.35, pitch: 0.4, largura: 1.5, altura: 1.4 },
   fogao: { alvo: [-2.5, 0.8, 3.4], yaw: 0.25, pitch: 0.45, largura: 1.7, altura: 1.8 },
   geladeira: { alvo: [-0.5, 1.0, 3.4], yaw: -0.35, pitch: 0.3, largura: 2.4, altura: 2.6 },
@@ -422,6 +426,10 @@ async function telas(p: Palco, sub: string, vitrine: boolean) {
     await ligar(p, { tv: prog });
     await foto(p, `tv-${prog + 1}-desenho-${prog}`, sub, 1600);
   }
+  // de longe, a tela continua com o desenho (não fica branca nem chapada)
+  await olhar(p, PERTO.tvLonge);
+  await foto(p, 'tv-longe', sub, 1200);
+  await olhar(p, PERTO.tv);
   await ligar(p, {});
   await foto(p, 'tv-5-desligou', sub);
   await olhar(p, PERTO.geladeira);
@@ -437,6 +445,8 @@ async function telas(p: Palco, sub: string, vitrine: boolean) {
   await ligar(p, { fogao: true });
   await foto(p, 'fogao-1-cozinhando', sub, 1200);
   await foto(p, 'fogao-2-cozinhando', sub, 700);
+  // (a prova de que o fogão continua cozinhando: a malha ligada está lá)
+  console.log(`moveis ligados ${JSON.stringify(await p.page.evaluate(() => window.__brumaluz!.moveis!.ligados()))}`);
   await ligar(p, {});
   await olhar(p, PERTO.som);
   await foto(p, 'som-0-parado', sub);
@@ -448,7 +458,7 @@ async function telas(p: Palco, sub: string, vitrine: boolean) {
   await assento(p, { x: 0, z: 2, d: 0, px: 0.5, pz: 2.5 });
   await olhar(p, PERTO.mesa, false);
   await foto(p, 'mesa-0-sentada', sub);
-  await prato(p, 'carne_assada', 2);
+  await prato(p, 'carne_assada', 1, [[0.5, 2.5]]);
   await foto(p, 'mesa-1-prato', sub, 1300);
   await assento(p, null);
   // de noite, com tudo ligado
@@ -478,13 +488,13 @@ async function telas(p: Palco, sub: string, vitrine: boolean) {
   // de dentro, com o teto, na primeira pessoa: de dia e de noite, com a TV e a cozinha ligadas
   await teto(p.page, p.O, true);
   await ligar(p, { tv: 2, fogao: true, geladeira: true });
-  await deDentro(p, -5.6, 2.4, [-9, 1.0, -1]);
+  await deDentro(p, -5.6, -1.6, [-11, 1.0, 1.0]);
   await foto(p, 'sala-dentro-dia', sub);
   await deDentro(p, 1.5, -2.2, [-1.5, 0.8, 3]);
   await foto(p, 'cozinha-dentro-dia', sub);
   await hora(p, NOITE);
   await luzes(p, true);
-  await deDentro(p, -5.6, 2.4, [-9, 1.0, -1]);
+  await deDentro(p, -5.6, -1.6, [-11, 1.0, 1.0]);
   await foto(p, 'sala-dentro-noite', sub);
   await deDentro(p, 1.5, -2.2, [-1.5, 0.8, 3]);
   await foto(p, 'cozinha-dentro-noite', sub);
@@ -498,9 +508,19 @@ async function telas(p: Palco, sub: string, vitrine: boolean) {
     e.selecionarSlot!(3);
     for (const el of Array.from(document.body.querySelectorAll<HTMLElement>('*'))) el.style.visibility = '';
   }, [Bloco.FOGAO, Bloco.GELADEIRA, Bloco.MESA, Bloco.TV, Bloco.SOM]);
-  await deDentro(p, 2.6, -2.2, [-0.5, 0.7, 2.8]);
+  // (em terceira pessoa, a câmera do jogo de sempre, mirando o chão uns 4 blocos à frente: a
+  // prévia de pôr do tamanho dela, sem passar por baixo do mapa e da mochila)
+  await olhar(p, null, false);
+  await p.page.evaluate(
+    ({ O }) => {
+      const e = window.__brumaluz!;
+      e.primeiraPessoa!.ligar(false);
+      e.teleportar!(O[0] - 6.5, O[2] - 2.2, O[1]);
+      e.apontar!(Math.atan2(-2, 3), 0.5);
+    },
+    { O: p.O },
+  );
   await foto(p, 'barra-e-mao', sub, 4000);
-  await p.page.evaluate(() => window.__brumaluz!.primeiraPessoa!.ligar(false));
   await teto(p.page, p.O, false);
 }
 
@@ -533,12 +553,13 @@ test('prancha: junta as fotos (depois das três telas)', async ({ browser }) => 
     figure img { width: 100%; border-radius: 10px; display: block; }
     figcaption { font-size: 15px; color: #6a5d7a; padding: 4px 4px 1px; }
   </style></head><body>
-    <h1>039b · T03: o fogão, a geladeira, a mesa, a TV e o som</h1>
-    <p class="sub">A casa com os treze móveis (sem o teto, como uma casa de bonecas), cada toque em sequência, de dia e de noite.</p>
+    <h1>039b · o fogão, a geladeira, a mesa, a TV e o som</h1>
+    <p class="sub">A casa com os treze móveis (sem o teto, como uma casa de bonecas), cada toque em sequência, de dia e de noite. 2ª rodada do portão: os desenhos da TV de pé, a TV de frente para a sala, o anel e o vapor da panela, a luz da geladeira, as notinhas e o prato na frente de quem come.</p>
     <h2>A casa (computador)</h2>
     ${linha([q(img('casa-dia', 'computador'), 'de dia'), q(img('casa-noite', 'computador'), 'de noite, tudo ligado')])}
     <h2>A TV: cada toque passa um desenho, o quinto desliga</h2>
     ${linha([q(img('tv-0-desligada'), 'desligada'), q(img('tv-1-desenho-0'), 'a joaninha'), q(img('tv-2-desenho-1'), 'o barquinho'), q(img('tv-3-desenho-2'), 'o trenzinho'), q(img('tv-4-desenho-3'), 'as ovelhinhas')])}
+    ${linha([q(img('tv-longe'), 'de longe, o desenho continua'), q(img('tv-longe', 'computador'), 'de longe, no computador')])}
     <h2>A geladeira, o fogão e o som</h2>
     ${linha([q(img('geladeira-0-fechada'), 'fechada'), q(img('geladeira-1-abrindo'), 'abrindo'), q(img('geladeira-2-aberta'), 'aberta'), q(img('fogao-0-desligado'), 'o fogão'), q(img('fogao-1-cozinhando'), 'cozinhando')])}
     ${linha([q(img('som-0-parado'), 'o som parado'), q(img('som-1-tocando'), 'tocando'), q(img('mesa-0-sentada'), 'à mesa'), q(img('mesa-1-prato'), 'a comida posta')])}

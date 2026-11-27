@@ -40,6 +40,8 @@ export interface MovelNaTela {
 export interface OpcoesLigados {
   /** O móvel cuja âncora é (x, y, z), ou null. */
   movel(x: number, y: number, z: number): MovelNaTela | null;
+  /** O bloco do mundo (os assentos em volta da mesa). */
+  bloco(x: number, y: number, z: number): number;
   modelo(bloco: number): ModeloMovel;
   material: Material;
   plasticos: Plasticos;
@@ -53,8 +55,12 @@ export interface Ligados {
   quadro(lista: readonly MovelLigado[], relogio: number, px: number, pz: number, dt: number): void;
   /** O móvel da âncora está com as partes paradas fora do corpo (a porta, os cones)? */
   semPartes(x: number, y: number, z: number): boolean;
-  /** A comida posta na mesa da âncora: os pratinhos (até 4) com a comida, por uns segundos. */
-  prato(x: number, y: number, z: number, item: string, quantos: number): void;
+  /**
+   * A comida posta na mesa da âncora: os pratinhos (até 4) com a comida, por uns segundos, na beira
+   * da mesa na frente de quem come (`quem`: onde está cada um, no mundo; sem ela, na frente dos
+   * assentos em volta).
+   */
+  prato(x: number, y: number, z: number, item: string, quantos: number, quem?: ReadonlyArray<{ x: number; z: number }>): void;
   /** O que está ligado agora (testes e fotos). */
   vistos(): Array<{ tipo: string; ancora: string; anima: boolean; k: number; programa?: number }>;
   /** Quantas malhas e triângulos (a medida). */
@@ -69,6 +75,12 @@ const PARTES: Record<string, readonly string[]> = {
   som: ['cone0', 'cone1', 'luzSom', 'nota0', 'nota1', 'nota2'],
   tv: [],
 };
+/** As partes que acendem e quanto (o anel um tico só: mais, o laranja virava amarelo-claro). */
+const BRILHA = new Map([
+  ['luzDentro', 2.1],
+  ['anel', 1.3],
+  ['luzSom', 1.8],
+]);
 /** As partes paradas que saem do corpo enquanto o móvel está ligado (elas mexem na malha dele). */
 const SEM_PARTES = new Set(['geladeira', 'som']);
 const BLOCO_DO_TIPO: Record<string, number> = { tv: Bloco.TV, som: Bloco.SOM, fogao: Bloco.FOGAO, geladeira: Bloco.GELADEIRA };
@@ -95,6 +107,8 @@ interface Ativo {
   no: TransformNode;
   /** Está na lista agora (a geladeira fecha devagar depois de sair dela). */
   ligado: boolean;
+  /** Há quanto tempo saiu da lista (desliga só depois de um tico: um quadro sem ela não apaga). */
+  fora: number;
   /** A porta (0 fechada, 1 aberta) e o aparecer das outras partes. */
   k: number;
   t: number;
@@ -137,7 +151,10 @@ export function criarLigados(scene: Scene, op: OpcoesLigados): Ligados {
         pos.push(P[i]);
         nor.push(N[i]);
       }
-      for (let i = 0; i < C.length; i++) cor.push(C[i]);
+      // o que acende (a luz de dentro da geladeira, o anel do fogão, a luzinha do som) leva a cor
+      // acima de 1: o plástico de noite escurece, e ela continua acesa (sem malha a mais)
+      const k = BRILHA.get(nome) ?? 1;
+      for (let i = 0; i < C.length; i++) cor.push(i % 4 === 3 ? C[i] : C[i] * k);
       for (let i = 0; i < I.length; i++) idx.push(I[i] + de);
       partes.push({
         nome,
@@ -169,7 +186,9 @@ export function criarLigados(scene: Scene, op: OpcoesLigados): Ligados {
   }
 
   function montarTela(a: Ativo, programa: number, desde: number): void {
-    const tex = new DynamicTexture(`moveis-tv-${a.chave}`, { width: TELA_W, height: TELA_H }, scene, false);
+    // (sem mipmaps, com a amostra bilinear: de longe a tela continua com o desenho; com a
+    // trilinear sem mipmaps ela saía chapada)
+    const tex = new DynamicTexture(`moveis-tv-${a.chave}`, { width: TELA_W, height: TELA_H }, scene, false, Texture.BILINEAR_SAMPLINGMODE);
     tex.wrapU = Texture.CLAMP_ADDRESSMODE;
     tex.wrapV = Texture.CLAMP_ADDRESSMODE;
     const mat = new StandardMaterial(`moveis-tv-mat-${a.chave}`, scene);
@@ -189,7 +208,9 @@ export function criarLigados(scene: Scene, op: OpcoesLigados): Ligados {
     const [x, y, z] = TELA_TV.meio;
     vd.positions = [x - w, y - h, z, x + w, y - h, z, x + w, y + h, z, x - w, y + h, z];
     vd.normals = [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1];
-    vd.uvs = [1, 0, 0, 0, 0, 1, 1, 1];
+    // (a linha de cima do canvas em cima: com o v ao contrário, os desenhos ficavam de cabeça para
+    // baixo)
+    vd.uvs = [1, 1, 0, 1, 0, 0, 1, 0];
     vd.indices = [0, 2, 1, 0, 3, 2];
     vd.applyToMesh(malha);
     malha.material = mat;
@@ -222,6 +243,7 @@ export function criarLigados(scene: Scene, op: OpcoesLigados): Ligados {
       movel,
       no,
       ligado: true,
+      fora: 0,
       k: 0,
       t: 0,
       anima: true,
@@ -266,9 +288,10 @@ export function criarLigados(scene: Scene, op: OpcoesLigados): Ligados {
       case 'fogao': {
         if (nome === 'anel') return { s: s * (1 + 0.04 * Math.sin(t * 3)), sy: s, giro: 0, dx: 0, dy: 0, dz: 0 };
         // o vapor: cada cubinho sobe, balança e some, um depois do outro
+        // (já sai da tampa do tamanho de ver, sobe e some lá em cima)
         const k = Number(nome.slice(-1));
         const u = (t * 0.45 + k / 3) % 1;
-        return { s: s * (0.35 + 0.65 * Math.sin(u * Math.PI)), giro: u * 1.2, dx: Math.sin(t * 2 + k) * 0.04, dy: u * 0.42, dz: 0 };
+        return { s: s * (u < 0.75 ? 0.75 + 0.25 * Math.sin(u * 4) : (1 - u) * 4 * 0.75), giro: u * 1.2, dx: Math.sin(t * 2 + k) * 0.035, dy: u * 0.45, dz: u * 0.12 };
       }
       case 'som': {
         // a batida mansa: os cones pulam juntos; a luzinha pisca; as notinhas sobem dançando
@@ -335,6 +358,7 @@ export function criarLigados(scene: Scene, op: OpcoesLigados): Ligados {
           a = novo;
         }
         a.ligado = true;
+        a.fora = 0;
         // a TV trocou de desenho: começa o novo do começo
         if (e.tipo === 'tv' && a.tela && (a.tela.programa !== e.programa || a.tela.desde !== e.desde)) {
           a.tela.programa = e.programa;
@@ -343,7 +367,11 @@ export function criarLigados(scene: Scene, op: OpcoesLigados): Ligados {
           a.tela.ultimo = -1;
         }
       }
-      for (const a of ativos.values()) if (!agora.has(a.chave)) a.ligado = false;
+      for (const a of ativos.values())
+        if (!agora.has(a.chave)) {
+          a.fora += dt;
+          a.ligado = a.fora < 0.4;
+        }
       // só as duas TVs e os dois sons mais perto animam
       for (const tipo of ['tv', 'som'] as const) {
         const deles = [...ativos.values()].filter((a) => a.tipo === tipo);
@@ -352,8 +380,9 @@ export function criarLigados(scene: Scene, op: OpcoesLigados): Ligados {
       }
       for (const a of [...ativos.values()]) {
         // a geladeira abre em 0,4 s e fecha em 0,5 s; os outros aparecem em 0,3 s
-        const alvo = a.ligado ? 1 : 0;
-        const vel = a.tipo === 'geladeira' ? (alvo > a.k ? dt / 0.4 : -dt / 0.5) : alvo > a.k ? dt / 0.3 : -1;
+        // (ligado, sobe até 1 e fica; desligado, desce até 0. Com "alvo > k", no 1 ele descia: o
+        // fogão sumia de vez num quadro e voltava apagado)
+        const vel = a.tipo === 'geladeira' ? (a.ligado ? dt / 0.4 : -dt / 0.5) : a.ligado ? dt / 0.3 : -dt / 0.2;
         a.k = Math.max(0, Math.min(1, a.k + vel));
         if (!a.ligado && a.k <= 0) {
           soltar(a);
@@ -394,21 +423,45 @@ export function criarLigados(scene: Scene, op: OpcoesLigados): Ligados {
       const a = ativos.get(`${x},${y},${z}`);
       return !!a && SEM_PARTES.has(a.tipo);
     },
-    prato(x, y, z, item, quantos) {
+    prato(x, y, z, item, quantos, quem) {
       const movel = op.movel(x, y, z);
       if (!movel || movel.bloco !== Bloco.MESA) return;
       const no = new TransformNode(`moveis-prato-${x},${y},${z}`, scene);
       no.position.set(movel.cx, movel.cy, movel.cz);
-      no.rotation.y = movel.giro;
-      // os pratinhos nos lugares (dois de cada lado da mesa), no tampo
       const topo = 0.792 * 1.12;
-      const lugares: Array<[number, number]> = [
+      const n = Math.max(1, Math.min(4, quantos));
+      // o tampo no mundo (a mesa tem 2 de comprido no eixo para onde cresceu) e os assentos em volta
+      // (a cadeira ou o sofá encostados, na ordem fixa do núcleo: x, depois z): cada pratinho vai na
+      // beira da mesa na frente de um assento; sem assento (quem come em pé), os lugares de sempre
+      const c = Math.cos(movel.giro);
+      const s = Math.sin(movel.giro);
+      const longoX = Math.abs(c) > 0.5;
+      const mx = longoX ? 1 : 0.5;
+      const mz = longoX ? 0.5 : 1;
+      const assentos: Array<[number, number]> = [];
+      for (let ax = Math.floor(movel.cx - mx) - 1; ax <= Math.floor(movel.cx + mx); ax++)
+        for (let az = Math.floor(movel.cz - mz) - 1; az <= Math.floor(movel.cz + mz); az++) {
+          const dx = ax + 0.5 - movel.cx;
+          const dz = az + 0.5 - movel.cz;
+          const dentro = Math.abs(dx) < mx && Math.abs(dz) < mz;
+          const encosta = Math.abs(dx) < mx + 1 && Math.abs(dz) < mz + 1 && (Math.abs(dx) < mx || Math.abs(dz) < mz);
+          const b = op.bloco(ax, movel.cy, az);
+          if (!dentro && encosta && (b === Bloco.CADEIRA || b === Bloco.SOFA)) assentos.push([dx, dz]);
+        }
+      const beira = 0.3;
+      const naBeira = ([dx, dz]: [number, number]): [number, number] => [
+        Math.max(-mx + beira, Math.min(mx - beira, dx)),
+        Math.max(-mz + beira, Math.min(mz - beira, dz)),
+      ];
+      const deQuem: Array<[number, number]> = (quem ?? []).map((q) => [q.x - movel.cx, q.z - movel.cz]);
+      const lugares: Array<[number, number]> = (deQuem.length ? deQuem : assentos).slice(0, n).map(naBeira);
+      const padrao: Array<[number, number]> = [
         [-0.45, 0.2],
         [0.45, 0.2],
         [-0.45, -0.2],
         [0.45, -0.2],
       ];
-      const n = Math.max(1, Math.min(4, quantos));
+      for (const [px, pz] of padrao) if (lugares.length < n) lugares.push([px * c + pz * s, -px * s + pz * c]);
       const vd = new VertexData();
       const base = pratinho();
       const juntos: VertexData[] = [];
@@ -439,8 +492,9 @@ export function criarLigados(scene: Scene, op: OpcoesLigados): Ligados {
         const it = modeloNaMao(scene, op.plasticos, null, item, `moveis-prato-${x},${y},${z}-${i}`);
         if (!it) continue;
         it.no.parent = no;
-        it.no.position.set(lugares[i][0], topo + 0.07, lugares[i][1]);
-        it.no.scaling.setAll(0.9);
+        it.no.position.set(lugares[i][0], topo + 0.08, lugares[i][1]);
+        // (maior: no tamanho da mão, a comida no prato era só uma bolinha marrom)
+        it.no.scaling.setAll(1.3);
         for (const mm of it.malhas) {
           mm.isPickable = false;
           op.aoCriar?.(mm);

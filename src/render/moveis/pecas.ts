@@ -297,15 +297,10 @@ function fogao(o: Oficina): void {
   r.caixa(0.08, 0.03, 0.04, 0.39, 1.0, 0.14, M.coralEscuro, 0.01);
   r.prisma(12, 0.16, 0.025, 0.2, 1.062, 0.14, M.coralEscuro, 'y');
   r.prisma(8, 0.035, 0.04, 0.2, 1.09, 0.14, M.creme, 'y');
-  // o anel aceso nas bocas (laranja manso) e os três cubinhos de vapor
-  o.parte('anel', [0, 0.912, 0], (p) => {
-    for (const [x, z] of BOCAS)
-      for (let i = 0; i < 8; i++) {
-        const a = (i * Math.PI) / 4;
-        p.caixa(0.04, 0.012, 0.04, x + Math.cos(a) * 0.085, 0, z + Math.sin(a) * 0.085, M.chama, 0.006);
-      }
-  });
-  for (let i = 0; i < 3; i++) o.parte(`vapor${i}`, [0.2, 1.12, 0.14], (p) => p.caixa(0.09, 0.09, 0.09, 0, 0, 0, M.branco, 0.04));
+  // cozinhando: o anel laranja manso, liso, na boca da panela (aparece em volta do fundo dela) e
+  // os três cubinhos de vapor saindo da tampa
+  o.parte('anel', [0.2, 0.905, 0.14], (p) => p.prisma(18, 0.2, 0.016, 0, 0, 0, M.chama, 'y'));
+  for (let i = 0; i < 3; i++) o.parte(`vapor${i}`, [0.2, 1.1, 0.14], (p) => p.caixa(0.1, 0.1, 0.1, 0, 0, 0, M.branco, 0.045));
 }
 const BOCAS: Array<[number, number]> = [
   [-0.2, -0.12],
@@ -427,17 +422,27 @@ function tv(r: Ref): void {
     r.caixa(0.86, 0.36, 0.03, s * 0.45, 0.13, 0.255, M.melClaro, 0.02);
     r.prisma(8, 0.03, 0.03, s * 0.09, 0.31, 0.28, M.melEscuro, 'z');
   }
-  // as costas do rack (as tábuas) e as da tela (a tampa azul com as frestas)
+  // as costas do rack (as tábuas) e as da tela: a tampa gordinha de brinquedo (uma caixa azul
+  // funda e redonda, com as frestas e os quatro parafusinhos), não uma folha
   for (let i = 0; i < 4; i++) r.caixa(0.42, 0.34, 0.012, -0.66 + i * 0.44, 0.14, -0.254, M.melClaro, 0.01);
-  r.caixa(0.5, 0.6, 0.06, 0, 0.78, -0.12, M.azulEscuro, 0.04);
-  for (let i = 0; i < 4; i++) r.caixa(0.34, 0.025, 0.012, 0, 0.86 + i * 0.1, -0.153, M.azul, 0);
+  r.caixa(1.08, 0.66, 0.16, 0, 0.76, -0.16, M.azulEscuro, 0.08);
+  for (let i = 0; i < 4; i++) r.caixa(0.6, 0.03, 0.014, 0, 0.9 + i * 0.1, -0.243, M.azul, 0.01);
+  for (const [x, y] of [
+    [-0.42, 0.84],
+    [0.42, 0.84],
+    [-0.42, 1.34],
+    [0.42, 1.34],
+  ] as const)
+    r.prisma(8, 0.035, 0.02, x, y, -0.245, M.cromo, 'z');
   r.caixa(0.4, 0.04, 0.24, 0, 0.54, -0.02, M.grafite, 0.015);
   r.caixa(0.12, 0.1, 0.06, 0, 0.58, -0.04, M.grafite, 0.01);
   r.caixa(1.36, 0.86, 0.14, 0, 0.66, -0.02, M.azul, 0.09);
   r.caixa(1.12, 0.64, 0.02, 0, 0.75, 0.055, M.vidro, 0.02);
+  // as caixinhas de som em pé no rack, encostadas na moldura (soltas no ar pareciam voar)
   for (const s of [-1, 1]) {
-    r.prisma(10, 0.13, 0.1, s * 0.82, 0.92, -0.02, M.azulEscuro, 'z');
-    r.prisma(10, 0.09, 0.11, s * 0.82, 0.92, -0.02, M.grafite, 'z');
+    r.caixa(0.2, 0.3, 0.2, s * 0.8, 0.54, -0.02, M.azulEscuro, 0.05);
+    r.prisma(10, 0.07, 0.03, s * 0.8, 0.72, 0.085, M.grafite, 'z');
+    r.prisma(8, 0.03, 0.035, s * 0.8, 0.72, 0.09, M.cromo, 'z');
   }
   r.prisma(10, 0.035, 0.03, 0.5, 0.7, 0.06, M.coral, 'z');
   r.caixa(0.1, 0.03, 0.26, 0.62, 0.54, 0.12, M.grafite, 0.015);
@@ -480,10 +485,11 @@ function som(o: Oficina): void {
   for (let i = 0; i < 3; i++)
     o.parte(`nota${i}`, [0, 0.72, 0.05], (p) => {
       const cor = i === 1 ? M.coral : M.azulEscuro;
-      // (do tamanho de ver de longe: a de 0,1 sumia na tela do celular)
-      p.caixa(0.17, 0.13, 0.07, 0, 0, 0, cor, 0.05);
-      p.caixa(0.045, 0.3, 0.045, 0.065, 0.06, 0, cor, 0);
-      p.caixa(0.12, 0.055, 0.045, 0.12, 0.33, 0, cor, 0.015);
+      // a colcheia: a bolinha (redonda, deitadinha), a haste do lado direito dela e a bandeirinha
+      // inclinada caindo da ponta (do tamanho de ver de longe na tela do celular)
+      p.prisma(14, 0.085, 0.06, 0, 0.06, 0, cor, 'z');
+      p.caixa(0.04, 0.32, 0.045, 0.07, 0.06, 0, cor, 0);
+      p.barra([0.07, 0.38, 0], [0.18, 0.26, 0], 0.045, cor);
     });
 }
 

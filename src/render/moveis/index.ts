@@ -127,7 +127,7 @@ export interface RenderMoveis {
   /** Quantos pedaços, malhas, triângulos, móveis e tapetes vivos (testes e medida). */
   contagem(): { pedacos: number; malhas: number; triangulos: number; moveis: number; tapetes: number; mexendo: number };
   /** Spec 039b: a comida posta na mesa da âncora (o evento `prato`): os pratinhos com a comida. */
-  prato(x: number, y: number, z: number, item: string, quantos: number): void;
+  prato(x: number, y: number, z: number, item: string, quantos: number, quem?: ReadonlyArray<{ x: number; z: number }>): void;
   /** Spec 039b (testes e fotos): os móveis ligados desenhados agora. */
   ligados(): Array<{ tipo: string; ancora: string; anima: boolean; k: number; programa?: number }>;
   /**
@@ -209,6 +209,7 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
   let forcados: MovelLigado[] | null = null;
   // spec 039b: o que mexe nos móveis ligados (a TV, o som, o fogão e a geladeira) e o prato da mesa
   const lig = criarLigados(scene, {
+    bloco: (x, y, z) => op.leitor.bloco(x, y, z),
     movel: (x, y, z) => {
       const i = instanciaEm(x, y, z);
       return i && i.ancora.x === x && i.ancora.y === y && i.ancora.z === z ? i : null;
@@ -748,8 +749,8 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
     forcarLigados(lista) {
       forcados = lista;
     },
-    prato(x, y, z, item, quantos) {
-      lig.prato(x, y, z, item, quantos);
+    prato(x, y, z, item, quantos, quem) {
+      lig.prato(x, y, z, item, quantos, quem);
     },
     ligados: () => lig.vistos(),
     portas(x, y, z, abertas) {

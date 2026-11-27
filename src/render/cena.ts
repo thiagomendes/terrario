@@ -8826,8 +8826,6 @@ export function criarCena(
         // spec 039b (T04): todos comem juntos na mesa: as notinhas e um coraçãozinho em cima de
         // cada um que come (os mais perto da mesa, até `quantos`)
         somMovel('comerJunto', e.x, e.z);
-        // (T03: os pratinhos com a comida aparecem na mesa)
-        moveis.prato(e.x, e.y, e.z, e.item, e.quantos);
         const corpos = [
           { x: controle.jogador.x, y: controle.jogador.y, z: controle.jogador.z },
           ...outrosJogadores.lista.map((o) => ({ x: o.x, y: o.y, z: o.z })),
@@ -8837,6 +8835,15 @@ export function criarCena(
           .sort((a, b) => a.d - b.d)
           .slice(0, e.quantos);
         for (const { c } of corpos) coracoes.soltar(c.x, c.y + 1.9, c.z, 2);
+        // (T03: os pratinhos com a comida aparecem na mesa, na frente de quem come)
+        moveis.prato(
+          e.x,
+          e.y,
+          e.z,
+          e.item,
+          e.quantos,
+          corpos.map(({ c }) => c),
+        );
         pratosVistos++;
         break;
       }
