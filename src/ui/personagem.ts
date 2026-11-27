@@ -159,10 +159,19 @@ export const CSS_PAINEL =
 .tela-personagem.provador .palco-personagem .nome-previa,
 .tela-personagem.provador .painel-personagem .topo-painel { display: none; }
 .tela-personagem.provador .voltar-titulo { align-self: start; }
+/* (2ª rodada do portão: o painel inteiro, sem rolar por dentro; as roupas menores, cinco por
+   fileira, e as cores numa grade de seis, todas inteiras) */
+.tela-personagem.provador .painel-personagem { max-height: none; overflow: visible; padding-bottom: 16px; gap: 12px; }
+.tela-personagem.provador .painel-personagem .miniaturas { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 8px; }
+.tela-personagem.provador .painel-personagem .amostras {
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); justify-items: center; gap: 8px; padding-top: 10px;
+}
 @media (orientation: landscape) and (max-height: 560px) {
   .tela-personagem.provador { grid-template-columns: auto minmax(0, 1fr); }
   .tela-personagem.provador .palco-personagem { grid-auto-flow: row; grid-template-columns: auto; justify-items: center; }
   .tela-personagem.provador .palco-personagem .pedestal { --lado: min(150px, 20vw); }
+  .tela-personagem.provador .painel-personagem .miniaturas { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+  .tela-personagem.provador .painel-personagem .amostras { grid-template-columns: repeat(12, minmax(0, 1fr)); }
 }
 ` +
   CSS_FANTASIAS +

@@ -24,7 +24,7 @@ import { abrirMundo, type Tamanho } from './guia-palco';
  * Fotos em capturas-039/t06/.
  */
 /** (as da T06 ficam em capturas-039/t06; as do conserto do portão visual, aqui) */
-const PASTA = 'capturas-039/t09/tela';
+const PASTA = 'capturas-039/t09b/tela';
 mkdirSync(PASTA, { recursive: true });
 
 type P = { x: number; y: number; z: number };
@@ -125,7 +125,11 @@ async function conferirProvador(p: Page, tamanho: Tamanho) {
   await p.waitForTimeout(700);
   const m = await p.evaluate(() => {
     const painel = document.querySelector<HTMLElement>('.painel-personagem [data-aba-painel="roupa"]')!;
-    const primeira = painel.querySelector<HTMLElement>('button.miniatura')!.getBoundingClientRect();
+    // todas as roupas e todas as cores inteiras na tela, e o painel sem rolar por dentro
+    const fora = [...painel.querySelectorAll<HTMLElement>('button')]
+      .map((b) => b.getBoundingClientRect())
+      .filter((q) => q.top < 0 || q.left < 0 || q.bottom > innerHeight || q.right > innerWidth).length;
+    const pp = document.querySelector<HTMLElement>('.painel-personagem')!;
     const entrada = document.querySelector<HTMLElement>('.entrada')!;
     const tela = document.querySelector<HTMLElement>('.tela-personagem.provador')!;
     const fundo = getComputedStyle(tela).backgroundImage;
@@ -136,13 +140,14 @@ async function conferirProvador(p: Page, tamanho: Tamanho) {
     const sobrepoe = c.right > pa.left + 1 && c.left < pa.right - 1 && c.bottom > pa.top + 1 && c.top < pa.bottom - 1;
     return {
       sobrepoe,
-      roupaNaTela: primeira.top >= 0 && primeira.bottom <= innerHeight && primeira.right <= innerWidth,
+      fora,
+      painelRola: pp.scrollHeight > pp.clientHeight + 1,
       rolou: entrada.scrollTop,
       fundo: fundo !== 'none',
       cobre: r.left <= 0 && r.top <= 0 && r.right >= innerWidth && r.bottom >= innerHeight - 1,
     };
   });
-  expect(m).toEqual({ sobrepoe: false, roupaNaTela: true, rolou: 0, fundo: true, cobre: true });
+  expect(m).toEqual({ sobrepoe: false, fora: 0, painelRola: false, rolou: 0, fundo: true, cobre: true });
   await p.screenshot({ path: `${PASTA}/troca-de-roupa-pelo-guarda-roupa-${tamanho}.png` });
 }
 

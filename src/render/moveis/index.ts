@@ -625,9 +625,10 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
     // neutro sumia contra o céu claro). O fantasma vai no grupo de cima, desenhado depois do
     // mundo e do boneco: a cabeça da criança não o tapa (é uma prévia, como a caixa de seleção)
     m.renderOutline = true;
-    if (cabe) m.outlineColor.set(0.9, 0.97, 1);
+    // (o azul do "cabe" é mais forte que o corpo: branco puro sumia contra o céu claro)
+    if (cabe) m.outlineColor.set(0.4, 0.68, 1);
     else m.outlineColor.set(0.86, 0.12, 0.1);
-    m.outlineWidth = 0.04;
+    m.outlineWidth = 0.05;
     m.renderingGroupId = 1;
     m.setEnabled(true);
   }
