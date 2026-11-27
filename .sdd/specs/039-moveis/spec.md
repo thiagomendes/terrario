@@ -1,7 +1,7 @@
 ---
 id: 039-moveis
 title: 'Móveis e utensílios, parte 1: a cama nova de dois blocos, sentar e deitar, e os móveis de brincar, para todos os mundos'
-status: APPROVED
+status: DONE
 base_branch: main
 branch: feat/039-moveis
 created_at: 2026-11-26T21:00:00Z
