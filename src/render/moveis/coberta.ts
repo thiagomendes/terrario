@@ -228,6 +228,8 @@ export function montarCoberta(f: FormaCoberta, corpo: readonly CaixaCorpo[], cab
     const i = Math.floor(casa / K);
     const k = casa % K;
     if (i === iBanda) return c3;
+    // (o que cai pelos lados e pelo pé fica liso: um quadradinho esticado na queda virava listra)
+    if (k === 0 || k === K - 1 || i === (cabecaEmA0 ? N - 1 : 0)) return c1;
     const ti = Math.floor(Math.abs((A(i) + A(i + 1)) / 2 - (cabecaEmA0 ? ini : fim)) / 0.2) % 2;
     const tk = Math.floor(((C(k) + C(k + 1)) / 2 - f.c0) / 0.2) % 2;
     return (ti + tk) % 2 === 0 ? c1 : c2;
