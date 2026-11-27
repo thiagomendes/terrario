@@ -15,7 +15,6 @@ import { Bloco, ehAlvo, luzDoBloco, obterBloco } from '../world/blocks';
 import { ALCANCE_REGRAS, alcancaDosOlhos } from '../jogo/alcance';
 import {
   podeLevarBicho,
-  celulaDoLote,
   ehConteiner,
   outraMetadeDaPorta,
   recusaConteiner,
@@ -44,10 +43,12 @@ import {
   definirEscolhaDoCanto,
   encontrarNascimento,
   estiloMundo,
+  metaGerada,
   olharDoNascimento,
   pontoDeNascer,
   povoadoNaColuna,
 } from '../world/chunk';
+import { VERSAO_CAMAS, converterCamas } from './camas';
 import {
   ESPERA_MESMO_BICHO,
   MAX_BAU_BANCA,
@@ -94,7 +95,7 @@ import type { EventoCriatura } from '../jogo/criaturas';
 import { criarClima, estacaoDoDia, type EstadoClima } from '../jogo/clima';
 import { criarSobrevivencia, type Sobrevivencia } from '../jogo/sobrevivencia';
 import { criarInventario, type Inventario, type Slot } from '../jogo/inventario';
-import { blocoDoItem, obterItem } from '../jogo/itens';
+import { blocoDoItem, idDoBloco, obterItem } from '../jogo/itens';
 import { lugarNaBarra } from '../jogo/compra';
 import { DURACAO_REFEICAO } from '../jogo/refeicao';
 import { RECEITAS } from '../jogo/receitas';
@@ -118,6 +119,32 @@ import { COMBATE_PULO, ESPERA_CHAMAR, ESPERA_PULO } from '../jogo/acharAmigo';
 import { lugarDoPulo, type MundoDoPulo } from './lugarPulo';
 import { comPecas } from '../jogo/caminho';
 import { celulaTomadaPelaVila } from '../world/vilaSolidos';
+import {
+  acesoOuApagado,
+  assentosDoMovel,
+  ehDeSentar,
+  type MovelAchado,
+  celulasDoMovel,
+  ehMetaDeAncora,
+  ehMovel,
+  metaDoMovel,
+  movelEm,
+  pecaSolta,
+  PARTE_CURTINHA,
+  vetorDoMovel,
+  type LeitorMoveis,
+} from '../jogo/moveis';
+import { decidirLote, gruposDoLote } from '../jogo/loteMoveis';
+import {
+  celulasDoTapete,
+  criarCamadaTapetes,
+  recusaPorTapete,
+  tapeteParaTirar,
+  tapetesDoSalvo,
+  type Tapete,
+  type TapeteMudado,
+  type TapeteSalvo,
+} from '../jogo/tapetes';
 import { roteiroDoMorador, type LugarCidade, type RoteiroCidade } from '../world/ruasCidade';
 
 type DadosFolga = 'casa' | 'loja' | undefined;
@@ -139,6 +166,7 @@ import type { DadosMundo, ModoJogo } from '../jogo/mundos';
 import { DURACAO_DIA, HORA_INICIAL, noiteNaHora, normalizarHora } from '../jogo/tempo';
 import { criarGerador } from '../audio/variacao';
 import {
+  blocoApoia,
   blocoOcupa,
   corpoNaCelula,
   corposDoRetrato,
@@ -170,6 +198,7 @@ import {
   type Quadro,
   type SalvoNucleo,
   type Telemetria,
+  type AssentoVisto,
 } from './protocolo';
 
 /** Distância máxima para bater, domar e trocar com uma criatura. */
@@ -204,8 +233,6 @@ export const INTERVALO_APARENCIA = 0.5;
 const ALCANCE_MADURA = 24;
 /** Espera entre deitar na cama e acordar (o véu escurece a tela). */
 const ESPERA_SONO = 1.5;
-/** Quanto tempo quem deitou espera os outros deitarem. */
-const ESPERA_TODOS = 10;
 
 export interface OpcoesNucleo {
   semente: number;
@@ -272,10 +299,15 @@ interface Jogador {
   ultimaSobrevivencia: string;
   eventos: EventoNucleo[];
   correcoes: BlocoMudado[];
+  /** Spec 039: o tapete previsto e recusado volta como é de verdade (só para este jogador). */
+  correcoesTapete: TapeteMudado[];
   /** Acorda quando chega a zero (dormindo). */
   sono: number;
-  /** Deitado esperando os outros deitarem (segundos que ainda vale). */
-  querDormir: number;
+  /**
+   * Spec 039 (T04): o assento do móvel em que está sentado (ou deitado, na cama), ou null. Não é
+   * salvo: ao abrir o mundo, ao voltar de uma queda e ao renascer, todo mundo está em pé.
+   */
+  sentado: SentadoNoMovel | null;
   perfil: PerfilJogador;
   constroi: boolean;
   /** Golpes, colocações e comidas desde que entrou (os amigos veem o movimento). */
@@ -322,6 +354,68 @@ interface Jogador {
 }
 
 export type Nucleo = ReturnType<typeof criarNucleo>;
+
+type Cel = { x: number; y: number; z: number };
+
+/** Spec 039 (T04): onde o jogador está sentado (ou deitado). */
+interface SentadoNoMovel {
+  /** As chaves dos assentos (a âncora do móvel e o número): o sofá deitado ocupa os dois. */
+  chaves: string[];
+  bloco: number;
+  ancora: Cel;
+  d: number;
+  /** A célula do assento e o ponto do corpo (x, z). */
+  x: number;
+  y: number;
+  z: number;
+  px: number;
+  pz: number;
+  deitado: boolean;
+  /** A posição do jogador já chegou ao assento (a tela leva o boneco até ele). */
+  chegou: boolean;
+  /** O passo em que sentou. */
+  desde: number;
+}
+
+/** Spec 039 (T04): chega ao assento quem está até aqui do ponto dele; levanta quem se afasta mais. */
+const PERTO_DO_ASSENTO = 0.9;
+/** Spec 039 (T04): quem sentou e não chegou ao assento nesse tempo (segundos) fica de pé. */
+const ESPERA_CHEGAR_ASSENTO = 3;
+
+/** Spec 039: as duas listas têm as mesmas células (sem repetir, em qualquer ordem)? */
+function mesmasCelulas(a: readonly Cel[], b: readonly Cel[]): boolean {
+  if (a.length !== b.length) return false;
+  const k = (c: Cel) => `${c.x},${c.y},${c.z}`;
+  const de = new Set(b.map(k));
+  const vistas = new Set<string>();
+  for (const c of a) {
+    const ck = k(c);
+    if (!de.has(ck) || vistas.has(ck)) return false;
+    vistas.add(ck);
+  }
+  return true;
+}
+
+/** A caixa (em células, inclusiva) que junta as células. */
+function caixaDe(cs: readonly Cel[]) {
+  const r = {
+    x0: Infinity,
+    y0: Infinity,
+    z0: Infinity,
+    x1: -Infinity,
+    y1: -Infinity,
+    z1: -Infinity,
+  };
+  for (const c of cs) {
+    r.x0 = Math.min(r.x0, c.x);
+    r.y0 = Math.min(r.y0, c.y);
+    r.z0 = Math.min(r.z0, c.z);
+    r.x1 = Math.max(r.x1, c.x);
+    r.y1 = Math.max(r.y1, c.y);
+    r.z1 = Math.max(r.z1, c.z);
+  }
+  return r;
+}
 
 export function criarNucleo(op: OpcoesNucleo) {
   registrarCatalogo();
@@ -470,6 +564,23 @@ export function criarNucleo(op: OpcoesNucleo) {
 
   /** Blocos que mudaram desde o último quadro (para todos). */
   let blocosMudados: BlocoMudado[] = [];
+  /**
+   * Spec 039: o que a regra dos móveis lê. O dono é o índice da tabela (a célula sem edição é
+   * do mundo, como o índice 0): a mesma leitura da colisão (`world/solido.ts`) e do cliente.
+   */
+  const leitorMoveis: LeitorMoveis = {
+    bloco: (x, y, z) => mundo.bloco(x, y, z),
+    meta: (x, y, z) => edicoes.obterMeta(x, y, z),
+    dono: (x, y, z) => edicoes.indiceDono(x, y, z),
+  };
+  /** Spec 039: a camada dos tapetes (rente ao chão, fora das células) e o que mudou nela. */
+  const tapetes = criarCamadaTapetes();
+  for (const t of tapetesDoSalvo((extras['tapetes'] as TapeteSalvo[] | undefined) ?? []))
+    tapetes.por(t);
+  let tapetesMudados: TapeteMudado[] = [];
+  /** O id de quem pôs o tapete (o índice 0 e o que saiu da tabela são do dono do mundo). */
+  const donoDoTapete = (t: Tapete): string | null =>
+    (t.dono ? edicoes.donos.id(t.dono) : undefined) || donoDoMundo;
   /** Eventos para todos (relâmpago, sons de criaturas). */
   let eventosGerais: EventoNucleo[] = [];
   /**
@@ -1059,7 +1170,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       },
       inventario: novoInventario(legado ? extras['inventario'] : oc.salvo?.inventario),
       sobrevivencia: criarSobrevivencia(legado ? extras['sobrevivencia'] : oc.salvo?.sobrevivencia),
-      spawn: (legado ? spawnSalvo : oc.salvo?.spawn) ?? { x, z },
+      // spec 039: o lugar de nascer gravado em cima de uma cama passa para o lado dela
+      spawn: foraDaCama((legado ? spawnSalvo : oc.salvo?.spawn) ?? { x, z }),
       transito: Array.from({ length: 10 }, () => null),
       conteiner: null,
       ack: 0,
@@ -1071,8 +1183,9 @@ export function criarNucleo(op: OpcoesNucleo) {
       ultimaSobrevivencia: '',
       eventos: [],
       correcoes: [],
+      correcoesTapete: [],
       sono: 0,
-      querDormir: 0,
+      sentado: null,
       acoes: [0, 0, 0],
       comendo: null,
       passoTelemetria: n,
@@ -1148,6 +1261,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     const d = dadosJogador(id);
     const j = jogadores.get(id);
     if (!j) return d;
+    // spec 039 (T04): quem sai deixa o assento livre
+    levantar(j);
     jogadores.delete(id);
     almaPendente.delete(id);
     perfisSujos = true;
@@ -1269,24 +1384,128 @@ export function criarNucleo(op: OpcoesNucleo) {
     for (const c of celulas) corrigir(j, c.x, c.y, c.z);
   }
 
+  // ------------------------------------------------------------ tapetes (spec 039)
+
+  /**
+   * O tapete previsto na tela de quem mandou volta como é de verdade: o da âncora prevista sai
+   * (se não é de verdade) e os tapetes de verdade das células voltam.
+   */
+  function corrigirTapetes(j: Jogador, celulas: readonly Cel[], previsto?: Cel): void {
+    if (previsto)
+      j.correcoesTapete.push({ x: previsto.x, y: previsto.y, z: previsto.z, fora: true });
+    const vistos = new Set<Tapete>();
+    for (const c of celulas) {
+      const t = tapetes.em(c.x, c.y, c.z);
+      if (t && !vistos.has(t)) {
+        vistos.add(t);
+        j.correcoesTapete.push({ ...t });
+      }
+    }
+  }
+
+  function recusarTapete(
+    j: Jogador,
+    comando: number,
+    motivo: string,
+    protecao: RecusaProtecao | undefined,
+  ): void {
+    j.eventos.push(
+      protecao ? { e: 'recusa', comando, motivo, protecao } : { e: 'recusa', comando, motivo },
+    );
+  }
+
+  /**
+   * Pôr o tapete (a âncora é a do toque; as outras 5 células, as da tabela). Ninguém fica preso:
+   * o tapete não ocupa espaço. Ele vai para a camada, com o dono e a direção.
+   */
+  function colocarTapete(j: Jogador, c: Extract<Comando, { t: 'colocar' }>): void {
+    const { x, y, z, meta } = c;
+    const d = meta & 3;
+    const cs = celulasDoTapete(x, y, z, d);
+    const p = j.inventario.obter(c.slot);
+    const temItem =
+      modo === 'criativo' || (!!p && blocoDoItem(p.item) === Bloco.TAPETE && p.qtd > 0);
+    const pode =
+      constroiAgora(j) &&
+      blocoNoMundo(Bloco.TAPETE, estiloMundo()) &&
+      ehMetaDeAncora(meta) &&
+      mesmasCelulas(c.extras ?? [], cs.slice(1)) &&
+      temItem &&
+      perto(j, x, y, z, ALCANCE_REGRAS) &&
+      !j.sobrevivencia.estado.morto;
+    const r = pode
+      ? recusaPorTapete(regra, tapetes, j.id, x, y, z, d, Bloco.TAPETE, ALTURA)
+      : { motivo: 'lugar' as const };
+    const t: Tapete = { x, y, z, d, dono: r ? 0 : indiceDe(j.id) };
+    if (r || !tapetes.por(t)) {
+      recusarTapete(j, c.id, 'colocar', r && 'protecao' in r ? r.protecao : undefined);
+      corrigirTapetes(j, cs, c);
+      // as células também voltam (o aparelho de antes da camada podia ter previsto o bloco)
+      for (const q of cs) corrigir(j, q.x, q.y, q.z);
+      return;
+    }
+    tapetesMudados.push({ ...t });
+    if (modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
+    j.acoes[1]++;
+    for (const o of jogadores.values())
+      o.eventos.push({ e: 'colocacao', x, y, z, bloco: Bloco.TAPETE, meu: o === j });
+    almaEvento(j.id, 'colocou');
+  }
+
+  /**
+   * Tirar o tapete da célula, onde não há nada em cima: sai o tapete inteiro, com a proteção de
+   * quebrar; na sobrevivência, vai para a mochila de quem tirou (o que não couber cai ali).
+   */
+  function quebrarTapete(j: Jogador, c: Extract<Comando, { t: 'quebrar' }>): void {
+    const { x, y, z } = c;
+    const pode =
+      constroiAgora(j) && perto(j, x, y, z, ALCANCE_REGRAS) && !j.sobrevivencia.estado.morto;
+    const r = pode ? tapeteParaTirar(regra, tapetes, j.id, c, donoDoTapete) : 'nada';
+    if (r === 'nada' || 'protecao' in r) {
+      recusarTapete(j, c.id, 'quebrar', r === 'nada' ? undefined : r.protecao);
+      corrigirTapetes(j, [c]);
+      return;
+    }
+    tapetes.tirar(r.x, r.y, r.z);
+    tapetesMudados.push({ x: r.x, y: r.y, z: r.z, fora: true });
+    if (modo === 'sobrevivencia') {
+      const item = idDoBloco(Bloco.TAPETE);
+      const sobra = j.inventario.adicionar(item, 1);
+      if (sobra > 0) mundoItens.soltar(item, sobra, x + 0.5, y + 0.2, z + 0.5, rngDrops);
+    }
+    for (const o of jogadores.values())
+      o.eventos.push({ e: 'quebra', x, y, z, bloco: Bloco.TAPETE, meu: o === j });
+  }
+
   const ferramentaDe = (p: Slot) => (p ? obterItem(p.item)?.ferramenta : undefined);
 
   function quebrar(j: Jogador, c: Extract<Comando, { t: 'quebrar' }>): void {
+    if (c.tapete) {
+      quebrarTapete(j, c);
+      return;
+    }
     const { x, y, z } = c;
     const b = mundo.bloco(x, y, z);
+    // spec 039: quebrar qualquer parte leva o móvel inteiro, que vira um item só; a peça solta
+    // (sem o móvel inteiro em volta) sai sozinha e não dá item
+    const movel = ehMovel(b) ? movelEm(leitorMoveis, x, y, z) : null;
+    const solta = !movel && pecaSolta(leitorMoveis, x, y, z);
+    const voltam = movel ? [c, ...movel.celulas] : [c, { x, y: y - 1, z }, { x, y: y + 1, z }];
     if (
       !ehAlvo(b) ||
       !constroiAgora(j) ||
       !perto(j, x, y, z, ALCANCE_REGRAS) ||
       j.sobrevivencia.estado.morto
     ) {
-      recusar(j, c.id, 'quebrar', [c, { x, y: y - 1, z }, { x, y: y + 1, z }]);
+      recusar(j, c.id, 'quebrar', voltam);
       return;
     }
     // spec 016: o que o mundo construiu não quebra; o que alguém pôs, só ele e o dono do mundo
-    const protegido = recusaQuebrar(regra, j.id, x, y, z);
+    // (o móvel, em todas as células)
+    let protegido = recusaQuebrar(regra, j.id, x, y, z);
+    for (const q of movel?.celulas ?? []) protegido ??= recusaQuebrar(regra, j.id, q.x, q.y, q.z);
     if (protegido) {
-      recusar(j, c.id, 'quebrar', [c, { x, y: y - 1, z }, { x, y: y + 1, z }], protegido);
+      recusar(j, c.id, 'quebrar', voltam, protegido);
       return;
     }
     // a lavoura do mundo se replanta: o estágio 0 da mesma planta volta na hora (colher
@@ -1311,8 +1530,10 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (!editar(x, y, z, replantio, edicoes.obterMeta(x, y, z)))
         lavoura.set(`${x},${y},${z}`, { x, y, z, p: 0, t: relogioLavoura });
     } else editar(x, y, z, Bloco.AR);
-    const darColheita = replantio === null || madura(b);
+    const darColheita = (replantio === null || madura(b)) && !solta;
     if (outraMetade !== null) editar(x, outraMetade, z, Bloco.AR);
+    for (const q of movel?.celulas ?? [])
+      if (q.x !== x || q.y !== y || q.z !== z) editar(q.x, q.y, q.z, Bloco.AR);
     // sobrevivência: a ferramenta gasta e o bloco vira item no chão
     if (modo === 'sobrevivencia') {
       const p = j.inventario.obter(c.slot);
@@ -1520,15 +1741,27 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
   }
 
+  /** Spec 039: a célula aceita um bloco novo (livre, ou a peça solta de um móvel, que não é nada). */
+  const livreParaPor = (x: number, y: number, z: number) =>
+    substituivel(mundo.bloco(x, y, z)) || pecaSolta(leitorMoveis, x, y, z);
+
   function colocar(j: Jogador, c: Extract<Comando, { t: 'colocar' }>): void {
+    // spec 039: o tapete vai para a camada rente ao chão, não para a célula
+    if (c.bloco === Bloco.TAPETE) {
+      colocarTapete(j, c);
+      return;
+    }
     const { x, y, z, bloco } = c;
     let { meta } = c;
-    const celulas = [c, ...(c.extras ?? [])];
+    // spec 039: o móvel ocupa as células da tabela (a âncora é a do toque, com a parte 0); a
+    // tela volta inteira se não entrar
+    const movel = ehMovel(bloco) ? celulasDoMovel(bloco, x, y, z, meta & 3) : null;
+    const celulas = [c, ...(c.extras ?? []), ...(movel ?? [])];
     const p = j.inventario.obter(c.slot);
     const def = obterBloco(bloco);
     const blocoAtual = mundo.bloco(x, y, z);
     // planta baixa e água dão lugar; a lavoura não (colocar em cima dela é recusado)
-    const livre = substituivel(blocoAtual);
+    const livre = livreParaPor(x, y, z);
     // semente só na terra arada
     const lav = lavouraDoBloco(bloco);
     const plantavel = !lav || podePlantar(mundo.bloco(x, y - 1, z), blocoAtual);
@@ -1549,16 +1782,22 @@ export function criarNucleo(op: OpcoesNucleo) {
     // a outra parte só existe para a porta (dois blocos de altura): exatamente a célula de
     // cima, que tem de estar livre. Qualquer outra "parte extra" é truque (uma semente
     // plantando três pés, uma tábua virando três blocos longe dali) e o pedido é recusado.
-    const metade = c.extras && c.extras.length > 0 ? c.extras : null;
-    const extrasOk =
-      !metade ||
-      (bloco === Bloco.PORTA &&
-        metade.length === 1 &&
-        metade[0].x === x &&
-        metade[0].y === y + 1 &&
-        metade[0].z === z &&
-        y + 1 < ALTURA &&
-        substituivel(mundo.bloco(x, y + 1, z)));
+    // Spec 039: o móvel leva exatamente as outras células da tabela (nem mais, nem menos), todas
+    // dentro do mundo e livres; o pedido vem com a âncora (parte 0) e o móvel apagado.
+    const metade = !movel && c.extras && c.extras.length > 0 ? c.extras : null;
+    const extrasOk = movel
+      ? ehMetaDeAncora(meta) &&
+        !def?.semItem &&
+        mesmasCelulas(c.extras ?? [], movel.slice(1)) &&
+        movel.every((q) => q.y >= 0 && q.y < ALTURA && livreParaPor(q.x, q.y, q.z))
+      : !metade ||
+        (bloco === Bloco.PORTA &&
+          metade.length === 1 &&
+          metade[0].x === x &&
+          metade[0].y === y + 1 &&
+          metade[0].z === z &&
+          y + 1 < ALTURA &&
+          substituivel(mundo.bloco(x, y + 1, z)));
     if (
       !def ||
       !constroiAgora(j) ||
@@ -1575,29 +1814,33 @@ export function criarNucleo(op: OpcoesNucleo) {
       recusar(j, c.id, lav && livre && !plantavel ? 'semente' : 'colocar', celulas);
       return;
     }
-    // spec 016: passagem e construção do mundo ficam livres; a flor do amigo não some
-    const protegido =
-      recusaColocar(regra, j.id, x, y, z, bloco) ??
-      (metade ? recusaColocar(regra, j.id, x, y + 1, z, bloco) : null);
+    // spec 016: passagem e construção do mundo ficam livres; a flor do amigo não some (o
+    // móvel, em todas as células)
+    const ocupadas = movel ?? (metade ? [c, { x, y: y + 1, z }] : [c]);
+    let protegido: RecusaProtecao | null = null;
+    for (const q of ocupadas) protegido ??= recusaColocar(regra, j.id, q.x, q.y, q.z, bloco);
     if (protegido) {
       recusar(j, c.id, 'colocar', celulas, protegido);
       return;
     }
     // spec 037: nunca em cima de um corpo, e o bloco novo encosta num sólido ou no chão (a
     // planta da obra e do bolo segue a própria planta; a recusa da proteção vem antes)
+    const caixa = caixaDe(ocupadas);
     const naoEntra = recusaConstruir({
       bloco,
-      celulas: metade ? [c, { x, y: y + 1, z }] : [c],
+      celulas: ocupadas,
       planejada: !!plano && plano.bloco === bloco,
       ler: mundo.bloco,
-      corpos: corposPerto(x, y, z, x, metade ? y + 1 : y, z, j),
+      corpos: corposPerto(caixa.x0, caixa.y0, caixa.z0, caixa.x1, caixa.y1, caixa.z1, j),
     });
     if (naoEntra) {
       recusar(j, c.id, 'colocar', celulas);
       return;
     }
-    // spec 016: o bloco guarda quem o colocou
-    editar(x, y, z, bloco, meta, j.id);
+    // spec 016: o bloco guarda quem o colocou; spec 039: o núcleo grava as partes do móvel
+    if (movel)
+      for (const q of movel) editar(q.x, q.y, q.z, bloco, metaDoMovel(meta, q.parte), j.id);
+    else editar(x, y, z, bloco, meta, j.id);
     // a metade de cima da porta (já conferida: ar, planta baixa ou água)
     if (metade)
       editar(x, y + 1, z, bloco, (cidade && protecao.planejado(x, y + 1, z)?.meta) || meta, j.id);
@@ -1626,58 +1869,48 @@ export function criarNucleo(op: OpcoesNucleo) {
         return;
       }
     }
+    // spec 039: os móveis entram e saem inteiros (só a âncora vale; cada uma vira o móvel
+    // inteiro, se couber), e cada móvel é um grupo que entra inteiro ou volta inteiro
+    const grupos = gruposDoLote(c.lote, leitorMoveis);
+    // as partes que saíram do lote (e o tapete) foram previstas na tela: voltam
+    const noLote = new Set<string>();
+    for (const g of grupos) for (const e of g.celulas) noLote.add(`${e.x},${e.y},${e.z}`);
+    for (const e of c.lote) if (!noLote.has(`${e.x},${e.y},${e.z}`)) corrigir(j, e.x, e.y, e.z);
     // a lavoura segue a regra de plantar (terra arada embaixo): primeiro o resto do lote
     // (que pode trazer a terra arada), depois as plantas; planta sem terra arada não entra
     // (e a tela é corrigida). Sem isso, milhares de pés no ar faziam o crescer pesar.
-    const plantas: typeof c.lote = [];
-    let primeira: RecusaProtecao | null = null;
+    const plantas: { x: number; y: number; z: number; v: number }[] = [];
     // spec 037: o lote não prende amigo nem bicho (quem manda o lote, sim: são as ferramentas
     // do computador e os ganchos dos testes); sem a regra de apoio
-    let x0 = Infinity;
-    let y0 = Infinity;
-    let z0 = Infinity;
-    let x1 = -Infinity;
-    let y1 = -Infinity;
-    let z1 = -Infinity;
-    for (const e of c.lote) {
-      if (!blocoOcupa(e.v & 255)) continue;
-      x0 = Math.min(x0, e.x);
-      y0 = Math.min(y0, e.y);
-      z0 = Math.min(z0, e.z);
-      x1 = Math.max(x1, e.x);
-      y1 = Math.max(y1, e.y);
-      z1 = Math.max(z1, e.z);
-    }
-    const corpos = x0 <= x1 ? corposPerto(x0, y0, z0, x1, y1, z1, j, true) : [];
-    let prendia = false;
-    for (const e of c.lote) {
-      // spec 016: cada célula segue a regra de quebrar (o que sai) e de colocar (o que entra);
-      // a igual não muda nada (nem o dono), a lavoura do mundo só se colhe
-      const atual = empacotar(mundo.bloco(e.x, e.y, e.z), edicoes.obterMeta(e.x, e.y, e.z));
-      const d = celulaDoLote(regra, j.id, e.x, e.y, e.z, e.v, atual);
-      if ('pula' in d) continue;
-      if ('recusa' in d) {
-        primeira ??= d.recusa;
-        corrigir(j, e.x, e.y, e.z);
-        continue;
-      }
-      const b = d.v & 255;
-      const meta = (d.v >> 8) & 255;
-      if (corpos.length && blocoOcupa(b) && corpos.some((k) => corpoNaCelula(e, k))) {
-        prendia = true;
-        corrigir(j, e.x, e.y, e.z);
-        continue;
-      }
-      if (d.manterDono) {
+    let corpos: Corpo[] | null = null;
+    const corposDoLote = (): Corpo[] => {
+      if (corpos) return corpos;
+      const ocupa: Cel[] = [];
+      for (const g of grupos) for (const e of g.celulas) if (blocoOcupa(e.v & 255)) ocupa.push(e);
+      const k = caixaDe(ocupa);
+      corpos = ocupa.length ? corposPerto(k.x0, k.y0, k.z0, k.x1, k.y1, k.z1, j, true) : [];
+      return corpos;
+    };
+    // spec 016: cada célula segue a regra de quebrar (o que sai) e de colocar (o que entra);
+    // a igual não muda nada (nem o dono), a lavoura do mundo só se colhe
+    const atual = (x: number, y: number, z: number) =>
+      empacotar(mundo.bloco(x, y, z), edicoes.obterMeta(x, y, z));
+    const r = decidirLote(grupos, regra, j.id, atual, corposDoLote);
+    for (const e of r.voltam) corrigir(j, e.x, e.y, e.z);
+    for (const e of r.vai) {
+      const b = e.v & 255;
+      const meta = (e.v >> 8) & 255;
+      if (e.manterDono) {
         // colheita da lavoura do mundo: entra de novo na lista que cresce, do começo
         lavoura.delete(`${e.x},${e.y},${e.z}`);
         editar(e.x, e.y, e.z, b, meta);
       } else if (ehLavoura(b)) plantas.push(e);
       else editar(e.x, e.y, e.z, b, meta, j.id);
     }
-    if (primeira)
-      j.eventos.push({ e: 'recusa', comando: c.id, motivo: 'editar', protecao: primeira });
-    else if (prendia) j.eventos.push({ e: 'recusa', comando: c.id, motivo: 'editar' });
+    if (r.primeira)
+      j.eventos.push({ e: 'recusa', comando: c.id, motivo: 'editar', protecao: r.primeira });
+    else if (r.prendia || r.naoCabia)
+      j.eventos.push({ e: 'recusa', comando: c.id, motivo: 'editar' });
     for (const e of plantas) {
       if (mundo.bloco(e.x, e.y - 1, e.z) === Bloco.TERRA_ARADA)
         editar(e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255, j.id);
@@ -2044,6 +2277,31 @@ export function criarNucleo(op: OpcoesNucleo) {
   }
 
   /**
+   * Spec 039 (T03): onde a criança nasce, ao lado da cama: a célula livre mais perto (dois de
+   * altura livres e chão sólido embaixo), primeiro dos lados da cabeceira, depois dos lados do
+   * pé, depois depois do pé e, por último, atrás da cabeceira. null se a cama está cercada.
+   */
+  function ladoDaCama(celulas: readonly Cel[], d: number): { x: number; z: number } | null {
+    const naCama = (x: number, z: number) => celulas.some((c) => c.x === x && c.z === z);
+    const livre = (x: number, y: number, z: number) =>
+      !blocoOcupa(mundo.bloco(x, y, z)) &&
+      !blocoOcupa(mundo.bloco(x, y + 1, z)) &&
+      !obterBloco(mundo.bloco(x, y, z))?.liquido &&
+      blocoApoia(mundo.bloco(x, y - 1, z));
+    const ultima = celulas[celulas.length - 1];
+    const tentativas: [Cel, number][] = [];
+    for (const c of celulas) tentativas.push([c, d + 1], [c, d + 3]);
+    tentativas.push([ultima, d], [celulas[0], d + 2]);
+    for (const [c, dir] of tentativas) {
+      const [dx, dz] = vetorDoMovel(dir);
+      const x = c.x + dx;
+      const z = c.z + dz;
+      if (!naCama(x, z) && livre(x, c.y, z)) return { x: x + 0.5, z: z + 0.5 };
+    }
+    return null;
+  }
+
+  /**
    * Spec 037: fechar a porta ou a porteira aberta em (x, y, z) prenderia um corpo (a criança,
    * um amigo, um bicho)? As duas metades da porta contam.
    */
@@ -2075,6 +2333,13 @@ export function criarNucleo(op: OpcoesNucleo) {
     } else if (abreEFecha(b)) {
       alternarPorta(x, y, z);
       for (const o of jogadores.values()) o.eventos.push({ e: 'porta', x, y, z });
+    } else if (acesoOuApagado(b) !== null) {
+      // spec 039: o abajur e o criado-mudo acendem e apagam inteiros (o toque na cúpula vai
+      // para a âncora); as células trocam de id juntas, com o dono e a parte de cada uma. A
+      // peça solta não acende
+      const m = movelEm(leitorMoveis, x, y, z);
+      const novo = acesoOuApagado(b)!;
+      if (m) for (const q of m.celulas) editar(q.x, q.y, q.z, novo, metaDoMovel(m.d, q.parte));
     } else if (
       (b === Bloco.BAU || b === Bloco.FORNALHA || b === Bloco.FORNALHA_ACESA) &&
       !j.constroi
@@ -2099,24 +2364,212 @@ export function criarNucleo(op: OpcoesNucleo) {
       j.conteiner = { tipo: 'fornalha', abertura, x, y, z };
       j.conteinerSujo = true;
     } else if (b === Bloco.CAMA) {
-      j.spawn = { x: x + 0.5, z: z + 0.5 };
+      // spec 039: a cama inteira (de qualquer parte); a peça solta não é cama
+      const cama = movelEm(leitorMoveis, x, y, z);
+      if (!cama) return;
+      // tocar de novo na cama em que está deitado: levanta
+      if (noMesmoMovel(j, cama.ancora)) {
+        levantar(j);
+        return;
+      }
+      // nasce ao lado da cama, na célula livre mais perto (nunca em cima da cabeceira)
+      j.spawn = ladoDaCama(cama.celulas, cama.d) ?? { x: x + 0.5, z: z + 0.5 };
+      // spec 039 (T04): deita (a cama tem um lugar só: a de um amigo deitado não serve)
+      if (!sentarNoMovel(j, cama, c)) return;
       if (noiteNaHora(hora) < 0.4) {
         j.eventos.push({ e: 'sono', dormiu: false });
         return;
       }
-      // a noite só passa quando todos estão deitados (com um jogador só, na hora)
-      j.querDormir = ESPERA_TODOS;
-      const faltam = [...jogadores.values()].filter((o) => o.querDormir <= 0).length;
-      if (faltam > 0) {
-        j.eventos.push({ e: 'sonoEspera', faltam });
-        return;
-      }
-      for (const o of jogadores.values()) {
-        o.querDormir = 0;
-        o.sono = ESPERA_SONO;
-        o.eventos.push({ e: 'sono', dormiu: true });
-      }
+      depoisDeDeitar(j);
+    } else if (ehDeSentar(b)) {
+      // spec 039 (T04): o sofá e a cadeira; tocar de novo no mesmo móvel levanta
+      const m = movelEm(leitorMoveis, x, y, z);
+      if (!m) return;
+      const deitaNoSofa = m.bloco === Bloco.SOFA && noiteNaHora(hora) >= 0.4;
+      // à noite, quem já está sentado no sofá e toca nele deita (se o outro lugar está livre)
+      if (noMesmoMovel(j, m.ancora) && !(deitaNoSofa && !j.sentado!.deitado)) levantar(j);
+      // decisão do dono (27 nov): à noite, o sofá deita (inteiro, encolhidinha) e conta para o
+      // dormir; o lugar de nascer continua sendo só o da cama
+      else if (deitaNoSofa) {
+        if (deitarNoSofa(j, m)) depoisDeDeitar(j);
+      } else sentarNoMovel(j, m, c);
     }
+  }
+
+  /**
+   * Deitou de noite: a noite só passa com todos deitados, numa cama ou num sofá (com um jogador
+   * só, na hora); quem deitou espera os outros enquanto ficar deitado.
+   */
+  function depoisDeDeitar(j: Jogador): void {
+    const faltam = [...jogadores.values()].filter((o) => !o.sentado?.deitado).length;
+    if (faltam > 0) {
+      j.eventos.push({ e: 'sonoEspera', faltam });
+      return;
+    }
+    dormirTodos();
+  }
+
+  /** A noite passa para todos (cada um dorme, e acorda junto em `acordar`). */
+  function dormirTodos(): void {
+    for (const o of jogadores.values()) {
+      o.sono = ESPERA_SONO;
+      o.eventos.push({ e: 'sono', dormiu: true });
+    }
+  }
+
+  /** Spec 039 (T04): de noite, com todos deitados (e ninguém dormindo ainda), a noite passa. */
+  function conferirSono(): void {
+    if (jogadores.size === 0 || noiteNaHora(hora) < 0.4) return;
+    for (const o of jogadores.values()) if (!o.sentado?.deitado || o.sono !== 0) return;
+    dormirTodos();
+  }
+
+  // ------------------------------------------------------------ assentos (spec 039, T04)
+
+  /** Os assentos dos móveis ocupados: a chave (a âncora e o número) → quem está ali. */
+  const assentos = new Map<string, string>();
+  const chaveDoMovel = (a: Cel) => `${a.x},${a.y},${a.z}`;
+  const noMesmoMovel = (j: Jogador, a: Cel) =>
+    !!j.sentado && j.sentado.chaves[0].startsWith(`${chaveDoMovel(a)}:`);
+  const livreParaMim = (j: Jogador, chave: string) => {
+    const dono = assentos.get(chave);
+    return dono === undefined || dono === j.id;
+  };
+
+  /**
+   * Senta (ou deita, na cama) no assento livre do móvel: o da parte tocada primeiro (o sofá tem
+   * dois). Quem está montado desce antes. Devolve se sentou (todos ocupados: o "não" curtinho).
+   */
+  function sentarNoMovel(j: Jogador, m: MovelAchado, tocada: Cel): boolean {
+    const lugares = assentosDoMovel(m);
+    const base = chaveDoMovel(m.ancora);
+    const ordem = lugares
+      .map((l, i) => ({ l, i }))
+      .sort(
+        (a, b) =>
+          Number(!(a.l.x === tocada.x && a.l.z === tocada.z)) -
+          Number(!(b.l.x === tocada.x && b.l.z === tocada.z)),
+      );
+    const livre = ordem.find(({ i }) => livreParaMim(j, `${base}:${i}`));
+    if (!livre) {
+      j.eventos.push({ e: 'recusa', comando: 0, motivo: 'sentar' });
+      return false;
+    }
+    ocupar(j, m, [`${base}:${livre.i}`], livre.l);
+    return true;
+  }
+
+  /**
+   * Decisão do dono (27 nov): à noite, o sofá deita a criança, encolhidinha, no sofá inteiro (os
+   * dois lugares; o corpo no meio dele). Com alguém sentado nele, o "não" curtinho.
+   */
+  function deitarNoSofa(j: Jogador, m: MovelAchado): boolean {
+    const base = chaveDoMovel(m.ancora);
+    const chaves = assentosDoMovel(m).map((_, i) => `${base}:${i}`);
+    if (!chaves.every((k) => livreParaMim(j, k))) {
+      j.eventos.push({ e: 'recusa', comando: 0, motivo: 'sentar' });
+      return false;
+    }
+    const px = m.celulas.reduce((s, c) => s + c.x + 0.5, 0) / m.celulas.length;
+    const pz = m.celulas.reduce((s, c) => s + c.z + 0.5, 0) / m.celulas.length;
+    ocupar(j, m, chaves, { ...m.ancora, px, pz, deitado: true });
+    return true;
+  }
+
+  /** Ocupa os assentos (quem está montado desce antes) e conta a quem sentou. */
+  function ocupar(
+    j: Jogador,
+    m: MovelAchado,
+    chaves: string[],
+    l: { x: number; y: number; z: number; px: number; pz: number; deitado: boolean },
+  ): void {
+    levantar(j);
+    // quem está no brinquedo de andar desce antes de sentar
+    const montado = j.perfil.aparencia.montado === true;
+    if (montado) {
+      const { montado: _m, ...resto } = j.perfil.aparencia;
+      void _m;
+      aplicarAparencia(j, resto);
+    }
+    // a aparência que ainda espera a janela não monta de novo depois de sentar (o resto dela,
+    // uma roupa trocada, continua valendo)
+    if (j.aparenciaPendente?.montado === true) {
+      const { montado: _p, ...resto } = j.aparenciaPendente;
+      void _p;
+      j.aparenciaPendente = resto;
+    }
+    for (const k of chaves) assentos.set(k, j.id);
+    j.sentado = {
+      chaves,
+      bloco: m.bloco,
+      ancora: { ...m.ancora },
+      d: m.d,
+      x: l.x,
+      y: l.y,
+      z: l.z,
+      px: l.px,
+      pz: l.pz,
+      deitado: l.deitado,
+      chegou: Math.hypot(j.tel.x - l.px, j.tel.z - l.pz) <= PERTO_DO_ASSENTO,
+      desde: n,
+    };
+    j.eventos.push({
+      e: 'sentou',
+      ...assentoVisto(j.sentado),
+      ...(montado ? { desceu: true as const } : {}),
+    });
+  }
+
+  /** O assento como a tela desenha (o jogador visto e o evento `sentou`). */
+  function assentoVisto(s: SentadoNoMovel): AssentoVisto {
+    return {
+      movel: s.bloco === Bloco.CAMA ? 'cama' : s.bloco === Bloco.SOFA ? 'sofa' : 'cadeira',
+      x: s.x,
+      y: s.y,
+      z: s.z,
+      d: s.d,
+      px: s.px,
+      pz: s.pz,
+      ...(s.deitado ? { deitado: true as const } : {}),
+    };
+  }
+
+  /** Fica de pé (os assentos ficam livres para outro). */
+  function levantar(j: Jogador): void {
+    if (!j.sentado) return;
+    for (const k of j.sentado.chaves) if (assentos.get(k) === j.id) assentos.delete(k);
+    j.sentado = null;
+    j.eventos.push({ e: 'levantou' });
+  }
+
+  /**
+   * A cada passo: quem está sentado levanta se o móvel saiu ou mudou (quebrado, trocado pelo
+   * lote), se desmaiou ou se não chegou ao assento a tempo.
+   */
+  function cuidarDosAssentos(): void {
+    for (const j of jogadores.values()) {
+      const s = j.sentado;
+      if (!s) continue;
+      const m = movelEm(leitorMoveis, s.ancora.x, s.ancora.y, s.ancora.z);
+      const mesmo =
+        !!m &&
+        m.bloco === s.bloco &&
+        m.d === s.d &&
+        m.ancora.x === s.ancora.x &&
+        m.ancora.y === s.ancora.y &&
+        m.ancora.z === s.ancora.z;
+      const tarde = !s.chegou && (n - s.desde) * PASSO > ESPERA_CHEGAR_ASSENTO;
+      if (!mesmo || tarde || j.sobrevivencia.estado.morto) levantar(j);
+    }
+  }
+
+  /** A posição nova do jogador sentado: chegou ao assento, ou se afastou (andou, pulou). */
+  function assentoNaTelemetria(j: Jogador, c: Telemetria): void {
+    const s = j.sentado;
+    if (!s) return;
+    const longe = Math.hypot(c.x - s.px, c.z - s.pz) > PERTO_DO_ASSENTO;
+    if (c.pulos > 0 || (s.chegou && longe)) levantar(j);
+    else if (!longe) s.chegou = true;
   }
 
   /** A noite passa (uma vez) e quem dormia acorda. */
@@ -2352,6 +2805,8 @@ export function criarNucleo(op: OpcoesNucleo) {
   const chaveAparencia = (a: unknown): string => JSON.stringify(normalizarAparencia(a));
 
   function aplicarAparencia(j: Jogador, a: Record<string, unknown>): void {
+    // spec 039 (T04): quem está sentado e monta no brinquedo de andar levanta (nunca os dois)
+    if (j.sentado && a.montado === true) levantar(j);
     j.perfil = { ...j.perfil, aparencia: a };
     j.passoAparencia = n;
     perfisSujos = true;
@@ -2583,8 +3038,38 @@ export function criarNucleo(op: OpcoesNucleo) {
       return;
     }
     j.passoVoltaCasa = n;
+    irParaCasa(j);
+  }
+
+  /**
+   * Leva o jogador ao lugar de nascer (renascer, voltar para casa): ele levanta do móvel e, se o
+   * lugar cai numa cama (o lugar gravado antes da 039, no meio da cama de uma célula), passa
+   * para o lado dela, pela regra do nascer ao lado. O lugar corrigido fica gravado.
+   */
+  function irParaCasa(j: Jogador): void {
+    j.spawn = foraDaCama(j.spawn);
+    levantar(j);
     j.saltoPermitido = true;
     j.eventos.push({ e: 'teleporte', x: j.spawn.x, z: j.spawn.z });
+  }
+
+  /**
+   * Spec 039: o lugar de nascer (só x e z) fora da cama. A tela põe a criança no primeiro vão de
+   * dois blocos da coluna, subindo do terreno: se antes dele há uma cama, ela nasceria em cima
+   * da cama, então vai para o lado dela.
+   */
+  function foraDaCama(s: { x: number; z: number }): { x: number; z: number } {
+    const x = Math.floor(s.x);
+    const z = Math.floor(s.z);
+    const livre = (y: number) => !obterBloco(mundo.bloco(x, y, z))?.solido;
+    for (let y = alturaTerreno(x, z, semente) + 1; y < ALTURA - 2; y++) {
+      if (mundo.bloco(x, y, z) === Bloco.CAMA) {
+        const cama = movelEm(leitorMoveis, x, y, z);
+        return (cama && ladoDaCama(cama.celulas, cama.d)) || s;
+      }
+      if (livre(y) && livre(y + 1)) return s;
+    }
+    return s;
   }
 
   /** Spec 021: o mundo como o lugar do pulo o vê (blocos, proteção da 016 e donos). */
@@ -2616,6 +3101,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     const l = lugarDoPulo(mundoDoPulo, j.id, j.tel, o.tel);
     if (!l) return void recusa();
     j.passoPulo = n;
+    levantar(j);
     j.saltoPermitido = true;
     j.destinoSalto = { x: l[0], z: l[2], ate: n + Math.round(3 / PASSO) };
     j.eventos.push({ e: 'teleporte', x: l[0], z: l[2], y: l[1], pulo: alvo });
@@ -2664,6 +3150,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (chegouNoDestino || (j.destinoSalto && n > j.destinoSalto.ate)) j.destinoSalto = null;
     j.passoTelemetria = n;
     j.tel = { ...c, quedas: [], pulos: 0, golpes: 0 };
+    // spec 039 (T04): andar, pular ou voar levanta do móvel
+    assentoNaTelemetria(j, c);
     if (golpes > 0) j.acoes[0] += Math.min(golpes, 20);
     for (let i = 0; i < golpes; i++) j.sobrevivencia.acao();
     if (modo !== 'sobrevivencia' || j.sobrevivencia.estado.morto) return;
@@ -2863,9 +3351,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       case 'renascer':
         // na nuvem só quem desmaiou renasce (senão seria cura e teletransporte de graça)
         if (!confiar && !j.sobrevivencia.estado.morto) break;
-        j.saltoPermitido = true;
         j.sobrevivencia.renascer();
-        j.eventos.push({ e: 'teleporte', x: j.spawn.x, z: j.spawn.z });
+        irParaCasa(j);
         break;
       case 'voltarCasa':
         voltarCasa(j);
@@ -3006,8 +3493,11 @@ export function criarNucleo(op: OpcoesNucleo) {
 
     aparenciasPendentes();
     let amanhece = false;
+    // spec 039 (T04): quem está sentado no móvel que saiu (ou desmaiou) levanta; de noite, com
+    // todos deitados (alguém saiu da sala, ou levantou e deitou de novo), a noite passa
+    cuidarDosAssentos();
+    conferirSono();
     for (const j of jogadores.values()) {
-      if (j.querDormir > 0) j.querDormir = Math.max(0, j.querDormir - dt);
       if (j.sono > 0) {
         j.sono -= dt;
         if (j.sono <= 0) {
@@ -3171,6 +3661,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         acoes: [o.acoes[0], o.acoes[1], o.acoes[2]],
         // spec 032: o que está comendo (o amigo vê as mordidas na comida certa)
         ...(o.comendo && n * PASSO < o.comendo.ate ? { come: o.comendo.item } : {}),
+        // spec 039 (T04): sentado no móvel (ou deitado na cama): o amigo vê, e quem entra também
+        ...(o.sentado ? { sentado: assentoVisto(o.sentado) } : {}),
       };
     });
     const perfis = perfisSujos
@@ -3201,6 +3693,12 @@ export function criarNucleo(op: OpcoesNucleo) {
       // na nuvem a lista vai sempre (vazia também: quem saiu some da tela)
       if (!confiar || todos.length > 1) q.jogadores = todos.filter((o) => o.id !== j.id);
       if (perfis) q.perfis = perfis;
+      // spec 039: quem chega recebe a camada dos tapetes inteira; depois, só o que mudou (e a
+      // correção do tapete dele que foi recusado)
+      const mudados = j.iniciado ? [...tapetesMudados, ...j.correcoesTapete] : [];
+      if (!j.iniciado && tapetes.tamanho) q.tapetes = tapetes.todos();
+      if (mudados.length) q.tapetesMudados = mudados;
+      j.correcoesTapete = [];
       if (!j.iniciado) {
         q.primeiro = true;
         j.iniciado = true;
@@ -3253,6 +3751,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       out.set(j.id, q);
     }
     blocosMudados = [];
+    tapetesMudados = [];
     eventosGerais = [];
     veiculosMudados = [];
     almaPendente.clear();
@@ -3277,6 +3776,12 @@ export function criarNucleo(op: OpcoesNucleo) {
     };
     // spec 016: quem colocou blocos (fora o dono); mundo sem amigos grava igual a antes
     if (edicoes.donos.tamanho > 0) out['donos'] = edicoes.donos.exportar();
+    // spec 039: a camada dos tapetes (mundo que nunca teve tapete grava igual a antes; o que
+    // teve grava a lista vazia, senão a cópia do aparelho, que junta os extras de antes, traria
+    // de volta o tapete tirado)
+    if (tapetes.tamanho > 0 || 'tapetes' in extras) out['tapetes'] = tapetes.salvar();
+    // spec 039 (T03): as camas deste mundo já são as novas (a conversão não roda de novo)
+    out['camas'] = VERSAO_CAMAS;
     // spec 014: as obras do canteiro (mundo sem obra começada grava igual a antes)
     if (obras.size > 0) out['obras'] = obrasSalvas();
     // spec 023: a alma de cada jogador neste mundo (mundo sem alma grava igual a antes)
@@ -3309,6 +3814,57 @@ export function criarNucleo(op: OpcoesNucleo) {
         ...(o.feita ? { feita: true as const } : {}),
       };
     return r;
+  }
+
+  // spec 039 (T03): as camas de uma célula dos mundos de antes viram a cama nova (ou a
+  // curtinha), uma vez por mundo e antes da regra da peça solta; quem entra recebe as células no
+  // primeiro quadro
+  if (extras['camas'] !== VERSAO_CAMAS) {
+    const corposDoMundo = corposDoRetrato(null, [], populacao.lista);
+    const gravada = (x: number, y: number, z: number) =>
+      blocosMudados.push({
+        x,
+        y,
+        z,
+        v:
+          edicoes.obterValor(x, y, z) ??
+          empacotar(mundo.bloco(x, y, z), edicoes.obterMeta(x, y, z)),
+      });
+    converterCamas({
+      edicoes,
+      bloco: (x, y, z) => mundo.bloco(x, y, z),
+      gerado: (x, y, z) => mundo.gerado(x, y, z),
+      metaGerada: (x, y, z) => metaGerada(x, y, z, semente),
+      regra,
+      ocupada: (c) => corposDoMundo.some((k) => corpoNaCelula(c, k)),
+      gravar(x, y, z, b, meta, dono) {
+        if (edicoes.definir(x, y, z, b, meta, dono)) gravada(x, y, z);
+      },
+      remover(x, y, z) {
+        if (edicoes.remover?.(x, y, z)) gravada(x, y, z);
+      },
+    });
+  }
+
+  // spec 039: ao abrir o mundo, a peça solta de um móvel (a parte sem o móvel inteiro em
+  // volta, e o id do tapete numa célula) vira ar; quem entra recebe o ar no primeiro quadro
+  for (const [k, lista] of Object.entries(edicoes.exportar())) {
+    const [cx, cz] = k.split(',').map(Number);
+    for (const [i, v] of lista) {
+      const b = v & 255;
+      if (b !== Bloco.TAPETE && !ehMovel(b)) continue;
+      const x = cx * TAM_X + (i % TAM_X);
+      const z = cz * TAM_Z + (Math.floor(i / TAM_X) % TAM_Z);
+      const y = Math.floor(i / (TAM_X * TAM_Z));
+      if (!pecaSolta(leitorMoveis, x, y, z)) continue;
+      // a cama de uma célula (a cabeceira sem o pé) vira a curtinha, e não ar: num mundo já
+      // marcado, ela vem de um aparelho de antes (uma aba aberta antes da publicação)
+      const meta = (v >> 8) & 255;
+      if (b === Bloco.CAMA && meta >> 2 === 0) {
+        if (edicoes.definir(x, y, z, Bloco.CAMA, metaDoMovel(meta & 3, PARTE_CURTINHA)))
+          blocosMudados.push({ x, y, z, v: edicoes.obterValor(x, y, z)! });
+      } else editar(x, y, z, Bloco.AR);
+    }
   }
 
   return {
@@ -3344,6 +3900,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     reiniciarQuadros(id: string) {
       const j = jogadores.get(id);
       if (!j) return;
+      // spec 039 (T04): quem volta de uma queda volta de pé (a tela nova não sabe do assento)
+      levantar(j);
       j.iniciado = false;
       j.inventarioSujo = true;
       j.transitoSujo = true;
@@ -3413,6 +3971,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         vila,
         /** Spec 027: a Noite das Fantasias (null fora dela). */
         baile,
+        /** Spec 039: a camada dos tapetes. */
+        tapetes,
       };
     },
   };

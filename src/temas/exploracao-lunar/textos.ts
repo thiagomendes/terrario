@@ -1,4 +1,5 @@
 import type { TextosTema } from '../tipos';
+import { NOMES_MOVEIS } from '../../jogo/moveis';
 
 /** Nomes e textos da Exploração Lunar (mesmos ids; só o que o jogador lê muda). */
 export const TEXTOS_LUNARES: TextosTema = {
@@ -87,6 +88,8 @@ export const TEXTOS_LUNARES: TextosTema = {
     81: 'fardo de palha de estufa',
     82: 'portão de grade',
     83: 'portão de grade aberto',
+    // spec 039: os móveis (os mesmos nomes em todos os mundos)
+    ...NOMES_MOVEIS,
   },
   itens: {
     // spec 013: plantio

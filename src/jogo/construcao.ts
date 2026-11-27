@@ -1,3 +1,7 @@
+import { Bloco } from '../world/blocks';
+import { celulasDoMovel } from './moveis';
+import { celulasDoTapete } from './tapetes';
+
 export interface Ponto {
   x: number;
   y: number;
@@ -114,6 +118,19 @@ export interface Blueprint {
   d: number;
   /** Valores empacotados (bloco | meta << 8), em ordem y, z, x. */
   blocos: number[];
+  /**
+   * Spec 039 (T06): os tapetes inteiros dentro da região (a camada rente ao chão não é de
+   * célula): a âncora a partir do canto mínimo e a direção. Ausente nas cópias de antes.
+   */
+  tapetes?: { x: number; y: number; z: number; d: number }[];
+}
+
+/** Um tapete da camada (a âncora e a direção), para copiar e colar. */
+export interface TapeteCopiado {
+  x: number;
+  y: number;
+  z: number;
+  d: number;
 }
 
 export function copiar(
@@ -121,6 +138,8 @@ export function copiar(
   a: Ponto,
   b: Ponto,
   ler: (x: number, y: number, z: number) => number,
+  /** Spec 039: os tapetes da camada; entram os que ficam inteiros dentro da região. */
+  tapetes: Iterable<TapeteCopiado> = [],
 ): Blueprint | null {
   const { min, max, volume } = caixaEntre(a, b);
   if (volume > LIMITE_REGIAO) return null;
@@ -131,7 +150,62 @@ export function copiar(
   for (let y = 0; y < h; y++)
     for (let z = 0; z < d; z++)
       for (let x = 0; x < w; x++) blocos.push(ler(min.x + x, min.y + y, min.z + z));
-  return { nome, w, h, d, blocos };
+  const dentro = (c: Ponto) =>
+    c.x >= min.x && c.x <= max.x && c.y >= min.y && c.y <= max.y && c.z >= min.z && c.z <= max.z;
+  const copiados: TapeteCopiado[] = [];
+  for (const t of tapetes)
+    if (celulasDoTapete(t.x, t.y, t.z, t.d).every(dentro))
+      copiados.push({ x: t.x - min.x, y: t.y - min.y, z: t.z - min.z, d: t.d & 3 });
+  return { nome, w, h, d, blocos, ...(copiados.length ? { tapetes: copiados } : {}) };
+}
+
+/** A célula (x, z) do blueprint depois do giro `g` (0..3), a partir do canto mínimo. */
+function girarCelula(bp: Blueprint, x: number, z: number, g: number): [number, number] {
+  if (g === 1) return [bp.d - 1 - z, x];
+  if (g === 2) return [bp.w - 1 - x, bp.d - 1 - z];
+  if (g === 3) return [z, bp.w - 1 - x];
+  return [x, z];
+}
+
+/**
+ * Spec 039 (T06): os tapetes do blueprint colado com o canto mínimo em `origem`, girado como as
+ * células: a âncora gira junto e a direção vira `d - giro` (o tapete fica inteiro na região).
+ */
+export function colarTapetes(bp: Blueprint, origem: Ponto, giro = 0): TapeteCopiado[] {
+  const g = ((giro % 4) + 4) % 4;
+  return (bp.tapetes ?? []).map((t) => {
+    const [px, pz] = girarCelula(bp, t.x, t.z, g);
+    return { x: origem.x + px, y: origem.y + t.y, z: origem.z + pz, d: (t.d - g + 4) & 3 };
+  });
+}
+
+/**
+ * Spec 039 (T06): o móvel (ou o tapete) espelhado no plano x = eixo + 0,5: as células espelhadas,
+ * a direção que olhava para +x passa a olhar para -x (e o contrário), e a âncora é a célula que
+ * dá essas mesmas células, com a cabeceira da cama no lugar da cabeceira. Antes, o espelho
+ * repetia a âncora com a mesma direção, e o móvel crescia para o mesmo lado (deslocado).
+ */
+export function espelharMovel(
+  b: number,
+  x: number,
+  y: number,
+  z: number,
+  d: number,
+  eixo: number,
+): TapeteCopiado | null {
+  const celulas = (cx: number, cy: number, cz: number, dd: number) =>
+    b === Bloco.TAPETE ? celulasDoTapete(cx, cy, cz, dd) : celulasDoMovel(b, cx, cy, cz, dd);
+  const alvo = celulas(x, y, z, d).map((c) => ({ ...espelharX(c, eixo), parte: c.parte }));
+  if (!alvo.length) return null;
+  const d2 = (d & 3) === 1 ? 3 : (d & 3) === 3 ? 1 : d & 3;
+  const chaves = new Set(alvo.map((c) => `${c.x},${c.y},${c.z}`));
+  // a âncora espelhada primeiro (a cabeceira da cama); senão, qualquer célula que dê as mesmas
+  for (const c of alvo) {
+    const cs = celulas(c.x, c.y, c.z, d2);
+    if (cs.length === chaves.size && cs.every((q) => chaves.has(`${q.x},${q.y},${q.z}`)))
+      return { x: c.x, y: c.y, z: c.z, d: d2 };
+  }
+  return null;
 }
 
 /** Edições para colar o blueprint com o canto mínimo em `origem`, girado (0..3) em torno de y. */
@@ -148,14 +222,14 @@ export function colar(
       for (let x = 0; x < bp.w; x++) {
         const v = bp.blocos[(y * bp.d + z) * bp.w + x];
         if (pularAr && (v & 255) === 0) continue;
-        let px = x;
-        let pz = z;
-        if (g === 1) [px, pz] = [bp.d - 1 - z, x];
-        else if (g === 2) [px, pz] = [bp.w - 1 - x, bp.d - 1 - z];
-        else if (g === 3) [px, pz] = [z, bp.w - 1 - x];
+        const [px, pz] = girarCelula(bp, x, z, g);
+        // a direção (bits 0 e 1 do metadado: 0 +z, 1 +x, 2 -z, 3 -x) gira junto com as células.
+        // Cada giro leva +z para -x (a direção d vira d - 1); o resto do metadado (a parte do
+        // móvel, spec 039) fica. Antes, a direção girava para o outro lado: no giro de 90 graus
+        // a escada e a porta saíam viradas ao contrário, e o móvel saía da região
         const meta = (v >> 8) & 3;
         const resto = v & ~(3 << 8);
-        const giradoMeta = ((meta + g) & 3) << 8;
+        const giradoMeta = ((meta - g + 4) & 3) << 8;
         out.push({
           p: { x: origem.x + px, y: origem.y + y, z: origem.z + pz },
           v: resto | giradoMeta,

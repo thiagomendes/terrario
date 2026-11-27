@@ -25,6 +25,17 @@ export const SEM_DIR = 255;
 export interface Peca {
   b: number;
   d?: DirLocal;
+  /**
+   * Spec 039: a parte do móvel de várias células (a cama: 0 a cabeceira, 1 o pé), nos bits 2 a
+   * 4 do metadado, por cima da direção (que precisa vir junto).
+   */
+  parte?: number;
+}
+
+/** O metadado da peça (a direção e, se tiver, a parte), ou undefined sem direção. */
+export function metaDaPeca(peca: Peca): number | undefined {
+  if (peca.d === undefined) return undefined;
+  return peca.d | ((peca.parte ?? 0) << 2);
 }
 /** Legenda das camadas. O espaço (' ') nunca está nela: não mexe na célula. */
 export type Legenda = Readonly<Record<string, Peca>>;
@@ -170,7 +181,7 @@ export function pintarCamadas(
         if (c === ' ') continue;
         const peca = leg[c];
         if (!peca) throw new Error(`${p.modelo}: letra "${c}" sem legenda`);
-        por(p, s, f, y0 + k, peca.b, peca.d);
+        por(p, s, f, y0 + k, peca.b, metaDaPeca(peca));
       }
     });
   });
@@ -248,7 +259,7 @@ export function sorteio(semente: number, a: number, b: number, c: number): numbe
 export function plantaEmTexto(p: Planta, leg: Legenda): string[] {
   const inversa = new Map<string, string>();
   for (const [c, peca] of Object.entries(leg)) {
-    const k = `${peca.b}:${peca.d ?? SEM_DIR}`;
+    const k = `${peca.b}:${metaDaPeca(peca) ?? SEM_DIR}`;
     if (!inversa.has(k)) inversa.set(k, c);
   }
   const out: string[] = [];

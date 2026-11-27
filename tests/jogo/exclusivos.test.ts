@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import '../../src/temas/todos';
 import { obterTema, temasDisponiveis } from '../../src/temas';
-import { Bloco, REGISTRO_BLOCOS } from '../../src/world/blocks';
+import { Bloco, PRIMEIRO_BLOCO_039, REGISTRO_BLOCOS } from '../../src/world/blocks';
 import {
   alturaTerreno,
   definirEstiloMundo,
@@ -83,7 +83,9 @@ describe('o que é só da cidade', () => {
     expect([...EXCLUSIVOS_CIDADE.blocos].sort((a, b) => a - b)).toEqual(daCidade);
     expect(EXCLUSIVOS_CIDADE.itens).toContain(COLHER_PEDREIRO);
     for (const t of OUTROS) expect(t.exclusivos, t.id).toBeUndefined();
-    for (const b of REGISTRO_BLOCOS) expect(blocoExclusivo(b.id), b.nome).toBe(b.id >= 84);
+    // spec 039: os móveis (128 em diante) são de todos os mundos
+    for (const b of REGISTRO_BLOCOS)
+      expect(blocoExclusivo(b.id), b.nome).toBe(b.id >= 84 && b.id < PRIMEIRO_BLOCO_039);
   });
 
   it('a Vila Neon lista os blocos de rua da cidade e os dela (103 em diante), sem colher', () => {
@@ -110,9 +112,12 @@ describe('o que é só da cidade', () => {
     expect(blocoNoMundo(Bloco.ASFALTO, estiloCidade)).toBe(true);
     expect(blocoNoMundo(Bloco.TAPUME, estiloCidade)).toBe(true);
     for (const b of BLOCOS_SO_DA_VILA) expect(blocoNoMundo(b, estiloCidade), String(b)).toBe(false);
-    // o Rancho: nada disso
-    for (const b of REGISTRO_BLOCOS.filter((d) => d.id >= 84))
+    // o Rancho: nada disso (os móveis da spec 039, sim: são de todos)
+    for (const b of REGISTRO_BLOCOS.filter((d) => d.id >= 84 && d.id < PRIMEIRO_BLOCO_039))
       expect(blocoNoMundo(b.id, rancho), b.nome).toBe(false);
+    for (const b of REGISTRO_BLOCOS.filter((d) => d.id >= PRIMEIRO_BLOCO_039))
+      for (const e of [VILA.mundo, estiloCidade, rancho])
+        expect(blocoNoMundo(b.id, e), b.nome).toBe(true);
     // os blocos de todo tema continuam em todo mundo
     for (const e of [VILA.mundo, estiloCidade, rancho])
       expect(blocoNoMundo(Bloco.TABUAS, e)).toBe(true);
@@ -275,7 +280,10 @@ describe('o que é só da cidade', () => {
  * blocos de rua da Cidade e da Vila (tem janela, toldinho e caminho próprios).
  */
 describe('o que é só da Noite das Fantasias', () => {
-  const daFesta = REGISTRO_BLOCOS.filter((b) => b.id >= 117).map((b) => b.id);
+  // (os móveis da spec 039 vêm depois e são de todos os mundos)
+  const daFesta = REGISTRO_BLOCOS.filter((b) => b.id >= 117 && b.id < PRIMEIRO_BLOCO_039).map(
+    (b) => b.id,
+  );
 
   it('o tema lista os onze blocos dela (117 a 127), e nada de rua nem da Vila', () => {
     expect(BAILE.exclusivos).toBe(EXCLUSIVOS_BAILE);

@@ -6,9 +6,17 @@
  */
 import { Bloco } from './blocks';
 import { hash2 } from './noise';
-import { BAU_CELEIRO, noLote, portaoDoCercado, type Lote, type PlanoPovoado } from './povoado';
+import {
+  BAU_CELEIRO,
+  noLote,
+  paraAPorta,
+  portaoDoCercado,
+  type Lote,
+  type PlanoPovoado,
+} from './povoado';
+import { pintarCama } from '../jogo/moveis';
 
-type Pincel = (wx: number, y: number, wz: number, id: number) => void;
+type Pincel = (wx: number, y: number, wz: number, id: number, meta?: number) => void;
 
 /** Plantas maduras da lavoura (o último estágio de cada uma). */
 const MADURAS = [Bloco.TRIGO_3, Bloco.MILHO_3, Bloco.ABOBOREIRA_3] as const;
@@ -17,7 +25,10 @@ export function construirLoteDoSitio(p: PlanoPovoado, l: Lote, em: Pincel): void
   /** Bloco em (s, f) do lote, `y` acima do chão. */
   const q = (s: number, f: number, y: number, id: number) => {
     const [x, z] = noLote(l, s, f);
-    em(x, l.h + y, z, id);
+    // spec 039: a cama é a nova, de duas células: a cabeceira em (s, f) e o pé para a porta
+    // (em f - 1, sempre livre nas três casas que têm cama)
+    if (id === Bloco.CAMA) pintarCama(em, x, l.h + y, z, paraAPorta(l));
+    else em(x, l.h + y, z, id);
   };
   switch (l.uso) {
     case 'fazenda':

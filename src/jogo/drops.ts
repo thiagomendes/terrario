@@ -48,6 +48,11 @@ export function dropsDoBloco(bloco: number, rng: Gerador, coleta = true): Drop[]
       return um(Bloco.PORTEIRA);
     case Bloco.FORNALHA_ACESA:
       return um(Bloco.FORNALHA);
+    // spec 039: o móvel aceso volta apagado (um item só, por mais células que tenha)
+    case Bloco.ABAJUR_ACESO:
+      return um(Bloco.ABAJUR);
+    case Bloco.CRIADO_MUDO_ACESO:
+      return um(Bloco.CRIADO_MUDO);
     case Bloco.FOLHAGEM:
     case Bloco.FOLHAS_BETULA:
     case Bloco.FOLHAS_PINHO:

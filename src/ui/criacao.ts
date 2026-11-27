@@ -13,9 +13,10 @@ import {
   type Grade,
   type Receita,
 } from '../jogo/receitas';
-import { iconeDoItem } from './icones';
+import { EVENTO_ICONES, iconeDoItem } from './icones';
 import { rolarAoFocar, type InventarioUI } from './inventario';
 import { trocar } from './conteiner';
+import { criarAbasCategoria } from './abasCategoria';
 
 export const CSS_CRIACAO = `
 /* criação e livro são seções do inventário: sem fundo nem sombra próprios */
@@ -32,7 +33,10 @@ export const CSS_CRIACAO = `
   min-height: 42px; padding: 6px 14px; border: 0; border-radius: 14px; box-sizing: border-box; width: 100%;
   background: var(--poco); color: var(--tinta); font: 700 0.95rem var(--jogo); box-shadow: var(--sombra-poco);
 }
-.livro .lista { display: grid; gap: 6px; max-height: calc(var(--slot) * 4.6); overflow-y: auto; padding: 2px 4px 4px 0; overscroll-behavior: contain; touch-action: pan-y; }
+.livro .lista { display: grid; gap: 6px; max-height: calc(var(--slot) * 4.6); overflow-y: auto; padding: 2px 4px 22px 0; overscroll-behavior: contain; touch-action: pan-y;
+  /* spec 039: o cartão de baixo some num degradê (lê como "tem mais", não como cortado) */
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent); }
 .receita {
   display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: center; text-align: left;
   padding: 6px 10px; border: 0; border-radius: 14px; background: var(--poco); box-shadow: var(--sombra-poco);
@@ -129,13 +133,24 @@ export function criarCriacao(
   rolarAoFocar(busca);
   const lista = document.createElement('div');
   lista.className = 'lista';
-  livro.append(busca, lista);
+  // spec 039: as abas de ícone das categorias (as mesmas do catálogo do criativo)
+  const abas = criarAbasCategoria(() => renderLivro());
+  livro.append(abas.raiz, busca, lista);
   botaoLivro.addEventListener('click', (e) => {
     e.preventDefault();
     livro.hidden = !livro.hidden;
     renderLivro();
   });
   busca.addEventListener('input', () => renderLivro());
+  // spec 039: os ícones de brinquedo chegam aos poucos: o livro aberto troca as figuras no lugar
+  // (sem refazer a lista: um toque no meio não se perde)
+  window.addEventListener(EVENTO_ICONES, () => {
+    // a grade e o resultado também, no lugar (o sofá montado mostrava o cubo de pixel)
+    desenharGrade();
+    if (livro.hidden) return;
+    for (const i of lista.querySelectorAll<HTMLImageElement>('img[data-icone]'))
+      i.src = iconeDoItem(i.dataset.icone!);
+  });
   ui.areaExtra.append(raiz, livro);
 
   let celulas: HTMLButtonElement[] = [];
@@ -154,11 +169,14 @@ export function criarCriacao(
 
   const atual = () => encontrarReceita(grade, lado);
 
-  function render(): void {
+  function desenharGrade(): void {
     celulas.forEach((c, i) => ui.desenharSlot(c, grade[i]));
     const r = atual();
     ui.desenharSlot(resultado, r ? { item: r.resultado.item, qtd: r.resultado.qtd } : null);
     resultado.classList.toggle('pronto', !!r);
+  }
+  function render(): void {
+    desenharGrade();
     if (!livro.hidden) renderLivro();
   }
 
@@ -170,7 +188,10 @@ export function criarCriacao(
     const termo = busca.value.trim().toLowerCase();
     lista.replaceChildren();
     // spec 014: receitas com algo só de outro tema não aparecem neste mundo
-    const itens = RECEITAS.filter((r) => receitaNoMundo(r, estiloMundo()))
+    const aba = abas.atual();
+    const itens = RECEITAS.filter(
+      (r) => receitaNoMundo(r, estiloMundo()) && (!aba || r.categoria === aba),
+    )
       .map((r) => ({ r, def: obterItem(r.resultado.item) }))
       .filter(({ def }) => !!def && (!termo || def.nome.toLowerCase().includes(termo)))
       .map((x) => ({ ...x, ok: podeFazer(x.r, contar) && (!x.r.mesa || lado === 3) }))
@@ -182,6 +203,7 @@ export function criarCriacao(
       el.dataset.receita = r.id;
       const img = document.createElement('img');
       img.src = iconeDoItem(r.resultado.item);
+      img.dataset.icone = r.resultado.item;
       img.alt = '';
       const txt = document.createElement('div');
       txt.append(`${def!.nome}${r.resultado.qtd > 1 ? ` ×${r.resultado.qtd}` : ''}`);
@@ -197,7 +219,10 @@ export function criarCriacao(
       for (const c of lista2) {
         const i = document.createElement('img');
         const exemplo = c.startsWith('#') ? TAGS[c]?.[0] : c;
-        if (exemplo) i.src = iconeDoItem(exemplo);
+        if (exemplo) {
+          i.src = iconeDoItem(exemplo);
+          i.dataset.icone = exemplo;
+        }
         i.title = c.startsWith('#') ? (NOMES_TAG[c] ?? c) : (obterItem(c)?.nome ?? c);
         ingr.appendChild(i);
       }

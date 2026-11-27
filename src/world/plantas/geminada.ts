@@ -63,8 +63,8 @@ const TERREO: Camada[] = [
     'M......M',
     'M.....EM',
     'M......M',
-    'M......M',
-    'MBKX...M',
+    'Mr.....M',
+    'MRKX...M',
     'MMJJJJMM',
   ],
   [
@@ -112,7 +112,7 @@ const ANDAR: Camada[] = [
     'M.....EM',
     'M......M',
     'MK.....M',
-    'MB.....M',
+    'MBb....M',
     'MMJJJJMM',
   ],
   [

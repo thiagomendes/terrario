@@ -1,5 +1,5 @@
-import { Bloco } from '../world/blocks';
-import { idDoBloco } from './itens';
+import { Bloco, obterBloco } from '../world/blocks';
+import { idDoBloco, type DefItem } from './itens';
 import type { Pilha } from './inventario';
 
 const b = (id: number) => idDoBloco(id);
@@ -27,8 +27,23 @@ export interface Receita {
   resultado: { item: string; qtd: number };
   /** Só na mesa de trabalho (precisa de 3x3). */
   mesa?: boolean;
-  categoria: 'blocos' | 'ferramentas' | 'decoracao' | 'comida' | 'materiais' | 'luz';
+  categoria: CategoriaReceita;
 }
+
+/**
+ * As categorias do livro de receitas, na ordem das abas (spec 039: a "casa", com os móveis e a
+ * cama). As abas do catálogo do criativo são as mesmas, com o "tudo" na frente.
+ */
+export const CATEGORIAS_RECEITA = [
+  'blocos',
+  'casa',
+  'comida',
+  'ferramentas',
+  'luz',
+  'decoracao',
+  'materiais',
+] as const;
+export type CategoriaReceita = (typeof CATEGORIAS_RECEITA)[number];
 
 const MATERIAIS_FERRAMENTA: [string, string][] = [
   ['madeira', '#tabuas'],
@@ -265,13 +280,78 @@ export const RECEITAS: readonly Receita[] = [
     mesa: true,
     categoria: 'decoracao',
   },
+  // spec 039: os móveis da casa (as receitas do estudo, seção 8), todos na mesa de trabalho; a
+  // forma da grade lembra o móvel. A cama mantém a de hoje e passa para a "casa"
   {
     id: 'cama',
     forma: ['LLL', 'TTT'],
     chaves: { L: '#la', T: '#tabuas' },
     resultado: { item: b(Bloco.CAMA), qtd: 1 },
     mesa: true,
-    categoria: 'decoracao',
+    categoria: 'casa',
+  },
+  {
+    // os braços e o assento de lã na base de madeira
+    id: 'sofa',
+    forma: ['L L', 'LLL', 'TTT'],
+    chaves: { L: '#la', T: '#tabuas' },
+    resultado: { item: b(Bloco.SOFA), qtd: 1 },
+    mesa: true,
+    categoria: 'casa',
+  },
+  {
+    // a cadeira de lado: o encosto, o assento e os pés
+    id: 'cadeira',
+    forma: ['T  ', 'TTT', 'T T'],
+    chaves: { T: '#tabuas' },
+    resultado: { item: b(Bloco.CADEIRA), qtd: 1 },
+    mesa: true,
+    categoria: 'casa',
+  },
+  {
+    // uma fileira de lã, rente como o tapete
+    id: 'tapete',
+    forma: ['LLL'],
+    chaves: { L: '#la' },
+    resultado: { item: b(Bloco.TAPETE), qtd: 1 },
+    mesa: true,
+    categoria: 'casa',
+  },
+  {
+    // a cúpula de lã, a luz (a tocha) e o pé
+    id: 'abajur',
+    forma: ['L', 'A', 'T'],
+    chaves: { L: '#la', A: b(Bloco.TOCHA), T: '#tabuas' },
+    resultado: { item: b(Bloco.ABAJUR), qtd: 1 },
+    mesa: true,
+    categoria: 'casa',
+  },
+  {
+    // um baú pequeno com o tampo
+    id: 'criado_mudo',
+    forma: ['T', 'B'],
+    chaves: { T: '#tabuas', B: b(Bloco.BAU) },
+    resultado: { item: b(Bloco.CRIADO_MUDO), qtd: 1 },
+    mesa: true,
+    categoria: 'casa',
+  },
+  {
+    // dois baús em pé, as duas portas
+    id: 'guarda_roupa',
+    forma: ['TT', 'BB', 'TT'],
+    chaves: { T: '#tabuas', B: b(Bloco.BAU) },
+    resultado: { item: b(Bloco.GUARDA_ROUPA), qtd: 1 },
+    mesa: true,
+    categoria: 'casa',
+  },
+  {
+    // a torneira de ferro (de verdade: só depois da primeira caverna) em cima da bancada de pedra
+    id: 'pia',
+    forma: [' F ', 'PPP'],
+    chaves: { F: 'lingote_ferro', P: '#pedra' },
+    resultado: { item: b(Bloco.PIA), qtd: 1 },
+    mesa: true,
+    categoria: 'casa',
   },
   {
     id: 'ensopado',
@@ -327,6 +407,36 @@ TAGS['#la'] = [
   b(Bloco.LA_ROXA),
   b(Bloco.LA_PRETA),
 ];
+
+/**
+ * Spec 039: a categoria de um item, para as abas do catálogo do criativo (as mesmas do livro):
+ * a da receita que o faz; o item sem receita vai para a do seu tipo, por esta tabela (o móvel na
+ * "casa", o bloco que ilumina na "luz", a planta na "decoração").
+ */
+const CATEGORIA_DO_TIPO: Readonly<Record<DefItem['tipo'], CategoriaReceita>> = {
+  bloco: 'blocos',
+  ferramenta: 'ferramentas',
+  comida: 'comida',
+  material: 'materiais',
+};
+let categoriaDaReceita: Map<string, CategoriaReceita> | null = null;
+export function categoriaDoItem(def: DefItem): CategoriaReceita {
+  if (!categoriaDaReceita) {
+    categoriaDaReceita = new Map();
+    for (const r of RECEITAS)
+      if (!categoriaDaReceita.has(r.resultado.item))
+        categoriaDaReceita.set(r.resultado.item, r.categoria);
+  }
+  const daReceita = categoriaDaReceita.get(def.id);
+  if (daReceita) return daReceita;
+  if (def.bloco !== undefined) {
+    const bl = obterBloco(def.bloco);
+    if (bl?.forma === 'movel' || bl?.forma === 'cama') return 'casa';
+    if ((bl?.luz ?? 0) > 0) return 'luz';
+    if (bl?.planta) return 'decoracao';
+  }
+  return CATEGORIA_DO_TIPO[def.tipo] ?? 'materiais';
+}
 
 export function aceita(chave: string, item: string | undefined): boolean {
   if (!item) return false;

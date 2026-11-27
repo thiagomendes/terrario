@@ -1,4 +1,5 @@
 import type { TextosTema } from '../tipos';
+import { NOMES_MOVEIS } from '../../jogo/moveis';
 
 /** Ferramentas da roça: picareta, machado, pá, facão (espada) e enxada nos 5 níveis. */
 const NIVEIS = {
@@ -114,6 +115,8 @@ export const TEXTOS_RANCHO: TextosTema = {
     81: 'fardo de feno',
     82: 'porteira',
     83: 'porteira aberta',
+    // spec 039: os móveis (os mesmos nomes em todos os mundos)
+    ...NOMES_MOVEIS,
   },
   itens: {
     graveto: 'Graveto',

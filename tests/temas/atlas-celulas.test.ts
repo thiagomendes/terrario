@@ -114,10 +114,13 @@ describe('spec 027: os tiles dos blocos 117 em diante a partir da célula 128', 
     vi.resetModules();
     const { NOMES_TILES, TILES_027, PRIMEIRA_CELULA_027, indiceDoTile, TILE_PORTA_CIMA, TILES_PECAS } =
       await import('../../src/art/tiles');
-    const { REGISTRO_BLOCOS, PRIMEIRO_BLOCO_027 } = await import('../../src/world/blocks');
+    const { REGISTRO_BLOCOS, PRIMEIRO_BLOCO_027, PRIMEIRO_BLOCO_039 } =
+      await import('../../src/world/blocks');
     expect(PRIMEIRA_CELULA_027).toBe(128);
-    // os onze blocos novos e os 14 tiles deles, só daqui
-    expect(REGISTRO_BLOCOS.filter((b) => b.id >= PRIMEIRO_BLOCO_027).map((b) => b.id)).toEqual([
+    // os onze blocos novos e os 14 tiles deles, só daqui (spec 039: os móveis vêm depois, com
+    // os tiles de blocos que já existem: nenhum tile novo)
+    const da027 = (b: { id: number }) => b.id >= PRIMEIRO_BLOCO_027 && b.id < PRIMEIRO_BLOCO_039;
+    expect(REGISTRO_BLOCOS.filter(da027).map((b) => b.id)).toEqual([
       117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127,
     ]);
     expect(TILES_027.length).toBe(14);

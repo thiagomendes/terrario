@@ -1,0 +1,66 @@
+{
+ "sofa": {
+  "malhas": 1,
+  "triangulos": 1384
+ },
+ "abajur": {
+  "malhas": 3,
+  "triangulos": 196
+ },
+ "som": {
+  "malhas": 7,
+  "triangulos": 1024
+ },
+ "tv": {
+  "malhas": 2,
+  "triangulos": 1046
+ },
+ "tapete": {
+  "malhas": 2,
+  "triangulos": 732
+ },
+ "geladeira": {
+  "malhas": 4,
+  "triangulos": 1548
+ },
+ "pia": {
+  "malhas": 3,
+  "triangulos": 1280
+ },
+ "fogao": {
+  "malhas": 6,
+  "triangulos": 1608
+ },
+ "mesa": {
+  "malhas": 2,
+  "triangulos": 1100
+ },
+ "cadeira1": {
+  "malhas": 1,
+  "triangulos": 600
+ },
+ "cadeira2": {
+  "malhas": 1,
+  "triangulos": 600
+ },
+ "cadeira3": {
+  "malhas": 1,
+  "triangulos": 600
+ },
+ "cama": {
+  "malhas": 2,
+  "triangulos": 1524
+ },
+ "criado": {
+  "malhas": 2,
+  "triangulos": 704
+ },
+ "guarda": {
+  "malhas": 3,
+  "triangulos": 1808
+ },
+ "total": {
+  "malhas": 40,
+  "triangulos": 15754
+ }
+}

@@ -33,6 +33,13 @@ export class PluginMundo extends MaterialPluginBase {
    */
   verdeNoite = 0;
   /**
+   * Spec 039 (portão visual): a luz mínima de noite debaixo de teto (0 = nada, o de sempre). No
+   * tema que apaga o chão de noite (o `pisoNoite` da Vila Neon), dentro de casa ficava quase
+   * preto com tudo apagado; isto dá às paredes e ao chão de dentro (onde a luz do céu não chega
+   * direto) um morno fraquinho. Ao ar livre (o céu inteiro) e nos outros temas não muda nada.
+   */
+  noiteDentro = 0;
+  /**
    * Spec 026 (parte 3): a Casa anos 80 por dentro. `casaDentro` é a caixa de dentro da casa no
    * chão (x0, z0, x1, z1, mundo): ali a luz do dia entra como lá fora (o telhado é de blocos e
    * escureceria a sala) e, de noite, o abajur deixa a sala morna. `casaCorte` é a caixa do
@@ -100,6 +107,7 @@ export class PluginMundo extends MaterialPluginBase {
         { name: 'tempoMundo', size: 1, type: 'float' },
         { name: 'pisoCeu', size: 1, type: 'float' },
         { name: 'verdeNoite', size: 1, type: 'float' },
+        { name: 'noiteDentro', size: 1, type: 'float' },
         { name: 'blocosOcultos', size: 4, type: 'vec4', arraySize: 8 },
         { name: 'casaDentro', size: 4, type: 'vec4' },
         { name: 'casaCorte', size: 4, type: 'vec4' },
@@ -110,7 +118,7 @@ export class PluginMundo extends MaterialPluginBase {
       vertex:
         'uniform float ventoFolhas;\nuniform float tempoMundo;\nuniform vec4 blocosOcultos[8];',
       fragment:
-        'uniform float pisoCeu;\nuniform float verdeNoite;\nuniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;\nuniform float outono;\nuniform float inverno;\nuniform float molhado;\nuniform vec4 casaDentro;\nuniform vec4 casaY;\nuniform vec4 casaCorte;\nuniform vec4 casaParede[5];\nuniform vec4 casaParedeK[2];',
+        'uniform float pisoCeu;\nuniform float verdeNoite;\nuniform float noiteDentro;\nuniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;\nuniform float outono;\nuniform float inverno;\nuniform float molhado;\nuniform vec4 casaDentro;\nuniform vec4 casaY;\nuniform vec4 casaCorte;\nuniform vec4 casaParede[5];\nuniform vec4 casaParedeK[2];',
     };
   }
 
@@ -130,6 +138,7 @@ export class PluginMundo extends MaterialPluginBase {
     uniformBuffer.updateFloat('tempoMundo', this.tempoMundo);
     uniformBuffer.updateFloat('pisoCeu', this.pisoCeu);
     uniformBuffer.updateFloat('verdeNoite', this.verdeNoite);
+    uniformBuffer.updateFloat('noiteDentro', this.noiteDentro);
     uniformBuffer.updateFloatArray('blocosOcultos', this.ocultos);
     uniformBuffer.updateFloat4(
       'casaDentro',
@@ -296,6 +305,10 @@ export class PluginMundo extends MaterialPluginBase {
           color.rgb = color.rgb * fCeu + baseColor.rgb * corTocha * (1.0 - fCeu * 0.6) + baseColor.rgb * 0.03;
           // e de noite o abajur deixa a sala morna (nunca o escuro da rua)
           color.rgb += baseColor.rgb * vec3(1.0, 0.8, 0.58) * 0.42 * casaY.w * naCasa;
+          // spec 039: de noite, debaixo de teto (a luz do céu não chega direto: dentro de casa),
+          // nunca o escuro total. Debaixo da copa das árvores (uma ou duas folhas) e ao ar livre, nada
+          if (noiteDentro > 0.0)
+            color.rgb += baseColor.rgb * vec3(1.0, 0.86, 0.7) * noiteDentro * (1.0 - smoothstep(0.75, 0.88, ceuL)) * (1.0 - naCasa);
           // spec 026: de noite o verde apaga (o gramado vira roxo-escuro); onde a lâmpada bate
           // ele fica um pouco, e o neon (claro) não muda
           if (verdeNoite > 0.0) {

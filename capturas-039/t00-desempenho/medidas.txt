@@ -1,0 +1,44 @@
+Spec 039, T00: medidas de antes (27 nov 2026, 09h27 a 09h33 de Brasília)
+main 1eeca93a, worktree temporário; suíte e2e/desempenho-039.spec.ts
+Placa (scripts/e2e-gpu.sh, RTX 3060 pela ponte do WSL), 1 trabalhador, sem vsync
+Celular em pé 390x844, toque, CPU 4x; cada medida numa página nova; 3 rodadas alternadas
+Medida: 8 s girando a câmera devagar (quadros, p95, maior quadro, chamadas por quadro) e 2 s parada (chamadas paradas)
+
+  E2E_ENV="-u 1000:1000 -e HOME=/tmp -e MEDIR_DESEMPENHO=1 -e E2E_SEM_VSYNC=1" \
+    scripts/e2e-gpu.sh e2e/desempenho-039.spec.ts --workers 1 --trace off
+
+Por rodada (quadros/s, p95 ms, maior ms, chamadas girando, chamadas paradas, malhas, ativas)
+cenário          rodada  fps   p95   maior  cham.  parada  malhas  ativas
+casa-vazia       1       65,9  19,5  42     108    116     839     58
+casa-mobiliada   1       47,4  27,4  44     108    116     839     58
+cidade           1       61,1  22,3  30     115    116     616     77
+povoado          1       47,1  35,7  125    142    126     539     71
+casa-vazia       2       50,6  27,6  56     108    117     839     58
+casa-mobiliada   2       66,0  19,7  44     108    117     839     58
+cidade           2       61,5  20,7  29     113    116     616     77
+povoado          2       69,3  18,3  77     142    126     529     71
+casa-vazia       3       64,6  20,0  46     108    117     839     58
+casa-mobiliada   3       63,8  20,6  50     108    117     839     58
+cidade           3       64,5  19,8  26     113    116     616     77
+povoado          3       69,3  18,3  87     146    130     559     75
+
+Resumo (mediana das 3; maior = o maior de todas)
+cenário          fps   p95   cham.  parada  maior
+casa-vazia       64,6  20,0  108    117     56
+casa-mobiliada   63,8  20,6  108    117     50    (na main fica vazia: a régua)
+cidade           61,5  20,7  113    116     30    (144 prédios, 437 células de cama na vista)
+povoado          69,3  18,3  142    126     125   (Doce Reino, povoado -1,2, 4 moradores, 4 camas)
+
+Ruído: uma página em quatro caiu para 47 a 50 quadros na mesma cena (casa-mobiliada 1,
+casa-vazia 2, povoado 1); as outras ficam em 61 a 69. A meta de 5% só vale pela mediana e com a
+main e o ramo alternados na mesma sessão. A suíte passou a gravar a escala da resolução e o
+alívio de efeitos (depois desta rodada), para explicar a queda na T08.
+
+Prova no ramo feat/039-moveis (731f6a18 + mudanças do engenheiro), 1 rodada, só a casa:
+casa-vazia       65,5  19,3  45  108  116  839  58  escala 0,75, alívio 0
+casa-mobiliada   70,5  18,0  39  109  117  840  59  escala 0,75, alívio 0
+os oito móveis entraram (guarda-roupa, pia, sofá, criado-mudo, abajur, cama, cadeira pelo lote;
+o tapete pelo colocar). O desenho dos móveis (T05) ainda não existe: não vale como medida.
+
+Tempos: a main inteira 5,5 min (13 testes, com a compilação); a prova no ramo 1 min.
+Defeitos achados: nenhum.

@@ -599,6 +599,23 @@ export function noLote(l: Lote, s: number, f: number): [number, number] {
   }
 }
 
+/**
+ * Spec 039: a direção do mundo (0 +z, 1 +x, 2 -z, 3 -x) do fundo do lote para a porta (o `-f`
+ * de `noLote`). A cama dos povoados e do sítio olha para lá: o pé fica para o lado da porta.
+ */
+export function paraAPorta(l: Pick<Lote, 'porta'>): number {
+  switch (l.porta) {
+    case 'n':
+      return 2;
+    case 's':
+      return 0;
+    case 'o':
+      return 3;
+    default:
+      return 1;
+  }
+}
+
 /** O baú do celeiro (sementes e enxada): no fundo, à direita de quem entra. */
 export const BAU_CELEIRO: [number, number] = [4, 5];
 

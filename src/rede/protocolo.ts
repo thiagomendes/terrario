@@ -81,8 +81,18 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * `andar`. `tests/rede/versao-038.test.ts` faz o mesmo com as regras da `main` a217838
  * (`congelado037.ts`): o servidor e o site de antes tiram só a moto, e o perfil a guarda em
  * "depois" até o site de agora voltar.
+ *
+ * 19: spec 039, os móveis da parte 1 (os blocos 128 a 136; o `colocar` do móvel com as outras
+ * células nos `extras`, até 5, conferidas pela tabela de `jogo/moveis.ts`, e a parte no
+ * metadado; o `quebrar` ganhou o `tapete`; o quadro ganhou a camada dos tapetes, `tapetes` e
+ * `tapetesMudados`; o `editar` do criativo leva o móvel inteiro; a cama de duas células na
+ * geração e a conversão das camas de antes; sentar e deitar, com o `sentado` do jogador visto e
+ * os eventos `sentou` e `levantou`, e a noite que só passa com todos deitados: a 039 sai inteira
+ * nesta versão). Não há volta: um servidor 18 leria cada parte do móvel como um bloco inteiro, e
+ * um navegador 18 não veria os tapetes nem teria os blocos novos. O servidor publica antes do
+ * site. A 027 (partes 2 e 3) fica com a 20 e a 21.
  */
-export const VERSAO_REDE = 18;
+export const VERSAO_REDE = 19;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 

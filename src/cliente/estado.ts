@@ -15,6 +15,7 @@ import type { EstadoSobrevivencia } from '../jogo/sobrevivencia';
 import type { Comando, EventoNucleo, Mensagem, Quadro, SalvoNucleo } from '../nucleo/protocolo';
 import type { Conexao } from './conexao';
 import { indiceDonoDe } from '../world/edicoes';
+import { criarCamadaTapetes, type TapeteMudado } from '../jogo/tapetes';
 import { criarReplicaVeiculos } from './veiculos';
 import { criarReplicaVila } from './vila';
 import { criarReplicaBaile } from './baile';
@@ -114,6 +115,11 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
   let conteiner: ConteinerReplica | null = null;
   let ultimoAckTransacao = 0;
 
+  /** Spec 039: a camada dos tapetes como o núcleo mandou (com as previsões por cima). */
+  const tapetes = criarCamadaTapetes();
+  /** Âncoras de tapete com previsão ainda não confirmada (chave → id do comando). */
+  const pendentesTapete = new Map<string, number>();
+
   /** `dono`: índice do dono previsto (quem coloca prevê que é dele; sem: fica o da célula). */
   function prever(
     id: number,
@@ -139,6 +145,18 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     for (const b of q.blocos ?? []) {
       if (pendentes.has(celula(b.x, b.y, b.z))) continue;
       op.aplicarBloco(b.x, b.y, b.z, b.v & 255, (b.v >> 8) & 255, indiceDonoDe(b.v));
+    }
+    // spec 039: a camada dos tapetes (inteira no primeiro quadro; depois, o que mudou)
+    for (const [k, id] of pendentesTapete) if (id <= q.ack) pendentesTapete.delete(k);
+    if (q.primeiro) {
+      // a sequência recomeçou: o que estava previsto ficou para trás (a camada vem inteira)
+      pendentesTapete.clear();
+      tapetes.trocar(q.tapetes ?? []);
+    }
+    for (const t of q.tapetesMudados ?? []) {
+      if (pendentesTapete.has(celula(t.x, t.y, t.z))) continue;
+      if ('fora' in t) tapetes.tirar(t.x, t.y, t.z);
+      else tapetes.impor(t);
     }
     if (q.criaturas) criaturas.receber(q.criaturas);
     if (q.itens) itens.receber(q.itens);
@@ -288,6 +306,17 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     enviar,
     proximoId,
     prever,
+    /** Spec 039: a camada dos tapetes (o desenho lê; `versao` sobe a cada mudança). */
+    tapetes,
+    /**
+     * Spec 039: prevê na tela um tapete posto (ou o da âncora tirado) que o núcleo ainda vai
+     * confirmar; até lá, o quadro não mexe nessa âncora.
+     */
+    preverTapete(id: number, t: TapeteMudado): void {
+      pendentesTapete.set(celula(t.x, t.y, t.z), id);
+      if ('fora' in t) tapetes.tirar(t.x, t.y, t.z);
+      else tapetes.impor(t);
+    },
     sincronia,
     criaturas,
     itens,

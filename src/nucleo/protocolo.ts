@@ -24,6 +24,7 @@ import type { EventoVila, VilaVista } from './vila';
 import type { EventoBaile } from './baile';
 import type { BaileVista } from '../jogo/baile';
 import type { BateVista } from '../jogo/bate';
+import type { Tapete, TapeteMudado } from '../jogo/tapetes';
 
 /** Sobe quando uma mensagem muda de formato (cliente e servidor precisam concordar). */
 export const VERSAO_PROTOCOLO = 1;
@@ -94,7 +95,19 @@ export type Comando = ComandoSemSeq & { seq?: number };
 
 type ComandoSemSeq =
   | ({ t: 'jogador' } & Telemetria)
-  | { t: 'quebrar'; id: number; x: number; y: number; z: number; slot: number }
+  | {
+      t: 'quebrar';
+      id: number;
+      x: number;
+      y: number;
+      z: number;
+      slot: number;
+      /**
+       * Spec 039: quebrar o tapete da célula (a camada rente ao chão), e não o bloco dela. Só
+       * vale onde não há nada em cima; sai o tapete inteiro.
+       */
+      tapete?: true;
+    }
   /** Enxada (no slot) na grama ou na terra: vira terra arada (spec 013). */
   | { t: 'arar'; id: number; x: number; y: number; z: number; slot: number }
   | {
@@ -106,7 +119,12 @@ type ComandoSemSeq =
       bloco: number;
       meta: number;
       slot: number;
-      /** Partes extras do mesmo bloco (metade de cima da porta). */
+      /**
+       * Partes extras do mesmo bloco: a metade de cima da porta; spec 039, as outras células
+       * do móvel (até 5, as do tapete). O núcleo calcula a lista dele pela tabela de
+       * `jogo/moveis.ts` e confere: qualquer diferença é recusa. O `meta` do móvel é o da âncora
+       * (só a direção, parte 0).
+       */
       extras?: Pos[];
     }
   /** Vários blocos de uma vez (ferramentas de construção, desfazer, espelho): só no criativo. */
@@ -312,6 +330,27 @@ export interface JogadorVisto {
   acoes?: [number, number, number];
   /** Spec 032: o que ele está comendo (durante a refeição): o amigo vê as mordidas certas. */
   come?: string;
+  /** Spec 039 (T04): sentado num móvel (ou deitado na cama), também para quem entra no meio. */
+  sentado?: AssentoVisto;
+}
+
+/**
+ * Spec 039 (T04): o assento do móvel como a tela desenha (a pose): qual móvel, a célula do
+ * assento (no sofá deitado e na cama, a âncora), a direção do móvel (a de `jogo/moveis.ts`: a
+ * frente do móvel olha para quem o pôs), o ponto do corpo (x, z: no sofá deitado e na cama, o
+ * meio do móvel inteiro) e se é deitado. As poses: sentado na cadeira ou no sofá; deitado na
+ * cama (de costas, com o edredom); deitado no sofá, encolhidinho (decisão do dono, 27 nov: à
+ * noite, o sofá deita e conta para o dormir).
+ */
+export interface AssentoVisto {
+  movel: 'cama' | 'sofa' | 'cadeira';
+  x: number;
+  y: number;
+  z: number;
+  d: number;
+  px: number;
+  pz: number;
+  deitado?: true;
 }
 
 /** Criatura como o cliente a desenha. */
@@ -425,6 +464,13 @@ export type EventoNucleo =
   | { e: 'relampago'; atrasoTrovao: number }
   | { e: 'sono'; dormiu: boolean }
   | { e: 'acordou' }
+  /**
+   * Spec 039 (T04): este jogador sentou no móvel (ou deitou na cama): o assento e, se estava no
+   * brinquedo de andar, `desceu` (a tela tira o brinquedo). Levanta com `levantou` (andou, pulou,
+   * o móvel saiu, tocou de novo, renasceu ou voltou para casa).
+   */
+  | ({ e: 'sentou'; desceu?: true } & AssentoVisto)
+  | { e: 'levantou' }
   | { e: 'trocou'; profissao: Profissao; troca: string }
   | { e: 'entrou'; id: string; apelido: string }
   | { e: 'saiu'; id: string; apelido: string }
@@ -536,6 +582,16 @@ export interface Quadro {
    * último controle `guiar` deste jogador que o núcleo já usou.
    */
   bate?: BateVista;
+  /**
+   * Spec 039: a camada dos tapetes inteira, no primeiro quadro (sem o campo, nenhum tapete: o
+   * cliente começa a camada do zero a cada primeiro quadro).
+   */
+  tapetes?: Tapete[];
+  /**
+   * Spec 039: o que mudou na camada dos tapetes desde o último quadro, na ordem (o posto, ou a
+   * âncora do que saiu), com as correções deste jogador no fim (o tapete previsto e recusado).
+   */
+  tapetesMudados?: TapeteMudado[];
 }
 
 /** Parte do salvamento que pertence ao núcleo (o cliente junta a câmera, o diário e o mapa). */

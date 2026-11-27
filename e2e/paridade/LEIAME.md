@@ -141,6 +141,16 @@ salvamento entra só a parte determinística:
     da 034 com só o atalho a mais, e conferidas 36/36 duas vezes seguidas. As 18 do Doce saíram
     iguais, byte a byte, às gravadas antes com placa de vídeo: lá as sessões eram rápidas e o
     relógio não chegava a derrubar a saturação.
+- **Spec 039 (T03), sessões `sobrevivencia` e `clima` (as 12 gravações, 3 sementes × 2
+  temas):** a cama nova tem duas células e quem usa a cama nasce ao lado dela. As duas sessões
+  são as únicas que põem cama. Conferidas no código da 039 antes de regravar, as 24 das outras
+  sessões passaram iguais (`construir`, `itens`, `fornalha`, `trocas`, essa no povoado que agora
+  tem a cama de duas células) e as 12 destas falharam. Regravadas com `PARIDADE=gravar`
+  (`PARIDADE_SESSOES=sobrevivencia,clima`, cada uma duas vezes iguais); a comparação com a
+  gravação de antes (`capturas-039/t03-paridade-comparacao.txt`) dá, em todas as etapas, só duas
+  diferenças: a edição nova do pé da cama (bloco 56, metadado 5: a direção 1 e a parte 1, ao lado
+  da cabeceira) e o `spawn`, que anda uma célula (ao lado da cabeceira, e não em cima dela). Nada
+  mais mudou: a vida, a fome, o inventário, a hora e o diário são os de antes.
 
 `PARIDADE_OBTIDO=pasta` (com `PARIDADE=conferir`) grava o retrato de cada sessão conferida
 nessa pasta, para comparar com a gravação quando falha.

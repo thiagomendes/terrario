@@ -35,6 +35,7 @@
         "src/render/contexto.ts"
       ],
       "suites": [
+        "camas-antigas.spec.ts",
         "carregando.spec.ts",
         "entrada-nuvem.spec.ts",
         "iphone.spec.ts",
@@ -47,6 +48,9 @@
       "nome": "Andar, pôr e tirar bloco, mochila",
       "gatilhos": [
         "src/jogo/construir.ts",
+        "src/jogo/moveis.ts",
+        "src/jogo/loteMoveis.ts",
+        "src/jogo/tapetes.ts",
         "src/player/alvo.ts",
         "src/player/controle.ts",
         "src/player/entrada.ts",
@@ -93,17 +97,22 @@
         "src/ui/conteiner.ts",
         "src/ui/gestosInventario.ts",
         "src/ui/icones.ts",
-        "src/ui/status.ts"
+        "src/ui/status.ts",
+        "src/ui/abasCategoria.ts",
+        "src/render/moveis/",
+        "src/render/poseMovel.ts"
       ],
       "suites": [
         "ajustes-filho.spec.ts",
         "bloco-some.spec.ts",
+        "capturas-039-t05.spec.ts",
         "construir-037.spec.ts",
         "cristal.spec.ts",
         "dar-item.spec.ts",
         "interacao.spec.ts",
         "inventario.spec.ts",
-        "mineracao.spec.ts"
+        "mineracao.spec.ts",
+        "moveis-039.spec.ts"
       ]
     },
     "temas-e-mundos": {
@@ -568,6 +577,7 @@
         "desempenho-036.spec.ts",
         "desempenho-037.spec.ts",
         "desempenho-038.spec.ts",
+        "desempenho-039.spec.ts",
         "desempenho-achar-amigo.spec.ts",
         "desempenho-brinquedo.spec.ts",
         "desempenho-premium.spec.ts",

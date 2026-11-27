@@ -1,4 +1,5 @@
 import { Bloco, obterBloco } from './blocks';
+import { caixasDaParte } from '../jogo/moveis';
 
 /** Caixa em coordenadas locais do bloco: [x0, y0, z0, x1, y1, z1], de 0 a 1. */
 export type Caixa = [number, number, number, number, number, number];
@@ -105,6 +106,12 @@ export function caixasDoBloco(
         girar(aberta ? [c[2] - 6 * P, c[1], 1 - c[3], c[5] - 6 * P, c[4], 1 - c[0]] : c, d),
       );
     }
+    case 'movel':
+      // spec 039: a parte do móvel, girada para onde a criança olhava ao pôr (o tapete numa
+      // célula, só por truque, não segura nada)
+      return (caixasDaParte(id, meta) ?? []).map((c) =>
+        girar([c[0], c[1], c[2], c[3], c[4], c[5]], d),
+      );
     default:
       return null;
   }
@@ -123,6 +130,10 @@ export function caixasDaMalha(
   conecta?: (d: number) => boolean,
 ): Caixa[] | null {
   switch (id) {
+    case Bloco.TAPETE:
+      // spec 039: o tapete do ícone e da mão, uma chapinha rente ao chão (até o modelo da T05);
+      // no mundo ele não é de célula
+      return [[0, 0, 0, 1, P, 1]];
     case Bloco.LAJE_GRADE:
       // chapa de grade (o topo em 0,5, como a laje), com a cantoneira por baixo
       return [
@@ -208,6 +219,7 @@ export function temFormaParcial(id: number): boolean {
     f === 'porta' ||
     f === 'cerca' ||
     f === 'porteira' ||
-    f === 'placa'
+    f === 'placa' ||
+    f === 'movel'
   );
 }

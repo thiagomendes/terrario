@@ -1,6 +1,7 @@
 import { ALTURA_JOGADOR, MEIA_LARGURA } from '../player/fisica';
 import { Bloco, obterBloco } from '../world/blocks';
 import { CRIATURAS, type TipoSer } from './criaturas';
+import { ehMovel } from './moveis';
 
 /**
  * Spec 037: a regra de construir, a mesma no núcleo (servidor local e nuvem) e na previsão do
@@ -126,6 +127,12 @@ export function recusaConstruir(p: PedidoConstruir): RecusaConstruir | null {
   // a porta fica de pé no chão (a metade de cima encosta na de baixo)
   if (p.bloco === Bloco.PORTA)
     return c.y <= 0 || blocoApoia(p.ler(c.x, c.y - 1, c.z)) ? null : 'apoio';
+  // spec 039: o móvel fica de pé no chão (cada célula de baixo tem chão sólido embaixo)
+  if (ehMovel(p.bloco)) {
+    const baixo = Math.min(...p.celulas.map((q) => q.y));
+    const noChao = (q: Celula) => q.y <= 0 || blocoApoia(p.ler(q.x, q.y - 1, q.z));
+    return p.celulas.every((q) => q.y !== baixo || noChao(q)) ? null : 'apoio';
+  }
   return temApoio(c, p.ler) ? null : 'apoio';
 }
 

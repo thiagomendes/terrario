@@ -7,7 +7,7 @@
  */
 import type { Scene } from '@babylonjs/core/scene';
 import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
-import { criarPersonagem } from './personagem';
+import { criarPersonagem, type Personagem } from './personagem';
 import { criarAnimador } from '../player/animacao';
 import { normalizarAparencia, type Aparencia } from '../personagem/aparencia';
 import { chaveSemMontado } from '../personagem/montar';
@@ -143,6 +143,7 @@ export function criarOutrosJogadores(scene: Scene) {
   const levesPorId = new Map<string, (typeof leves)[number]>();
   let assento: ((id: string) => AssentoDoAmigo | null) | null = null;
   let yawFixo: ((id: string) => number | null) | null = null;
+  let poseMovel: ((p: Personagem, v: JogadorVisto, id: string) => void) | null = null;
 
   function criar(v: JogadorVisto): Outro {
     const perfil = perfis[v.id];
@@ -257,6 +258,13 @@ export function criarOutrosJogadores(scene: Scene) {
     /** Spec 027 (T11): o rumo do corpo de um amigo preso a algo (o abraço do Bento), ou null. */
     definirYawFixo(f: ((id: string) => number | null) | null) {
       yawFixo = f;
+    },
+    /**
+     * Spec 039 (T05): depois de posar cada amigo, a pose do móvel (sentado no sofá ou na cadeira,
+     * deitado na cama), lida do jogador visto dele.
+     */
+    definirPoseMovel(f: ((p: Personagem, v: JogadorVisto, id: string) => void) | null) {
+      poseMovel = f;
     },
     /** Spec 027 (T11): o animador e os pés de um amigo à vista (o abraço do Bento), ou null. */
     amigo(id: string): {
@@ -378,6 +386,7 @@ export function criarOutrosJogadores(scene: Scene) {
         o.personagem.posicionar(o.x, o.y, o.z, o.animador.yaw());
         // parte 3: na curva da rampa o boneco deita junto com a prancha
         o.personagem.raiz.rotation.x = -(cadeira?.inclina ?? 0) * 0.85;
+        poseMovel?.(o.personagem, a, a.id);
         o.personagem.definirLuz(luz);
         o.balao?.atualizar(dt);
         // apelido acima da cabeça, projetado na tela (some atrás da câmera e muito longe)

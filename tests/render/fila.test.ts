@@ -24,6 +24,23 @@ describe('fila de remalha', () => {
     expect(f.retirar(1)).toEqual([]);
   });
 
+  it('a resposta mais velha que chega depois não substitui a mais nova (spec 039)', () => {
+    // o pedaço 0,0 foi pedido duas vezes (v1 no carregamento, v2 pela edição): a v2 chega antes
+    const f = criarFilaRemalha<string>();
+    f.adicionar({ cx: 0, cz: 0, editado: true, dados: 'v2', versao: 2 });
+    f.adicionar({ cx: 0, cz: 0, editado: false, dados: 'v1', versao: 1 });
+    expect(f.tamanho).toBe(1);
+    const [item] = f.retirar(1);
+    expect(item.dados).toBe('v2');
+    expect(item.versao).toBe(2);
+    // o "editado" da que ficou vale (os editados são servidos primeiro)
+    expect(item.editado).toBe(true);
+    // a mais nova que chega depois troca, como sempre
+    f.adicionar({ cx: 0, cz: 0, editado: false, dados: 'v3', versao: 3 });
+    f.adicionar({ cx: 0, cz: 0, editado: false, dados: 'v4', versao: 4 });
+    expect(f.retirar(1)[0].dados).toBe('v4');
+  });
+
   it('gerarMalha de chunk editado termina em menos de 500 ms', () => {
     const e = criarEdicoes();
     e.definir(3, 40, 3, 0);

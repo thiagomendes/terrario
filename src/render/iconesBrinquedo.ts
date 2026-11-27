@@ -129,12 +129,24 @@ export function gerarIconesBrinquedo(
       raiz.rotation.set(-0.5, Math.PI / 4, 0);
       return raiz;
     }
-    if (b?.forma === 'cama') {
-      // a cama do ícone é a mesma da mão (com lençol e travesseiro), maior
+    if (b?.forma === 'cama' || b?.forma === 'movel') {
+      // a cama do ícone é a mesma da mão (com lençol e travesseiro), maior; spec 039 (T05): os
+      // móveis também (o modelo do mundo em miniatura)
       const m = modeloNaMao(scene, mats, bloco, null, `icone-${id}`);
       if (m) {
-        m.no.parent = raiz;
         m.no.scaling.setAll(4);
+        if (bloco === Bloco.CAMA) {
+          // a cama, comprida, de lado e vista de cima: ela gira deitada num nó (o comprido de lado,
+          // a cabeceira à esquerda) e o conjunto inclina para a câmera. No giro de sempre (inclinar
+          // e depois girar) ela tombava no comprido e parecia uma rampa
+          const giro = new TransformNode(`icone-${id}-giro`, scene);
+          giro.parent = raiz;
+          m.no.parent = giro;
+          giro.rotation.y = Math.PI / 2 + 0.45;
+          raiz.rotation.set(-0.62, 0, 0);
+          return raiz;
+        }
+        m.no.parent = raiz;
         raiz.rotation.set(-0.5, Math.PI / 4, 0);
         return raiz;
       }

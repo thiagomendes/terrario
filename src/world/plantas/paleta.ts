@@ -34,7 +34,9 @@ export const BLOCOS_PREDIO = {
  * - `}` e `{` degraus da escada de incêndio (sobem para +s e para -s), `_` patamar de grade
  * - `#` grade de ferro (parapeito, corrimão), `|` perna de pau (caixa d'água)
  * - `W` e `w` tábuas da caixa d'água (aduela clara e cinta escura), `m` tampa
- * - `B` cama, `X` mesa, `K` baú, `F` fornalha acesa, `i` lampião (tocha) em cima da mesa
+ * - `X` mesa, `K` baú, `F` fornalha acesa, `i` lampião (tocha) em cima da mesa
+ * - spec 039, a cama de duas células: a cabeceira em maiúscula e o pé em minúscula, ao lado,
+ *   para onde ele vai: `B`/`b` o pé para +s, `Q`/`q` para -s, `R`/`r` para a rua (-f)
  */
 export function legendaComum(parede: number, enfeite: number = parede): Legenda {
   return {
@@ -58,7 +60,12 @@ export function legendaComum(parede: number, enfeite: number = parede): Legenda 
     W: { b: Bloco.TABUAS },
     w: { b: Bloco.TABUAS_PINHO },
     m: { b: Bloco.LAJE },
-    B: { b: Bloco.CAMA },
+    B: { b: Bloco.CAMA, d: 1, parte: 0 },
+    b: { b: Bloco.CAMA, d: 1, parte: 1 },
+    Q: { b: Bloco.CAMA, d: 3, parte: 0 },
+    q: { b: Bloco.CAMA, d: 3, parte: 1 },
+    R: { b: Bloco.CAMA, d: 2, parte: 0 },
+    r: { b: Bloco.CAMA, d: 2, parte: 1 },
     X: { b: Bloco.MESA_TRABALHO, d: 1 },
     K: { b: Bloco.BAU, d: 1 },
     F: { b: Bloco.FORNALHA_ACESA, d: 2 },
