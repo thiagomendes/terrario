@@ -91,6 +91,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 - **Achados pelo filho do dono (26 nov, à noite; "deixa no radar, encaixa no momento certo"):**
   - **Primeira pessoa no carro e nos brinquedos de andar:** ao montar, o jogo volta para a terceira pessoa (regra da 037: montado é lugar com câmera própria). Ele quer andar de carro vendo de dentro. É pedido novo, e não defeito: olhar dos olhos com o volante ou o guidão na frente, e as mãos no lugar.
   - **Comer na primeira pessoa:** a comida só balança um pouquinho na mão. Ela precisa ir até a boca (para baixo do quadro, como quem leva à boca), com farelinhos saindo e o som de comer no ritmo. É defeito pequeno da 037, para o artista.
+  - **A motoquinha sem rodinhas de apoio** (pedido do filho, 26 nov, à noite: "gostou, mas queria sem rodinha"). As rodinhas saem; parada, a moto fica em pé num descansinho lateral de ouro escuro. Vai junto do conserto do comer e da nuvem (`fix/comer-e-nuvem`). Também tira uma chamada de desenho por moto.
   - **A nuvem fofa some no modo de voo:** montado na nuvem, ao ligar o voo, o brinquedo some. É defeito: conferir se o voo desmonta (o `montado`) ou só esconde o brinquedo, e decidir se a nuvem pode voar junto (ela já flutua).
 - **Defeitos antigos vistos na 038** (26 nov):
   - a ponta do sapato fura a barra do vestido com a menina parada (o vestido de 14 lados);
