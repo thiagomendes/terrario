@@ -61,7 +61,7 @@ describe('os modelos dos móveis (spec 039, T05)', () => {
 
   it('spec 039b: as partes do que liga (a porta e a luz da geladeira, o anel e o vapor, os cones e as notinhas)', () => {
     expect(Object.keys(montarModeloMovel(Bloco.GELADEIRA).partes).sort()).toEqual(['comidinha', 'luzDentro', 'porta']);
-    expect(Object.keys(montarModeloMovel(Bloco.FOGAO).partes).sort()).toEqual(['anel', 'vapor0', 'vapor1', 'vapor2']);
+    expect(Object.keys(montarModeloMovel(Bloco.FOGAO).partes).sort()).toEqual(['anel', 'vapor0', 'vapor1', 'vapor2', 'vapor3', 'vapor4']);
     expect(Object.keys(montarModeloMovel(Bloco.SOM).partes).sort()).toEqual(['cone0', 'cone1', 'luzSom', 'nota0', 'nota1', 'nota2']);
     // a mesa e o som cabem na caixa da colisão (o tampo a 0,875; o som até 0,69)
     const topo = (b: number) => Math.max(...(montarModeloMovel(b).corpo!.positions as number[]).filter((_, i) => i % 3 === 1));

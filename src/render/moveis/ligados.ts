@@ -25,7 +25,7 @@ import type { MovelLigado } from '../../nucleo/protocolo';
 import { Bloco } from '../../world/blocks';
 import type { Plasticos } from '../formas';
 import { modeloNaMao, type ModeloItem } from '../itensBrinquedo';
-import { TELA_TV, pratinho, type ModeloMovel } from './pecas';
+import { TELA_TV, VAPORES, pratinho, type ModeloMovel } from './pecas';
 import { pintarDesenho } from './desenhosTv';
 
 /** O móvel inteiro na âncora: o bloco, o meio do pé (mundo) e o giro do desenho. */
@@ -71,7 +71,7 @@ export interface Ligados {
 /** As partes de cada móvel que entram na malha do ligado. */
 const PARTES: Record<string, readonly string[]> = {
   geladeira: ['porta', 'luzDentro', 'comidinha'],
-  fogao: ['anel', 'vapor0', 'vapor1', 'vapor2'],
+  fogao: ['anel', ...Array.from({ length: VAPORES }, (_, i) => `vapor${i}`)],
   som: ['cone0', 'cone1', 'luzSom', 'nota0', 'nota1', 'nota2'],
   tv: [],
 };
@@ -290,21 +290,28 @@ export function criarLigados(scene: Scene, op: OpcoesLigados): Ligados {
         // o vapor: cada cubinho sobe, balança e some, um depois do outro
         // (já sai da tampa do tamanho de ver, sobe e some lá em cima)
         const k = Number(nome.slice(-1));
-        const u = (t * 0.45 + k / 3) % 1;
-        return { s: s * (u < 0.75 ? 0.75 + 0.25 * Math.sin(u * 4) : (1 - u) * 4 * 0.75), giro: u * 1.2, dx: Math.sin(t * 2 + k) * 0.035, dy: u * 0.45, dz: u * 0.12 };
+        const u = (t * 0.4 + k / VAPORES) % 1;
+        return {
+          s: s * (u < 0.7 ? 0.8 + 0.2 * Math.sin(u * 4) : ((1 - u) / 0.3) * 0.8),
+          giro: u * 1.2,
+          dx: Math.sin(t * 2 + k * 1.7) * 0.05,
+          dy: u * 0.6,
+          dz: u * 0.12,
+        };
       }
       case 'som': {
         // a batida mansa: os cones pulam juntos; a luzinha pisca; as notinhas sobem dançando
         const batida = Math.abs(Math.sin(t * 6.3));
         if (nome.startsWith('cone')) return { s: 1, sy: 1 + 0.1 * batida, giro: 0, dx: 0, dy: 0, dz: 0.02 * batida };
         if (nome === 'luzSom') return { s: (t * 2) % 1 < 0.6 ? 1 : 0.2, giro: 0, dx: 0, dy: 0, dz: 0 };
-        // (a notinha `nota0` a `nota2`: uma de cada vez, saindo do meio e indo para um lado)
+        // (a notinha `nota0` a `nota2`: cada uma na sua coluna, com a folga de uma nota entre elas,
+        // subindo e balançando um tico; uma nunca atravessa a outra)
         const n = Number(nome.slice(-1));
         const u = (t * 0.38 + n / 3) % 1;
         return {
           s: s * Math.min(1, Math.sin(u * Math.PI) * 1.6),
-          giro: Math.sin(t * 2 + n) * 0.3,
-          dx: (n - 1) * 0.12 * u * 2 + Math.sin(u * 5 + n) * 0.04,
+          giro: Math.sin(t * 2 + n) * 0.12,
+          dx: (n - 1) * 0.32 + Math.sin(u * 5 + n) * 0.025,
           dy: u * 0.45,
           dz: 0,
         };
@@ -448,11 +455,13 @@ export function criarLigados(scene: Scene, op: OpcoesLigados): Ligados {
           const b = op.bloco(ax, movel.cy, az);
           if (!dentro && encosta && (b === Bloco.CADEIRA || b === Bloco.SOFA)) assentos.push([dx, dz]);
         }
-      const beira = 0.3;
-      const naBeira = ([dx, dz]: [number, number]): [number, number] => [
-        Math.max(-mx + beira, Math.min(mx - beira, dx)),
-        Math.max(-mz + beira, Math.min(mz - beira, dz)),
-      ];
+      // (em cima da toalha, ao alcance das mãos de quem come: o meio do prato fica a 0,15 da beira
+      // dela no lado de quem come, e na direção dele no comprido da mesa)
+      const naBeira = ([dx, dz]: [number, number]): [number, number] => {
+        const bx = longoX ? 0.32 : 0.35;
+        const bz = longoX ? 0.35 : 0.32;
+        return [Math.max(-mx + bx, Math.min(mx - bx, dx)), Math.max(-mz + bz, Math.min(mz - bz, dz))];
+      };
       const deQuem: Array<[number, number]> = (quem ?? []).map((q) => [q.x - movel.cx, q.z - movel.cz]);
       const lugares: Array<[number, number]> = (deQuem.length ? deQuem : assentos).slice(0, n).map(naBeira);
       const padrao: Array<[number, number]> = [

@@ -300,8 +300,11 @@ function fogao(o: Oficina): void {
   // cozinhando: o anel laranja manso, liso, na boca da panela (aparece em volta do fundo dela) e
   // os três cubinhos de vapor saindo da tampa
   o.parte('anel', [0.2, 0.905, 0.14], (p) => p.prisma(18, 0.2, 0.016, 0, 0, 0, M.chama, 'y'));
-  for (let i = 0; i < 3; i++) o.parte(`vapor${i}`, [0.2, 1.1, 0.14], (p) => p.caixa(0.1, 0.1, 0.1, 0, 0, 0, M.branco, 0.045));
+  // (cinco bolinhas de vapor, uma atrás da outra: com três, ele quase sumia entre uma e outra)
+  for (let i = 0; i < VAPORES; i++) o.parte(`vapor${i}`, [0.2, 1.1, 0.14], (p) => p.caixa(0.12, 0.12, 0.12, 0, 0, 0, M.branco, 0.055));
 }
+/** Quantas bolinhas de vapor o fogão solta cozinhando. */
+export const VAPORES = 5;
 const BOCAS: Array<[number, number]> = [
   [-0.2, -0.12],
   [0.2, -0.12],
@@ -392,21 +395,25 @@ export function pratinho(): VertexData {
   return dd.corpo.juntar();
 }
 
-/** A mesa de duas células: mel, com a toalha xadrez coral e creme caindo na frente e atrás. */
+/**
+ * A mesa de duas células: mel, com a toalha xadrez coral e creme por cima. A toalha fica por
+ * dentro do tampo, com a beirada de madeira à mostra em volta (sem barra caindo): da câmera de
+ * cima, a toalha encostava no assento da cadeira de trás e parecia entrar nela. O tampo é um tico
+ * mais raso que a célula (0,76), com folga para a cadeira encostada.
+ */
 function mesa(r: Ref): void {
   for (const x of [-0.8, 0.8])
-    for (const z of [-0.32, 0.32]) r.caixa(0.1, 0.7, 0.1, x, 0, z, M.melEscuro, 0.02);
+    for (const z of [-0.28, 0.28]) r.caixa(0.1, 0.7, 0.1, x, 0, z, M.melEscuro, 0.02);
   // as travessas de baixo (a mesa de costas também tem cara)
-  for (const z of [-0.32, 0.32]) r.caixa(1.5, 0.05, 0.05, 0, 0.18, z, M.mel, 0.015);
-  r.caixa(1.84, 0.08, 0.84, 0, 0.7, 0, M.mel, 0.04);
+  for (const z of [-0.28, 0.28]) r.caixa(1.5, 0.05, 0.05, 0, 0.18, z, M.mel, 0.015);
+  r.caixa(1.84, 0.08, 0.76, 0, 0.7, 0, M.mel, 0.04);
   const n = 8;
   const m = 4;
-  const lx = 1.4 / n;
-  const lz = 0.84 / m;
+  const lx = 1.36 / n;
+  const lz = 0.6 / m;
   for (let i = 0; i < n; i++)
     for (let k = 0; k < m; k++)
-      r.caixa(lx, 0.012, lz, -0.7 + (i + 0.5) * lx, 0.78, -0.42 + (k + 0.5) * lz, (i + k) % 2 ? M.coral : M.creme, 0);
-  for (const s of [-1, 1]) r.caixa(1.4, 0.12, 0.012, 0, 0.67, s * 0.426, M.coral, 0);
+      r.caixa(lx, 0.012, lz, -0.68 + (i + 0.5) * lx, 0.78, -0.3 + (k + 0.5) * lz, (i + k) % 2 ? M.coral : M.creme, 0);
 }
 
 /**
@@ -485,11 +492,13 @@ function som(o: Oficina): void {
   for (let i = 0; i < 3; i++)
     o.parte(`nota${i}`, [0, 0.72, 0.05], (p) => {
       const cor = i === 1 ? M.coral : M.azulEscuro;
-      // a colcheia: a bolinha (redonda, deitadinha), a haste do lado direito dela e a bandeirinha
-      // inclinada caindo da ponta (do tamanho de ver de longe na tela do celular)
+      // a colcheia, como se escreve: a bolinha embaixo, à esquerda da haste, e a bandeirinha que
+      // sai do alto da haste para a direita, curvinha, em dois gomos (o +x do modelo fica à
+      // esquerda de quem olha a frente: por isso a haste e a bandeirinha vão para -x)
       p.prisma(14, 0.085, 0.06, 0, 0.06, 0, cor, 'z');
-      p.caixa(0.04, 0.32, 0.045, 0.07, 0.06, 0, cor, 0);
-      p.barra([0.07, 0.38, 0], [0.18, 0.26, 0], 0.045, cor);
+      p.caixa(0.04, 0.32, 0.045, -0.07, 0.06, 0, cor, 0);
+      p.barra([-0.07, 0.375, 0], [-0.15, 0.32, 0], 0.045, cor);
+      p.barra([-0.15, 0.32, 0], [-0.18, 0.22, 0], 0.04, cor);
     });
 }
 

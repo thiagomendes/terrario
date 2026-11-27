@@ -401,7 +401,8 @@ const PERTO = {
   som: { alvo: [-4.5, 0.4, 3.4], yaw: -0.35, pitch: 0.4, largura: 1.5, altura: 1.4 },
   fogao: { alvo: [-2.5, 0.8, 3.4], yaw: 0.25, pitch: 0.45, largura: 1.7, altura: 1.8 },
   geladeira: { alvo: [-0.5, 1.0, 3.4], yaw: -0.35, pitch: 0.3, largura: 2.4, altura: 2.6 },
-  mesa: { alvo: [1, 0.9, 1.5], yaw: 0.5, pitch: 0.55, largura: 3.4, altura: 2.6 },
+  // (de frente para quem está sentado do outro lado da mesa: o prato na frente dela)
+  mesa: { alvo: [0.8, 0.9, 1.7], yaw: 0.18, pitch: 0.55, largura: 3.2, altura: 2.6 },
 } satisfies Record<string, Olhar>;
 const vitrineOlhar = (i: number, costas = false): Olhar => ({
   alvo: [VITRINE_X0 + 1.5 * VITRINE_PASSO + 1, 0.8, VITRINE_Z0 + i * 4 + 0.5],
@@ -444,7 +445,8 @@ async function telas(p: Palco, sub: string, vitrine: boolean) {
   await foto(p, 'fogao-0-desligado', sub);
   await ligar(p, { fogao: true });
   await foto(p, 'fogao-1-cozinhando', sub, 1200);
-  await foto(p, 'fogao-2-cozinhando', sub, 700);
+  // (um momento diferente do vapor: as bolinhas em outra altura)
+  await foto(p, 'fogao-2-cozinhando', sub, 1300);
   // (a prova de que o fogão continua cozinhando: a malha ligada está lá)
   console.log(`moveis ligados ${JSON.stringify(await p.page.evaluate(() => window.__brumaluz!.moveis!.ligados()))}`);
   await ligar(p, {});
