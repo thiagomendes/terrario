@@ -135,7 +135,7 @@ export function gerarIconesBrinquedo(
       const m = modeloNaMao(scene, mats, bloco, null, `icone-${id}`);
       if (m) {
         m.no.parent = raiz;
-        m.no.scaling.setAll(3.5);
+        m.no.scaling.setAll(4);
         raiz.rotation.set(-0.5, Math.PI / 4, 0);
         return raiz;
       }

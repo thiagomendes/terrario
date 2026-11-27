@@ -528,8 +528,25 @@ async function telas(p: Palco, sub: string, comVitrine: boolean) {
     await olhar(p, q, false);
     await foto(p, `${n}-dia`, sub);
   }
-  // de noite: o abajur e o criado-mudo acesos, a criança dormindo na cama
+  // o que mexe (só na tela de quem tocou; a T06 liga ao toque): as portas do guarda-roupa e a água
   await assento(p, null);
+  await p.page.evaluate((O) => {
+    const m = window.__brumaluz!.moveis!;
+    m.portas(O[0] + 10, O[1], O[2] + 3, true);
+    m.agua(O[0] - 2, O[1], O[2] + 3, true);
+  }, p.O);
+  await p.page.waitForTimeout(1200);
+  await olhar(p, { alvo: [11, 1.0, 3.1], yaw: -0.25, pitch: 0.2, largura: 2.8, altura: 2.4 });
+  await foto(p, 'guarda-aberto-dia', sub);
+  await olhar(p, { alvo: [-1.5, 1.05, 3.4], yaw: 0.2, pitch: 0.5, largura: 1.6, altura: 1.5 });
+  await foto(p, 'pia-agua-dia', sub);
+  await p.page.evaluate((O) => {
+    const m = window.__brumaluz!.moveis!;
+    m.portas(O[0] + 10, O[1], O[2] + 3, false);
+    m.agua(O[0] - 2, O[1], O[2] + 3, false);
+  }, p.O);
+  await p.page.waitForTimeout(1000);
+  // de noite: o abajur e o criado-mudo acesos, a criança dormindo na cama
   await hora(p, NOITE);
   await luzes(p, true);
   await olhar(p, CASA);
@@ -563,6 +580,23 @@ async function telas(p: Palco, sub: string, comVitrine: boolean) {
     await deDentro(p, x, z, a);
     await foto(p, `${n}-dentro-noite`, sub);
   }
+  // os ícones na barra e o móvel na mão (de dentro, com a interface à vista)
+  await hora(p, DIA);
+  await p.page.evaluate((bs) => {
+    const e = window.__brumaluz!;
+    bs.forEach((b, i) => e.inventario!.definir(i, { item: `bloco:${b}`, qtd: 1 }));
+    e.selecionarSlot!(0);
+    for (const el of Array.from(document.body.querySelectorAll<HTMLElement>('*'))) el.style.visibility = '';
+  }, [Bloco.SOFA, Bloco.CAMA, Bloco.CADEIRA, Bloco.CRIADO_MUDO, Bloco.ABAJUR, Bloco.TAPETE, Bloco.PIA, Bloco.GUARDA_ROUPA]);
+  await deDentro(p, -5.2, -2.2, [-8.6, 0.0, 1.0]);
+  await foto(p, 'barra-e-mao', sub);
+  await p.page.evaluate(() => {
+    const e = window.__brumaluz!;
+    for (let i = 0; i < 9; i++) e.inventario!.definir(i, null);
+    const cena = document.getElementById('cena')!;
+    for (const el of Array.from(document.body.querySelectorAll<HTMLElement>('*')))
+      if (el !== cena && !el.contains(cena)) el.style.visibility = 'hidden';
+  });
   await p.page.evaluate(() => window.__brumaluz!.primeiraPessoa!.ligar(false));
   await luzes(p, false);
   await teto(p.page, p.O, false);
@@ -613,6 +647,8 @@ async function prancha(browser: Browser) {
     <h2>Sentada e deitada</h2>
     ${linha([q(img('sentada-sofa-dia'), 'no sofá'), q(img('sentada-cadeira-dia'), 'na cadeira'), q(img('deitada-cama-dia'), 'na cama'), q(img('deitada-curtinha-dia'), 'na curtinha')])}
     ${linha([q(img('deitada-cama-noite'), 'dormindo de noite'), q(img('deitada-sofa-noite'), 'no sofá, de noite, sem cama'), q(img('quarto-noite'), 'o quarto de noite'), q(img('quarto-dentro-noite'), 'de dentro, de noite')])}
+    <h2>O que mexe (a T06 liga ao toque)</h2>
+    ${linha([q(img('guarda-aberto-dia'), 'as portas do guarda-roupa abertas'), q(img('pia-agua-dia'), 'a água da pia'), q(img('barra-e-mao'), 'os ícones na barra e o sofá na mão')])}
     <h2>De dentro (primeira pessoa)</h2>
     ${linha([q(img('sala-dentro-dia'), 'sala'), q(img('meio-dentro-dia'), 'a pia'), q(img('quarto-dentro-dia'), 'quarto'), q(img('sala-dentro-noite'), 'sala de noite')])}
     ${

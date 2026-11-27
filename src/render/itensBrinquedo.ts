@@ -720,7 +720,7 @@ export function modeloNaMao(
     return { no, malhas, ferramenta: false };
   }
   // spec 039 (T05): os móveis (a cama nova também) e o tapete na mão são o modelo do mundo, em
-  // miniatura (o maior lado com 0,3)
+  // miniatura (o maior lado com 0,26, o mesmo da cama de antes)
   if (bloco !== null && (ehMovel(bloco) || bloco === Bloco.TAPETE)) {
     const vd = montarModeloMovel(bloco).corpo;
     if (vd) {
@@ -737,7 +737,7 @@ export function modeloNaMao(
         z0 = Math.min(z0, P[i + 2]);
         z1 = Math.max(z1, P[i + 2]);
       }
-      const k = 0.3 / Math.max(x1 - x0, y1, z1 - z0);
+      const k = 0.26 / Math.max(x1 - x0, y1, z1 - z0);
       const m = new Mesh(`${prefixo}-movel`, scene);
       vd.applyToMesh(m);
       m.material = mats.corVertice(0.3) ?? mats.cor('#ffffff', 0.3);
