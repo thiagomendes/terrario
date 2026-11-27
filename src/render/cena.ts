@@ -3071,7 +3071,17 @@ export function criarCena(
       estado.remalhasConcluidas = (estado.remalhasConcluidas ?? 0) + 1;
       return;
     }
-    fila.adicionar({ cx: r.cx, cz: r.cz, editado: prioritarios.has(k), dados: r });
+    // a resposta mais velha que chega depois da mais nova ser pedida (o trabalhador de edição é
+    // rápido e passa o do carregamento) não entra: a mais nova está a caminho (sem isto, a velha
+    // tirava a nova da fila e era jogada fora, e o pedaço ficava pedido para sempre)
+    if (r.versao < (versoesPedidas.get(k) ?? 0)) return;
+    fila.adicionar({
+      cx: r.cx,
+      cz: r.cz,
+      editado: prioritarios.has(k),
+      dados: r,
+      versao: r.versao,
+    });
   };
   worker.onmessage = receber;
   workerEdicao.onmessage = receber;
