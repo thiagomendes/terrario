@@ -175,6 +175,33 @@ export function tapeteParaTirar(
   return { protecao: apelido ? { motivo: 'amigo', dono: apelido } : { motivo: 'amigo' } };
 }
 
+/**
+ * Mexer no chão (x, y, z) embaixo de um tapete: null pode; senão, o aviso "amigo". O chão do
+ * tapete de quem a criança não pode mexer fica protegido (sem isso, quebrar o chão tirava o
+ * tapete da amiga e ele caía aos pés de quem quebrou).
+ */
+export function recusaChaoDoTapete(
+  m: MundoDaRegra,
+  camada: Pick<CamadaTapetes, 'em'>,
+  quem: string,
+  x: number,
+  y: number,
+  z: number,
+  donoDe: (t: Tapete) => string | null,
+): RecusaProtecao | null {
+  const t = camada.em(x, y + 1, z);
+  if (!t) return null;
+  const dono = donoDe(t);
+  if (podeMexer(quem, dono, m.donoDoMundo)) return null;
+  const apelido = dono ? m.apelido(dono) : undefined;
+  return apelido ? { motivo: 'amigo', dono: apelido } : { motivo: 'amigo' };
+}
+
+/** As células de um tapete que ficaram sem chão firme embaixo. */
+export function tapeteSemApoio(m: Pick<MundoDaRegra, 'bloco'>, t: Tapete): boolean {
+  return celulasDoTapete(t.x, t.y, t.z, t.d).some((c) => !blocoApoia(m.bloco(c.x, c.y - 1, c.z)));
+}
+
 const inteiro = (v: unknown, min: number, max: number): v is number =>
   Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
 

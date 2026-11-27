@@ -39,7 +39,12 @@ import {
   type LeitorMoveis,
 } from '../jogo/moveis';
 import { direcaoParaAMesa } from '../jogo/mesa';
-import { celulasDoTapete, recusaPorTapete } from '../jogo/tapetes';
+import {
+  celulasDoTapete,
+  recusaChaoDoTapete,
+  recusaPorTapete,
+  tapeteParaTirar,
+} from '../jogo/tapetes';
 import {
   ehConteiner,
   outraMetadeDaPorta,
@@ -3397,7 +3402,9 @@ export function criarCena(
     const movelPosto = !quebra && ehMovel(b);
     // spec 016: a mesma regra do núcleo (o que o mundo fez, o que é do amigo, a passagem)
     const protegido = quebra
-      ? recusaQuebrar(regra, voce, x, y, z)
+      ? (recusaQuebrar(regra, voce, x, y, z) ??
+        // spec 039: o chão embaixo do tapete de outra criança (o núcleo recusa igual)
+        recusaChaoDoTapete(regra, cliente.tapetes, voce, x, y, z, donoDoTapete))
       : (recusaColocar(regra, voce, x, y, z, b) ??
         extras.reduce<RecusaProtecao | null>(
           (r, e) => r ?? recusaColocar(regra, voce, e.x, e.y, e.z, b),
@@ -3942,9 +3949,71 @@ export function criarCena(
     return true;
   }
 
+  /**
+   * Spec 039 (o tapete que não saía): o tapete é rente ao chão e não é célula, então a mira cai
+   * no bloco de baixo. Com um tapete cobrindo a célula de cima (e nada nela), quem quebra é o
+   * tapete: o bloco de baixo nunca é tocado (senão a criança abria um buraco e atravessava o
+   * tapete). Devolve a célula coberta.
+   */
+  function tapeteSobre(a: {
+    x: number;
+    y: number;
+    z: number;
+    normal?: { y: number };
+  }): { x: number; y: number; z: number } | null {
+    // (só a face de cima: a mira no lado do bloco de baixo é o bloco, que o núcleo protege se o
+    // tapete for de outra criança)
+    if (a.normal?.y !== 1) return null;
+    const c = { x: a.x, y: a.y + 1, z: a.z };
+    if (!cliente.tapetes.em(c.x, c.y, c.z)) return null;
+    const b = blocoEm(c.x, c.y, c.z);
+    return b === Bloco.AR || obterBlocoDef(b)?.liquido ? c : null;
+  }
+  /** O dono do tapete (o índice 0 e o que não está na tabela são do dono do mundo). */
+  const donoDoTapete = (t: { dono: number }): string | null =>
+    (t.dono ? edicoes.donos.id(t.dono) : undefined) || donoDoMundo;
+  /**
+   * Tira o tapete que cobre a célula `c`, com a regra do núcleo (a proteção de quebrar), na
+   * hora (a previsão), e manda o `quebrar` com `tapete`. Devolve se tirou.
+   */
+  function tirarTapete(c: { x: number; y: number; z: number }): boolean {
+    const r = tapeteParaTirar(regra, cliente.tapetes, voce, c, donoDoTapete);
+    if (r === 'nada') return false;
+    if ('protecao' in r) {
+      recusarProtegido(r.protecao);
+      return false;
+    }
+    const id = proximoId();
+    cliente.preverTapete(id, { x: r.x, y: r.y, z: r.z, fora: true });
+    enviarTelemetria(true);
+    enviar({ t: 'quebrar', id, x: c.x, y: c.y, z: c.z, slot: hotbar.ativo, tapete: true });
+    return true;
+  }
+
+  /**
+   * Spec 039: o tapete acabou de sair pelo dedo segurando: o chão de baixo só começa a rachar
+   * depois de soltar e segurar de novo (senão, segurando um pouco mais, a criança abria o buraco
+   * que o dono viu).
+   */
+  let soltarDepoisDoTapete = false;
   function alvoMineracao(): AlvoMineracao | null {
+    if (soltarDepoisDoTapete) {
+      if (minerador.segurando) return null;
+      soltarDepoisDoTapete = false;
+    }
     const a = alvoDoQuadro();
     if (!a) return null;
+    // spec 039: o tapete por cima vem antes do bloco de baixo (e da proteção dele)
+    const t = tapeteSobre(a);
+    if (t) {
+      // o tapete de outra criança: a rachadura nem começa (segurando, o aviso diz de quem é)
+      const rt = tapeteParaTirar(regra, cliente.tapetes, voce, t, donoDoTapete);
+      if (typeof rt === 'object' && 'protecao' in rt) {
+        if (minerador.segurando) avisarProtecao(rt.protecao);
+        return null;
+      }
+      return { ...t, bloco: Bloco.TAPETE };
+    }
     // spec 016: no bloco protegido a rachadura nem começa; segurando, o aviso diz de quem é
     const r = protecaoNaMira();
     if (r) {
@@ -3963,10 +4032,13 @@ export function criarCena(
   function protecaoNaMira(): RecusaProtecao | null {
     const a = alvoDoQuadro();
     if (!a) return null;
-    const k = `${a.x},${a.y},${a.z},${edicoes.versaoGeral},${edicoes.donos.versao}`;
+    const k = `${a.x},${a.y},${a.z},${edicoes.versaoGeral},${edicoes.donos.versao},${cliente.tapetes.versao}`;
     if (k !== chaveProtecaoMira) {
       chaveProtecaoMira = k;
-      protecaoMira = recusaQuebrar(regra, voce, a.x, a.y, a.z);
+      // (spec 039: e o chão embaixo do tapete de outra criança, como o núcleo)
+      protecaoMira =
+        recusaQuebrar(regra, voce, a.x, a.y, a.z) ??
+        recusaChaoDoTapete(regra, cliente.tapetes, voce, a.x, a.y, a.z, donoDoTapete);
     }
     return protecaoMira;
   }
@@ -3974,6 +4046,16 @@ export function criarCena(
   function interagirComEventos(acao: AcaoInteracao): boolean {
     const a = calcularAlvo();
     if (!a) return false;
+    // spec 039: com um tapete por cima, quebrar tira o tapete (o bloco de baixo fica)
+    if (acao === 'quebrar') {
+      const t = tapeteSobre(a);
+      if (t) {
+        // (o som e as migalhas da quebra, como o minerador faz)
+        const ok = tirarTapete(t);
+        if (ok) barramento.emitir('quebra', { ...t, bloco: Bloco.TAPETE });
+        return ok;
+      }
+    }
     const bloco = acao === 'quebrar' ? blocoEm(a.x, a.y, a.z) : hotbar.blocoAtivo();
     const pos = acao === 'quebrar' ? a : posicaoDeColocar(a);
     const ok = interagir(acao);
@@ -3993,7 +4075,10 @@ export function criarCena(
   const minerador = criarMinerador({
     barramento,
     quebrar: (a) =>
-      executarInteracao('quebrar', {
+      // spec 039: o tapete (a célula coberta, que a mira deu no lugar do bloco de baixo)
+      a.bloco === Bloco.TAPETE
+        ? (soltarDepoisDoTapete = tirarTapete(a))
+        : executarInteracao('quebrar', {
         alvo: { x: a.x, y: a.y, z: a.z, normal: { x: 0, y: 1, z: 0 } },
         edicoes,
         blocoAtivo: hotbar.blocoAtivo(),
