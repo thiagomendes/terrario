@@ -147,6 +147,14 @@ export const Bloco = {
   GUARDA_ROUPA: 134,
   ABAJUR_ACESO: 135,
   CRIADO_MUDO_ACESO: 136,
+  // spec 039b: os móveis da parte 2 (todos os mundos). O fogão e a geladeira são contêineres
+  // do núcleo (pela âncora); o fogão cozinhando e a TV ligada não trocam o id (o estado vai no
+  // quadro, em `moveisLigados`)
+  FOGAO: 137,
+  GELADEIRA: 138,
+  MESA: 139,
+  TV: 140,
+  SOM: 141,
 } as const;
 
 /** Spec 027: o primeiro bloco da Noite das Fantasias (os tiles dele em diante vão na célula 128). */
@@ -775,6 +783,13 @@ export const REGISTRO_BLOCOS: readonly DefinicaoBloco[] = [
     'tabuas',
     madeira({ ...movel, dureza: 0.6, emissivo: true, luz: 11, semItem: true }),
   ),
+  // spec 039b: os móveis da parte 2. Quebram à mão; os de ferro (o fogão, a geladeira, a TV e o
+  // som) têm o som de pedra. Os tiles são os de blocos que já existem: o desenho é o modelo
+  def(Bloco.FOGAO, 'fogão', 'pedra_lisa', { ...movel, dureza: 1, som: 'pedra' }),
+  def(Bloco.GELADEIRA, 'geladeira', 'la_branca', { ...movel, dureza: 1, som: 'pedra' }),
+  def(Bloco.MESA, 'mesa', 'tabuas', madeira({ ...movel, dureza: 0.8 })),
+  def(Bloco.TV, 'televisão', 'la_azul', { ...movel, dureza: 0.8, som: 'pedra' }),
+  def(Bloco.SOM, 'aparelho de som', 'la_preta', { ...movel, dureza: 0.6, som: 'pedra' }),
 ];
 
 export function obterBloco(id: number): DefinicaoBloco | undefined {

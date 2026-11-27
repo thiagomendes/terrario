@@ -282,3 +282,149 @@ describe('móveis e tapetes na sala da nuvem', () => {
     expect(quadros(a3).find((q) => q.primeiro)!.tapetes).toEqual([tapete]);
   });
 });
+
+describe('a geladeira e o fogão na sala da nuvem (spec 039b, T01a)', () => {
+  it('a sala dorme e acorda com a geladeira cheia e o fogão no meio; a amiga vê o mesmo', async () => {
+    let t = 0;
+    const armazem = armazemMemoria();
+    const g = criarGerenciador({ armazem, agora: () => t, sorteio: Math.random, depuracao: true });
+    const avancar = async (ms: number) => {
+      for (let i = 0; i < ms; i += 50) {
+        t += 50;
+        g.passo();
+        if (i % 1000 === 0) await g.manutencao();
+      }
+      await g.manutencao();
+    };
+    const a = canal();
+    await g.receber(
+      a,
+      JSON.stringify({
+        t: 'entrar',
+        versao: VERSAO_REDE,
+        jogador: ident('ana'),
+        criar: {
+          nome: 'Cozinha',
+          semente: 1337,
+          tema: 'rancho-alegre',
+          modo: 'criativo',
+          versaoMundo: 2,
+          estilo: ESTILO_PADRAO,
+        },
+      }),
+    );
+    const codigo = (a.recebidas.find((m) => m.t === 'bemvindo') as Extract<RespostaServidor, { t: 'bemvindo' }>).sala.codigo;
+    await avancar(300);
+    const nucleo = () => g.ativas.get(codigo)!.nucleo;
+    const ana = nucleo().estado.jogadores.get('ana')!;
+    const X = Math.floor(ana.tel.x);
+    const Z = Math.floor(ana.tel.z);
+    const Y = alturaTerreno(X, Z, 1337) + 24;
+    for (let x = X - 1; x <= X + 6; x++)
+      for (let z = Z - 1; z <= Z + 6; z++) {
+        nucleo().estado.edicoes.definir(x, Y - 1, z, Bloco.TABUAS);
+        for (let y = Y; y <= Y + 2; y++) nucleo().estado.edicoes.definir(x, y, z, Bloco.AR);
+      }
+    let seq = 0;
+    const mandar = (c: Record<string, unknown>) =>
+      g.receber(a, JSON.stringify({ ...c, seq: ++seq }));
+    ana.saltoPermitido = true;
+    await mandar({
+      t: 'jogador',
+      x: X + 0.5,
+      y: Y,
+      z: Z - 0.5,
+      yaw: 0,
+      pitch: 0,
+      olhos: Y + 1.62,
+      noChao: true,
+      voando: false,
+      vel: 0,
+      correndo: false,
+      submerso: false,
+      quedas: [],
+      pulos: 0,
+      golpes: 0,
+      slot: 0,
+    });
+    const GEL = { x: X + 1, y: Y, z: Z + 1 };
+    const FOG = { x: X + 3, y: Y, z: Z + 1 };
+    await mandar({
+      t: 'colocar',
+      id: 1,
+      ...GEL,
+      bloco: Bloco.GELADEIRA,
+      meta: 0,
+      slot: 0,
+      extras: [{ x: GEL.x, y: Y + 1, z: GEL.z }],
+    });
+    await mandar({ t: 'colocar', id: 2, ...FOG, bloco: Bloco.FOGAO, meta: 0, slot: 0 });
+    // a geladeira cheia (pelo toque na porta de cima), no criativo o catálogo dá a comida
+    await mandar({ t: 'usar', id: 3, x: GEL.x, y: Y + 1, z: GEL.z });
+    const cheia = Array.from({ length: 9 }, (_, i) => ({ item: 'pipoca', qtd: i + 1 }));
+    await mandar({
+      t: 'transacao',
+      id: 4,
+      mudancas: cheia.map((p, i) => ({ onde: 'gel', i, antes: null, depois: p })),
+    });
+    // o fogão com 64 carnes: leva mais de 8 minutos, então a sala dorme no meio
+    await mandar({ t: 'usar', id: 5, ...FOG });
+    await mandar({
+      t: 'transacao',
+      id: 6,
+      mudancas: [{ onde: 'fog', i: 0, antes: null, depois: { item: 'carne_crua', qtd: 64 } }],
+    });
+    await avancar(20_000);
+    const fogao = () => nucleo().estado.conteineres.fogao(FOG.x, FOG.y, FOG.z);
+    expect(fogao().saida?.item).toBe('carne_assada');
+    expect(nucleo().estado.conteineres.geladeira(GEL.x, GEL.y, GEL.z)).toEqual(cheia);
+
+    // a Bia entra no meio, abre a geladeira (a dona do mundo pôs; ela não abre a da Ana)
+    const b = canal();
+    await g.receber(
+      b,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('bia'), codigo }),
+    );
+    await avancar(200);
+    const bv = b.recebidas.find((m) => m.t === 'bemvindo') as Extract<RespostaServidor, { t: 'bemvindo' }>;
+    expect(JSON.stringify(bv.edicoes)).toContain(String(Bloco.GELADEIRA));
+
+    // a Ana cai e volta: o painel volta fechado e o fogão continua
+    g.caiu(a);
+    await avancar(2000);
+    const a2 = canal();
+    await g.receber(
+      a2,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('ana'), codigo }),
+    );
+    await avancar(200);
+    expect(nucleo().estado.jogadores.get('ana')!.conteiner).toBeNull();
+    expect(quadros(a2).find((q) => q.primeiro)!.conteiner ?? null).toBeNull();
+
+    // todos saem; a sala dorme no meio do fogão e acorda com o mesmo
+    g.caiu(a2);
+    g.caiu(b);
+    await avancar(95_000);
+    expect(g.ativas.has(codigo)).toBe(false);
+    const a3 = canal();
+    await g.receber(
+      a3,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('ana'), codigo }),
+    );
+    await avancar(200);
+    expect(nucleo().estado.mundo.bloco(GEL.x, Y + 1, GEL.z)).toBe(Bloco.GELADEIRA);
+    expect(nucleo().estado.conteineres.geladeira(GEL.x, GEL.y, GEL.z)).toEqual(cheia);
+    const f = fogao();
+    expect(f.entrada?.item).toBe('carne_crua');
+    expect(f.saida?.item).toBe('carne_assada');
+    expect(f.entrada!.qtd + f.saida!.qtd).toBe(64);
+    expect(f.entrada!.qtd).toBeGreaterThan(0);
+    expect(f.saida!.qtd).toBeGreaterThan(1);
+    // e o quadro da Ana leva o fogão aberto com o progresso
+    await g.receber(a3, JSON.stringify({ t: 'usar', id: 7, ...FOG, seq: 1 }));
+    await avancar(200);
+    const visto = quadros(a3).filter((q) => q.conteiner).at(-1)!.conteiner!;
+    expect(visto.tipo).toBe('fogao');
+    if (visto.tipo === 'fogao') expect(visto.fogao.entrada?.item).toBe('carne_crua');
+  });
+});

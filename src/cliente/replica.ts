@@ -9,6 +9,7 @@
  */
 import type { Inventario, Slot } from '../jogo/inventario';
 import type { EstadoFornalha } from '../jogo/fornalha';
+import type { EstadoFogao } from '../jogo/fogao';
 import type {
   Comando,
   ConteinerVisto,
@@ -32,7 +33,8 @@ interface Fonte {
 }
 
 export interface ConteinerReplica {
-  tipo: 'bau' | 'fornalha';
+  /** Spec 039b: a geladeira (como o baú, `slots`) e o fogão (`fogao`) também. */
+  tipo: 'bau' | 'fornalha' | 'geladeira' | 'fogao';
   /** Id do comando que abriu (reabrir é outra abertura). */
   abertura: number;
   x: number;
@@ -42,7 +44,18 @@ export interface ConteinerReplica {
   slots?: Slot[];
   /** Fornalha: o estado que o painel mostra e edita. */
   fornalha?: EstadoFornalha;
+  /** Spec 039b: o fogão (a entrada, a saída e o progresso). */
+  fogao?: EstadoFogao;
 }
+
+/** O lugar da transação de cada contêiner. */
+const LUGAR: Record<ConteinerReplica['tipo'], LocalSlot> = {
+  bau: 'bau',
+  fornalha: 'forn',
+  geladeira: 'gel',
+  fogao: 'fog',
+};
+const LUGARES_DE_CONTEINER: LocalSlot[] = ['bau', 'forn', 'gel', 'fog'];
 
 export function criarSincronizadorItens(
   inv: Inventario,
@@ -74,10 +87,10 @@ export function criarSincronizadorItens(
       },
     ];
     const c = conteiner;
-    if (c?.tipo === 'bau' && c.slots) {
+    if ((c?.tipo === 'bau' || c?.tipo === 'geladeira') && c.slots) {
       const s = c.slots;
       lista.push({
-        onde: 'bau',
+        onde: LUGAR[c.tipo],
         ler: (i) => s[i] ?? null,
         gravar: (i, p) => {
           s[i] = p;
@@ -94,6 +107,17 @@ export function criarSincronizadorItens(
           f[campos[i]] = p;
         },
         tamanho: 3,
+      });
+    } else if (c?.tipo === 'fogao' && c.fogao) {
+      const f = c.fogao;
+      const campos = ['entrada', 'saida'] as const;
+      lista.push({
+        onde: 'fog',
+        ler: (i) => f[campos[i]] ?? null,
+        gravar: (i, p) => {
+          f[campos[i]] = p;
+        },
+        tamanho: 2,
       });
     }
     if (transito) lista.push({ onde: 'tr', ...transito });
@@ -176,8 +200,7 @@ export function criarSincronizadorItens(
       verificar();
       fechadasAte = Math.max(fechadasAte, ate);
       conteiner = null;
-      base.delete('bau');
-      base.delete('forn');
+      for (const l of LUGARES_DE_CONTEINER) base.delete(l);
     },
     /** Contêiner aberto mudou (null: fechou). Devolve a cópia que os painéis usam. */
     conteiner(v: ConteinerVisto | null, ackTransacao: number): ConteinerReplica | null {
@@ -185,45 +208,39 @@ export function criarSincronizadorItens(
       if (v && v.abertura <= fechadasAte) v = null;
       if (!v) {
         conteiner = null;
-        base.delete('bau');
-        base.delete('forn');
+        for (const l of LUGARES_DE_CONTEINER) base.delete(l);
         return null;
       }
-      const mesmo = conteiner?.abertura === v.abertura;
+      const mesmo = conteiner?.abertura === v.abertura && conteiner?.tipo === v.tipo;
       if (!mesmo) {
-        base.delete('bau');
-        base.delete('forn');
+        for (const l of LUGARES_DE_CONTEINER) base.delete(l);
+        const onde = { abertura: v.abertura, x: v.x, y: v.y, z: v.z };
         conteiner =
-          v.tipo === 'bau'
-            ? {
-                tipo: 'bau',
-                abertura: v.abertura,
-                x: v.x,
-                y: v.y,
-                z: v.z,
-                slots: v.slots.map(copia),
-              }
-            : {
-                tipo: 'fornalha',
-                abertura: v.abertura,
-                x: v.x,
-                y: v.y,
-                z: v.z,
-                fornalha: { ...v.fornalha },
-              };
-        const f = fonte(v.tipo === 'bau' ? 'bau' : 'forn');
+          v.tipo === 'bau' || v.tipo === 'geladeira'
+            ? { tipo: v.tipo, ...onde, slots: v.slots.map(copia) }
+            : v.tipo === 'fornalha'
+              ? { tipo: 'fornalha', ...onde, fornalha: { ...v.fornalha } }
+              : { tipo: 'fogao', ...onde, fogao: { ...v.fogao } };
+        const f = fonte(LUGAR[v.tipo]);
         if (f) base.set(f.onde, fotografar(f));
         return conteiner;
       }
-      const f = fonte(v.tipo === 'bau' ? 'bau' : 'forn');
+      const f = fonte(LUGAR[v.tipo]);
       if (!f) return conteiner;
-      if (v.tipo === 'bau') gravarTudo(f, oficial('bau', v.slots, ackTransacao));
-      else {
+      if (v.tipo === 'bau' || v.tipo === 'geladeira')
+        gravarTudo(f, oficial(LUGAR[v.tipo], v.slots, ackTransacao));
+      else if (v.tipo === 'fornalha') {
         // o progresso da fornalha anda no núcleo; os slots seguem a mesma regra do baú
         const forn = conteiner!.fornalha!;
         const { entrada, combustivel, saida, ...resto } = v.fornalha;
         Object.assign(forn, resto);
         gravarTudo(f, oficial('forn', [entrada, combustivel, saida], ackTransacao));
+      } else {
+        // spec 039b: o fogão cozinha no núcleo (o progresso vem dele)
+        const fog = conteiner!.fogao!;
+        const { entrada, saida, ...resto } = v.fogao;
+        Object.assign(fog, resto);
+        gravarTudo(f, oficial('fog', [entrada, saida], ackTransacao));
       }
       return conteiner;
     },

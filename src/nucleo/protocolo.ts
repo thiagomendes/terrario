@@ -11,6 +11,7 @@ import type { Pilha, Slot } from '../jogo/inventario';
 import type { EstadoClima, TipoClima } from '../jogo/clima';
 import type { EstadoSobrevivencia, CausaDano } from '../jogo/sobrevivencia';
 import type { EstadoFornalha } from '../jogo/fornalha';
+import type { EstadoFogao } from '../jogo/fogao';
 import type { DadosMundo, ModoJogo } from '../jogo/mundos';
 import type { EstiloMundo } from '../temas/tipos';
 import type { TipoSer } from '../jogo/criaturas';
@@ -80,7 +81,8 @@ export interface Telemetria {
 }
 
 /** Lugar de um slot numa transação. */
-export type LocalSlot = 'inv' | 'bau' | 'forn' | 'tr';
+/** Spec 039b: `gel` a geladeira (9 lugares) e `fog` o fogão (0 a entrada, 1 a saída). */
+export type LocalSlot = 'inv' | 'bau' | 'forn' | 'gel' | 'fog' | 'tr';
 
 /** Uma mudança de slot vista pelo cliente: o núcleo só aceita se `antes` ainda é o atual. */
 export interface MudancaSlot {
@@ -401,7 +403,10 @@ export type ConteinerVisto =
       y: number;
       z: number;
       fornalha: EstadoFornalha;
-    };
+    }
+  /** Spec 039b: a geladeira (os 9 lugares, só de comida) e o fogão (a entrada e a saída). */
+  | { tipo: 'geladeira'; abertura: number; x: number; y: number; z: number; slots: Slot[] }
+  | { tipo: 'fogao'; abertura: number; x: number; y: number; z: number; fogao: EstadoFogao };
 
 /** Fatos do mundo para som, efeitos, avisos e diário. */
 export type EventoNucleo =

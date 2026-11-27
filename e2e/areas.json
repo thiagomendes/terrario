@@ -87,6 +87,7 @@
         "src/jogo/catalogo.ts",
         "src/jogo/receitas.ts",
         "src/jogo/fornalha.ts",
+        "src/jogo/fogao.ts",
         "src/jogo/conteineres.ts",
         "src/jogo/drops.ts",
         "src/jogo/ferramentas.ts",

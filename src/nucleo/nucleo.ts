@@ -22,6 +22,7 @@ import {
   recusaQuebrar,
   type MundoDaRegra,
   type RecusaProtecao,
+  type TipoConteiner,
 } from '../jogo/permissao';
 import { CANTEIRO_BOLO, Protecao, criarProtecaoMundo, replantioDaLavoura } from '../world/protecao';
 import {
@@ -75,7 +76,8 @@ import { TAM_LOTE, definirRegioesSemPovoado, regiaoDoChunk } from '../world/povo
 import { povoadosPerto } from '../jogo/povoados';
 import { LIMITE_CRIADOS } from '../jogo/criacao';
 import { abreEFecha, alternado, ehPorta } from '../world/portas';
-import { criarConteineres, TAMANHO_BAU } from '../jogo/conteineres';
+import { criarConteineres, ehLugarDeConteiner, TAMANHO_BAU } from '../jogo/conteineres';
+import { TAMANHO_GELADEIRA, mudancaAceita } from '../jogo/fogao';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
 import { criarPopulacao } from '../jogo/populacao';
 import { corpoNaRua, criarTransito, type PessoaNaRua } from '../jogo/transito';
@@ -287,7 +289,8 @@ interface Jogador {
   spawn: { x: number; z: number };
   /** Itens nas mãos durante a tela de inventário (cursor e grade de criação). */
   transito: Slot[];
-  conteiner: { tipo: 'bau' | 'fornalha'; abertura: number; x: number; y: number; z: number } | null;
+  /** O contêiner aberto (spec 039b: a geladeira e o fogão, na âncora do móvel). */
+  conteiner: { tipo: TipoConteiner; abertura: number; x: number; y: number; z: number } | null;
   ack: number;
   ackTransacao: number;
   inventarioSujo: boolean;
@@ -1555,14 +1558,21 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (b === Bloco.GRAMA_ALTA && rngPlantio() < CHANCE_SEMENTE_GRAMA)
         mundoItens.soltar('semente_trigo', 1, x + 0.5, y + 0.4, z + 0.5, rngPlantio);
     }
-    // quebrar baú ou fornalha espalha o conteúdo (o de ruína nunca aberto também)
-    if (b === Bloco.BAU || b === Bloco.FORNALHA || b === Bloco.FORNALHA_ACESA) {
+    // quebrar baú ou fornalha espalha o conteúdo (o de ruína nunca aberto também); spec 039b: a
+    // geladeira e o fogão espalham o deles (guardado na âncora, de qualquer parte quebrada)
+    if (ehConteiner(b) && !solta) {
+      const a = movel?.ancora ?? { x, y, z };
       const gerado = b === Bloco.BAU && intocado && mundo.gerado(x, y, z) === Bloco.BAU;
-      for (const p of conteineres.remover(x, y, z, gerado)) {
-        if (p) mundoItens.soltar(p.item, p.qtd, x + 0.5, y + 0.5, z + 0.5, rngDrops, p.dur);
+      for (const p of conteineres.remover(a.x, a.y, a.z, gerado)) {
+        if (p) mundoItens.soltar(p.item, p.qtd, a.x + 0.5, a.y + 0.5, a.z + 0.5, rngDrops, p.dur);
       }
       for (const o of jogadores.values())
-        if (o.conteiner && o.conteiner.x === x && o.conteiner.y === y && o.conteiner.z === z) {
+        if (
+          o.conteiner &&
+          o.conteiner.x === a.x &&
+          o.conteiner.y === a.y &&
+          o.conteiner.z === a.z
+        ) {
           o.conteiner = null;
           o.conteinerSujo = true;
         }
@@ -2340,20 +2350,32 @@ export function criarNucleo(op: OpcoesNucleo) {
       const m = movelEm(leitorMoveis, x, y, z);
       const novo = acesoOuApagado(b)!;
       if (m) for (const q of m.celulas) editar(q.x, q.y, q.z, novo, metaDoMovel(m.d, q.parte));
-    } else if (
-      (b === Bloco.BAU || b === Bloco.FORNALHA || b === Bloco.FORNALHA_ACESA) &&
-      !j.constroi
-    ) {
-      // quem só passeia não mexe nos baús e fornalhas dos outros
+    } else if (ehConteiner(b) && !j.constroi) {
+      // quem só passeia não mexe nos baús, fornalhas, geladeiras e fogões dos outros
       j.eventos.push({ e: 'recusa', comando: c.id ?? 0, motivo: 'visitante' });
     } else if (ehConteiner(b) && recusaConteiner(regra, j.id, x, y, z)) {
       // spec 016: o baú e a fornalha que alguém pôs abrem só para ele e para o dono do mundo
+      // (spec 039b: a geladeira e o fogão também)
       j.eventos.push({
         e: 'recusa',
         comando: c.id ?? 0,
         motivo: 'usar',
         protecao: recusaConteiner(regra, j.id, x, y, z)!,
       });
+    } else if (b === Bloco.GELADEIRA || b === Bloco.FOGAO) {
+      // spec 039b: o contêiner do móvel mora na âncora (o toque em qualquer parte abre o mesmo);
+      // a peça solta não abre nada
+      const m = movelEm(leitorMoveis, x, y, z);
+      if (!m) return;
+      const { x: ax, y: ay, z: az } = m.ancora;
+      if (b === Bloco.GELADEIRA) {
+        conteineres.geladeira(ax, ay, az);
+        j.conteiner = { tipo: 'geladeira', abertura, x: ax, y: ay, z: az };
+      } else {
+        conteineres.fogao(ax, ay, az);
+        j.conteiner = { tipo: 'fogao', abertura, x: ax, y: ay, z: az };
+      }
+      j.conteinerSujo = true;
     } else if (b === Bloco.BAU) {
       // baú sem edição no lugar foi gerado pelo mundo (ruína): vem com tesouro
       conteineres.bau(x, y, z, edicoes.obter(x, y, z) === undefined);
@@ -2626,6 +2648,28 @@ export function criarNucleo(op: OpcoesNucleo) {
         tamanho: 3,
       };
     }
+    // spec 039b: a geladeira (9 lugares) e o fogão (a entrada e a saída), na âncora
+    if (onde === 'gel' && ct?.tipo === 'geladeira') {
+      const s = conteineres.geladeira(ct.x, ct.y, ct.z);
+      return {
+        ler: (i) => s[i] ?? null,
+        gravar: (i, p) => {
+          s[i] = p;
+        },
+        tamanho: TAMANHO_GELADEIRA,
+      };
+    }
+    if (onde === 'fog' && ct?.tipo === 'fogao') {
+      const f = conteineres.fogao(ct.x, ct.y, ct.z);
+      const campos = ['entrada', 'saida'] as const;
+      return {
+        ler: (i) => f[campos[i]] ?? null,
+        gravar: (i, p) => {
+          f[campos[i]] = p;
+        },
+        tamanho: 2,
+      };
+    }
     return null;
   }
 
@@ -2638,11 +2682,20 @@ export function criarNucleo(op: OpcoesNucleo) {
     // confere tudo antes de mexer: ou a transação inteira vale, ou nada muda
     const alvos = c.mudancas.map((m) => ({ m, s: slotsDe(j, m.onde) }));
     const valida = alvos.every(
-      ({ m, s }) => !!s && m.i >= 0 && m.i < s.tamanho && igual(s.ler(m.i), m.antes),
+      ({ m, s }) =>
+        !!s &&
+        m.i >= 0 &&
+        m.i < s.tamanho &&
+        igual(s.ler(m.i), m.antes) &&
+        // spec 039b: a geladeira só guarda comida; o fogão só cozinha comida e a saída dele
+        // não aceita item posto
+        (m.onde !== 'gel' && m.onde !== 'fog'
+          ? true
+          : mudancaAceita(m.onde, m.i, m.antes, m.depois)),
     );
     // na nuvem a conta dos itens tem que fechar (no criativo o catálogo dá de tudo)
     const contaOk = confiar || modo === 'criativo' || contaFecha(c.mudancas, c.fabricou ?? []);
-    const noConteiner = c.mudancas.some((m) => m.onde === 'bau' || m.onde === 'forn');
+    const noConteiner = c.mudancas.some((m) => ehLugarDeConteiner(m.onde));
     const ct = j.conteiner;
     const alcanca = !ct || confiar || perto(j, ct.x, ct.y, ct.z, ALCANCE_REGRAS + 2);
     // foi embora com o baú aberto: fecha
@@ -2660,7 +2713,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     for (const { m, s } of alvos) s!.gravar(m.i, m.depois ? { ...m.depois } : null);
     j.inventarioSujo = true;
     almaDaTransacao(j, c);
-    if (c.mudancas.some((m) => m.onde === 'bau' || m.onde === 'forn')) {
+    if (noConteiner) {
       // outros jogadores com o mesmo contêiner aberto veem a mudança
       for (const o of jogadores.values())
         if (
@@ -2688,8 +2741,10 @@ export function criarNucleo(op: OpcoesNucleo) {
         almaEvento(j.id, `fabricou:${f.receita}`, f.vezes, comida ? 'cozinhou' : 'fabricou');
       }
     for (const m of c.mudancas) {
-      if (m.onde !== 'forn' || m.i !== 2) continue;
-      // comida que sai da fornalha (pipoca, carne e peixe assados, ovo cozido)
+      // spec 039b: a saída do fogão dá o mesmo XP de cozinheiro (decisão do dono, 27 nov)
+      const saida = (m.onde === 'forn' && m.i === 2) || (m.onde === 'fog' && m.i === 1);
+      if (!saida) continue;
+      // comida que sai da fornalha ou do fogão (pipoca, carne e peixe assados, ovo cozido)
       const item = m.antes?.item ?? m.depois?.item;
       if (!item || !obterItem(item)?.comida) continue;
       const antes = m.antes?.item === item ? m.antes.qtd : 0;
@@ -3497,6 +3552,16 @@ export function criarNucleo(op: OpcoesNucleo) {
     // todos deitados (alguém saiu da sala, ou levantou e deitou de novo), a noite passa
     cuidarDosAssentos();
     conferirSono();
+    // spec 039b: na nuvem, o contêiner aberto fecha quando a criança sai do alcance (uma vez por
+    // segundo; a transação de longe já era recusada)
+    if (!confiar && n % 20 === 0)
+      for (const j of jogadores.values()) {
+        const ct = j.conteiner;
+        if (ct && !perto(j, ct.x, ct.y, ct.z, ALCANCE_REGRAS + 2)) {
+          j.conteiner = null;
+          j.conteinerSujo = true;
+        }
+      }
     for (const j of jogadores.values()) {
       if (j.sono > 0) {
         j.sono -= dt;
@@ -3632,6 +3697,19 @@ export function criarNucleo(op: OpcoesNucleo) {
         tipo: 'bau',
         slots: conteineres.bau(c.x, c.y, c.z, false).map((p) => (p ? { ...p } : null)),
       };
+    // spec 039b: a geladeira e o fogão
+    if (c.tipo === 'geladeira')
+      return {
+        ...c,
+        tipo: 'geladeira',
+        slots: conteineres.geladeira(c.x, c.y, c.z).map((p) => (p ? { ...p } : null)),
+      };
+    if (c.tipo === 'fogao')
+      return {
+        ...c,
+        tipo: 'fogao',
+        fogao: JSON.parse(JSON.stringify(conteineres.fogao(c.x, c.y, c.z))),
+      };
     const f = conteineres.fornalha(c.x, c.y, c.z);
     return { ...c, tipo: 'fornalha', fornalha: JSON.parse(JSON.stringify(f)) };
   }
@@ -3724,7 +3802,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         j.transitoSujo = false;
       }
       // a fornalha aberta anda sozinha: vai em todo quadro
-      if (j.conteinerSujo || j.conteiner?.tipo === 'fornalha') {
+      // (spec 039b: o fogão também cozinha sozinho)
+      if (j.conteinerSujo || j.conteiner?.tipo === 'fornalha' || j.conteiner?.tipo === 'fogao') {
         q.conteiner = vistaConteiner(j);
         j.conteinerSujo = false;
       }
@@ -3866,6 +3945,14 @@ export function criarNucleo(op: OpcoesNucleo) {
       } else editar(x, y, z, Bloco.AR);
     }
   }
+  // spec 039b: a geladeira e o fogão cuja âncora não é mais o móvel certo saem (a peça solta já
+  // saiu; um salvamento mexido por fora não deixa um contêiner sem móvel)
+  conteineres.limparMoveis((k, tipo) => {
+    const [x, y, z] = k.split(',').map(Number);
+    const m = movelEm(leitorMoveis, x, y, z);
+    const bloco = tipo === 'geladeira' ? Bloco.GELADEIRA : Bloco.FOGAO;
+    return !!m && m.bloco === bloco && m.ancora.x === x && m.ancora.y === y && m.ancora.z === z;
+  });
 
   return {
     semente,
@@ -3902,6 +3989,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (!j) return;
       // spec 039 (T04): quem volta de uma queda volta de pé (a tela nova não sabe do assento)
       levantar(j);
+      // spec 039b: e com o contêiner fechado (a tela nova não tem o painel aberto)
+      j.conteiner = null;
       j.iniciado = false;
       j.inventarioSujo = true;
       j.transitoSujo = true;
