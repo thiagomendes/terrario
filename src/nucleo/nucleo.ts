@@ -1581,17 +1581,11 @@ export function criarNucleo(op: OpcoesNucleo) {
       for (const p of conteineres.remover(a.x, a.y, a.z, gerado)) {
         if (p) mundoItens.soltar(p.item, p.qtd, a.x + 0.5, a.y + 0.5, a.z + 0.5, rngDrops, p.dur);
       }
-      for (const o of jogadores.values())
-        if (
-          o.conteiner &&
-          o.conteiner.x === a.x &&
-          o.conteiner.y === a.y &&
-          o.conteiner.z === a.z
-        ) {
-          o.conteiner = null;
-          o.conteinerSujo = true;
-        }
+      fecharConteinerEm(a);
     }
+    // spec 039b: a TV e o som quebrados saem da lista na hora
+    if ((b === Bloco.TV || b === Bloco.SOM) && movel && ligados.delete(chaveDoMovel(movel.ancora)))
+      ligadosSujo = true;
     for (const o of jogadores.values()) {
       o.eventos.push({ e: 'quebra', x, y, z, bloco: b, meu: o === j });
       if (ehLavoura(b))
@@ -1883,6 +1877,30 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (lav) almaEvento(j.id, 'plantou');
   }
 
+  /**
+   * Spec 039b: (x, y, z) ainda é a âncora da geladeira ou do fogão inteiro? A mesma conta serve
+   * ao abrir o mundo, ao lote do criativo e ao `moveisLigados`.
+   */
+  function ancoraDoConteiner(
+    x: number,
+    y: number,
+    z: number,
+    tipo: 'geladeira' | 'fogao',
+  ): boolean {
+    const m = movelEm(leitorMoveis, x, y, z);
+    const bloco = tipo === 'geladeira' ? Bloco.GELADEIRA : Bloco.FOGAO;
+    return !!m && m.bloco === bloco && m.ancora.x === x && m.ancora.y === y && m.ancora.z === z;
+  }
+
+  /** O contêiner de (x, y, z) saiu: fecha para quem estava com ele aberto. */
+  function fecharConteinerEm(a: Cel): void {
+    for (const o of jogadores.values())
+      if (o.conteiner && o.conteiner.x === a.x && o.conteiner.y === a.y && o.conteiner.z === a.z) {
+        o.conteiner = null;
+        o.conteinerSujo = true;
+      }
+  }
+
   function editarLote(j: Jogador, c: Extract<Comando, { t: 'editar' }>): void {
     if ((modo !== 'criativo' && !confiar) || !constroiAgora(j) || c.lote.length > 20000) {
       recusar(j, c.id, 'editar', c.lote.slice(0, 20000));
@@ -1926,6 +1944,18 @@ export function criarNucleo(op: OpcoesNucleo) {
       empacotar(mundo.bloco(x, y, z), edicoes.obterMeta(x, y, z));
     const r = decidirLote(grupos, regra, j.id, atual, corposDoLote);
     for (const e of r.voltam) corrigir(j, e.x, e.y, e.z);
+    // spec 039b: a geladeira e o fogão que o lote cobre (a âncora de cada um, antes)
+    const cobertos = new Map<string, Cel & { tipo: 'geladeira' | 'fogao' }>();
+    for (const e of r.vai) {
+      const b0 = mundo.bloco(e.x, e.y, e.z);
+      if (b0 !== Bloco.GELADEIRA && b0 !== Bloco.FOGAO) continue;
+      const m = movelEm(leitorMoveis, e.x, e.y, e.z);
+      if (m)
+        cobertos.set(`${m.ancora.x},${m.ancora.y},${m.ancora.z}`, {
+          ...m.ancora,
+          tipo: b0 === Bloco.GELADEIRA ? 'geladeira' : 'fogao',
+        });
+    }
     for (const e of r.vai) {
       const b = e.v & 255;
       const meta = (e.v >> 8) & 255;
@@ -1945,6 +1975,14 @@ export function criarNucleo(op: OpcoesNucleo) {
         editar(e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255, j.id);
       else corrigir(j, e.x, e.y, e.z);
     }
+    // a que não é mais o móvel inteiro naquela âncora some com o que tinha (o lote é do
+    // criativo, onde o catálogo dá de tudo), e o painel de quem estava com ela fecha; a nova
+    // que o lote põe na mesma âncora começa vazia
+    for (const a of cobertos.values())
+      if (!ancoraDoConteiner(a.x, a.y, a.z, a.tipo)) {
+        conteineres.remover(a.x, a.y, a.z);
+        fecharConteinerEm(a);
+      }
   }
 
   // ------------------------------------------------------------ canteiro (spec 014, T05)
@@ -2506,7 +2544,9 @@ export function criarNucleo(op: OpcoesNucleo) {
   function tocarLigado(m: MovelAchado): void {
     const k = chaveDoMovel(m.ancora);
     const tipo = m.bloco === Bloco.TV ? 'tv' : 'som';
-    const atual = ligados.get(k) ?? null;
+    // o que estava ligado nesta âncora com outro móvel (ou virado) conta como desligado
+    const antes = ligados.get(k);
+    const atual = antes && antes.bloco === m.bloco && antes.d === m.d ? antes : null;
     const t = n * PASSO;
     const novo = tipo === 'tv' ? tocarTv(atual, t) : tocarSom(atual, t);
     if (novo === undefined) return;
@@ -2547,36 +2587,45 @@ export function criarNucleo(op: OpcoesNucleo) {
 
   /** O que muda a lista sem tirar nem pôr (o fogão que começa ou para; a geladeira aberta). */
   let chaveDosLigados = '';
-  function chaveDosLigadosAgora(): string {
-    const partes: string[] = [];
-    for (const [k, f] of conteineres.fogoesCozinhando()) partes.push(`f${k}:${f.entrada?.item}`);
-    for (const o of jogadores.values())
-      if (o.conteiner?.tipo === 'geladeira')
-        partes.push(`g${o.conteiner.x},${o.conteiner.y},${o.conteiner.z}`);
-    return partes.sort().join('|');
-  }
-
-  /** Os móveis ligados perto de `j` (as 16 mais perto, até 32 blocos). */
-  function ligadosPerto(j: Jogador): MovelLigado[] {
-    const todos: MovelLigado[] = [];
-    for (const e of ligados.values()) {
-      const desde = Math.round(e.desde * 1000) / 1000;
-      todos.push({ tipo: e.tipo, ...e.ancora, programa: e.programa, desde });
-    }
+  /**
+   * O fogão cozinhando e a geladeira aberta, só onde a âncora ainda é o móvel inteiro certo (a
+   * conta do abrir o mundo): um contêiner sem o móvel não aparece ligado.
+   */
+  function conteineresLigados(): MovelLigado[] {
+    const out: MovelLigado[] = [];
     for (const [k, f] of conteineres.fogoesCozinhando()) {
       const [x, y, z] = k.split(',').map(Number);
       const receita = f.entrada ? noFogao(f.entrada.item) : undefined;
       const progresso = Math.round(f.progresso * 1000) / 1000;
-      if (receita) todos.push({ tipo: 'fogao', x, y, z, receita, progresso });
+      if (receita && ancoraDoConteiner(x, y, z, 'fogao'))
+        out.push({ tipo: 'fogao', x, y, z, receita, progresso });
     }
     const abertas = new Set<string>();
     for (const o of jogadores.values())
       if (o.conteiner?.tipo === 'geladeira') {
         const { x, y, z } = o.conteiner;
         const k = `${x},${y},${z}`;
-        if (!abertas.has(k)) todos.push({ tipo: 'geladeira', x, y, z });
+        if (!abertas.has(k) && ancoraDoConteiner(x, y, z, 'geladeira'))
+          out.push({ tipo: 'geladeira', x, y, z });
         abertas.add(k);
       }
+    return out;
+  }
+
+  function chaveDosLigadosAgora(): string {
+    return conteineresLigados()
+      .map((e) => `${e.tipo}${e.x},${e.y},${e.z}:${e.tipo === 'fogao' ? e.receita : ''}`)
+      .sort()
+      .join('|');
+  }
+
+  /** Os móveis ligados perto de `j` (as 16 mais perto, até 32 blocos). */
+  function ligadosPerto(j: Jogador): MovelLigado[] {
+    const todos: MovelLigado[] = conteineresLigados();
+    for (const e of ligados.values()) {
+      const desde = Math.round(e.desde * 1000) / 1000;
+      todos.push({ tipo: e.tipo, ...e.ancora, programa: e.programa, desde });
+    }
     const dist = (e: MovelLigado) => Math.hypot(e.x + 0.5 - j.tel.x, e.z + 0.5 - j.tel.z);
     return todos
       .filter((e) => dist(e) <= ALCANCE_LIGADOS)
@@ -2915,6 +2964,12 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (!item || !obterItem(item)?.comida) continue;
       const antes = m.antes?.item === item ? m.antes.qtd : 0;
       const depois = m.depois?.item === item ? m.depois.qtd : 0;
+      // o fogão: a saída não recebe item (o filtro da transação), então todo o tirado foi
+      // cozido ali; sem o desconto do mundo, que passaria o XP de uma criança para outra
+      if (m.onde === 'fog') {
+        if (antes > depois) almaEvento(j.id, `fundiu:${item}`, antes - depois);
+        continue;
+      }
       // pôr comida na saída não é cozinhar: a que foi posta não conta ao sair
       const posta = postoNaSaida.get(item) ?? 0;
       if (depois > antes) postoNaSaida.set(item, posta + depois - antes);
@@ -4131,9 +4186,7 @@ export function criarNucleo(op: OpcoesNucleo) {
   // saiu; um salvamento mexido por fora não deixa um contêiner sem móvel)
   conteineres.limparMoveis((k, tipo) => {
     const [x, y, z] = k.split(',').map(Number);
-    const m = movelEm(leitorMoveis, x, y, z);
-    const bloco = tipo === 'geladeira' ? Bloco.GELADEIRA : Bloco.FOGAO;
-    return !!m && m.bloco === bloco && m.ancora.x === x && m.ancora.y === y && m.ancora.z === z;
+    return ancoraDoConteiner(x, y, z, tipo);
   });
 
   return {
@@ -4163,7 +4216,13 @@ export function criarNucleo(op: OpcoesNucleo) {
     /** Visitantes podem construir? (o dono decide) */
     definirConstrucao(id: string, pode: boolean) {
       const j = jogadores.get(id);
-      if (j) j.constroi = pode;
+      if (!j) return;
+      j.constroi = pode;
+      // spec 039b: quem passa a só passear não fica com o contêiner aberto
+      if (!pode && j.conteiner) {
+        j.conteiner = null;
+        j.conteinerSujo = true;
+      }
     },
     /** Voltou da queda: o próximo quadro recomeça a sequência e leva tudo de novo. */
     reiniciarQuadros(id: string) {

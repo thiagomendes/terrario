@@ -473,6 +473,25 @@ for (const modo of ['local', 'nuvem'] as const)
       expect(proximaLista(n, 'ana')).toEqual([]);
     });
 
+    it('a TV trocada pelo som na mesma âncora (o lote): o toque liga o som, não desliga a TV', () => {
+      const n = abrir(modo);
+      ir(n, 'ana', PERTO.x, PERTO.z);
+      passo(n);
+      porMovel(n, Bloco.TV, TV.x, TV.z);
+      passo(n);
+      usar(n, 'ana', TV.x, TV.z);
+      passo(n);
+      while ((passo(n).get('ana')!.n + 1) % 20 !== 5);
+      // o lote tira a TV inteira e põe o som na âncora dela
+      mandar(n, 'ana', { t: 'editar', lote: [{ x: TV.x, y: YP, z: TV.z, v: Bloco.SOM }] });
+      usar(n, 'ana', TV.x, TV.z);
+      const q = passo(n).get('ana')!;
+      expect(bloco(n, TV.x, TV.z)).toBe(Bloco.SOM);
+      expect(q.moveisLigados).toEqual([
+        { tipo: 'som', x: TV.x, y: YP, z: TV.z, programa: 0, desde: expect.any(Number) },
+      ]);
+    });
+
     it('quebrar a TV ligada tira ela da lista; o fogão cozinhando e a geladeira aberta entram', () => {
       const n = abrir(modo);
       ir(n, 'ana', PERTO.x, PERTO.z);
@@ -483,9 +502,12 @@ for (const modo of ['local', 'nuvem'] as const)
       passo(n);
       usar(n, 'ana', TV.x, TV.z);
       passo(n);
+      // quebrar sai na hora (num passo longe da conferência de cada segundo)
+      while ((passo(n).get('ana')!.n + 1) % 20 !== 5);
       mandar(n, 'ana', { t: 'quebrar', x: TV.x + 1, y: YP + 1, z: TV.z, slot: 0 });
-      for (let i = 0; i < 21; i++) n.passo();
-      expect(ligadosDe(passo(n), 'ana')).toEqual([]);
+      const qq = passo(n).get('ana')!;
+      expect(qq.n % 20).toBe(5);
+      expect(qq.moveisLigados).toEqual([]);
       // o fogão com milho cozinha: entra com a receita e o progresso
       usar(n, 'ana', X0 + 3, Z0 + 7);
       mandar(n, 'ana', {

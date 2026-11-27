@@ -13,6 +13,7 @@ import {
   novoFogao,
 } from '../../src/jogo/fogao';
 import { ehConteiner } from '../../src/jogo/permissao';
+import { idDoBloco } from '../../src/jogo/itens';
 import { criarSincronizadorItens } from '../../src/cliente/replica';
 import { criarInventario } from '../../src/jogo/inventario';
 import { registrarCatalogo } from '../../src/jogo/catalogo';
@@ -142,6 +143,15 @@ function passo(n: Nucleo): Map<string, Quadro> {
 }
 const recusasDe = (q: Quadro | undefined) =>
   (q?.eventos ?? []).filter((e): e is Extract<EventoNucleo, { e: 'recusa' }> => e.e === 'recusa');
+
+/** A próxima lista dos móveis ligados que o quadro da Ana leva (vai a cada 20 passos). */
+function proximaLista(n: Nucleo) {
+  for (let i = 0; i < 21; i++) {
+    const l = passo(n).get('ana')?.moveisLigados;
+    if (l) return l;
+  }
+  return undefined;
+}
 
 function contar(n: Nucleo, item: string): number {
   let t = 0;
@@ -274,6 +284,17 @@ for (const modo of ['local', 'nuvem'] as const)
     it('tirar a comida do fogão dá o XP de cozinheiro, como a fornalha', () => {
       const n = abrir(modo);
       cozinha(n);
+      // a carne assada posta na saída de uma fornalha (o desconto da fornalha) não tira o XP do
+      // que o fogão cozinhou
+      const F = { x: X0 + 3, y: YP, z: Z0 + 2 };
+      mandar(n, 'ana', { t: 'colocar', ...F, bloco: Bloco.FORNALHA, meta: 0, slot: 0 });
+      usar(n, 'ana', F.x, F.y, F.z);
+      mandar(n, 'ana', {
+        t: 'transacao',
+        mudancas: [{ onde: 'forn', i: 2, antes: null, depois: { item: 'carne_assada', qtd: 2 } }],
+      });
+      passo(n);
+      expect(n.estado.conteineres.fornalha(F.x, F.y, F.z).saida?.qtd).toBe(2);
       usar(n, 'ana', FOG.x, FOG.y, FOG.z);
       guardar(n, 'ana', 'fog', 0, 'carne_crua', 2);
       for (let i = 0; i < TEMPO_FUNDIR * 20 * 2 + 5; i++) n.passo();
@@ -379,6 +400,92 @@ for (const modo of ['local', 'nuvem'] as const)
       expect(passo(n).get('ana')!.conteiner).toBeNull();
     });
   });
+
+for (const modo of ['local', 'nuvem'] as const)
+  describe(`o lote do criativo sobre a geladeira e o fogão (${modo})`, () => {
+    it('o ar sobre o fogão cozinhando: sai da lista, o painel fecha e o fogão novo começa vazio', () => {
+      const n = abrir(modo);
+      cozinha(n);
+      usar(n, 'ana', FOG.x, FOG.y, FOG.z);
+      guardar(n, 'ana', 'fog', 0, 'carne_crua', 5);
+      const q = passo(n).get('ana')!;
+      expect(q.moveisLigados?.map((e) => e.tipo)).toEqual(['fogao']);
+      mandar(n, 'ana', { t: 'editar', lote: [{ ...FOG, v: Bloco.AR }] });
+      const q2 = passo(n).get('ana')!;
+      expect(bloco(n, FOG.x, FOG.y, FOG.z)).toBe(Bloco.AR);
+      expect(q2.moveisLigados).toEqual([]);
+      expect(jog(n, 'ana').conteiner).toBeNull();
+      expect(q2.conteiner).toBeNull();
+      // um fogão novo na mesma âncora começa vazio (e não aparece cozinhando)
+      porMovel(n, 'ana', Bloco.FOGAO, FOG.x, FOG.y, FOG.z);
+      passo(n);
+      expect(n.estado.conteineres.fogao(FOG.x, FOG.y, FOG.z)).toEqual({
+        entrada: null,
+        saida: null,
+        progresso: 0,
+      });
+      expect(proximaLista(n)).toBeUndefined();
+    });
+
+    it('o ar sobre a porta de cima da geladeira aberta: some com o que tinha e fecha o painel', () => {
+      const n = abrir(modo);
+      cozinha(n);
+      usar(n, 'ana', GEL.x, GEL.y, GEL.z);
+      guardar(n, 'ana', 'gel', 0, 'pipoca', 3);
+      const lista = passo(n).get('ana')!.moveisLigados ?? [];
+      expect(lista.some((e) => e.tipo === 'geladeira')).toBe(true);
+      mandar(n, 'ana', { t: 'editar', lote: [{ x: GEL.x, y: YP + 1, z: GEL.z, v: Bloco.AR }] });
+      const q = passo(n).get('ana')!;
+      expect(bloco(n, GEL.x, YP, GEL.z)).toBe(Bloco.AR);
+      expect(jog(n, 'ana').conteiner).toBeNull();
+      expect(q.moveisLigados).toEqual([]);
+      porMovel(n, 'ana', Bloco.GELADEIRA, GEL.x, GEL.y, GEL.z);
+      passo(n);
+      const g = n.estado.conteineres.geladeira(GEL.x, GEL.y, GEL.z);
+      expect(g.every((p) => p === null)).toBe(true);
+    });
+  });
+
+describe('a geladeira na sobrevivência (nuvem)', () => {
+  it('a comida que só aparece na geladeira é recusada; a que sai da mochila entra', () => {
+    const n = abrir('nuvem', { jogo: 'sobrevivencia' });
+    const ana = jog(n, 'ana');
+    ana.inventario.definir(0, { item: idDoBloco(Bloco.GELADEIRA), qtd: 1 });
+    porMovel(n, 'ana', Bloco.GELADEIRA, GEL.x, GEL.y, GEL.z);
+    expect(recusasDe(passo(n).get('ana'))).toEqual([]);
+    expect(bloco(n, GEL.x, YP + 1, GEL.z)).toBe(Bloco.GELADEIRA);
+    usar(n, 'ana', GEL.x, GEL.y, GEL.z);
+    passo(n);
+    expect(ana.conteiner?.tipo).toBe('geladeira');
+    // do nada: a conta dos itens não fecha
+    mandar(n, 'ana', {
+      t: 'transacao',
+      mudancas: [{ onde: 'gel', i: 0, antes: null, depois: { item: 'pipoca', qtd: 5 } }],
+    });
+    passo(n);
+    expect(n.estado.conteineres.geladeira(GEL.x, GEL.y, GEL.z)[0]).toBeNull();
+    // da mochila para a geladeira: passa
+    guardar(n, 'ana', 'gel', 0, 'pipoca', 5);
+    passo(n);
+    expect(n.estado.conteineres.geladeira(GEL.x, GEL.y, GEL.z)[0]).toEqual({
+      item: 'pipoca',
+      qtd: 5,
+    });
+    expect(ana.inventario.contar('pipoca')).toBe(0);
+  });
+
+  it('quem passa a só passear fica com o painel fechado', () => {
+    const n = abrir('nuvem', { jogo: 'sobrevivencia' });
+    jog(n, 'ana').inventario.definir(0, { item: idDoBloco(Bloco.FOGAO), qtd: 1 });
+    porMovel(n, 'ana', Bloco.FOGAO, FOG.x, FOG.y, FOG.z);
+    passo(n);
+    usar(n, 'ana', FOG.x, FOG.y, FOG.z);
+    expect(passo(n).get('ana')!.conteiner?.tipo).toBe('fogao');
+    n.definirConstrucao('ana', false);
+    expect(jog(n, 'ana').conteiner).toBeNull();
+    expect(passo(n).get('ana')!.conteiner).toBeNull();
+  });
+});
 
 describe('a geladeira e o fogão dos outros (nuvem)', () => {
   it('o visitante não abre; outra criança não abre a da Bia; a dona do mundo abre', () => {
