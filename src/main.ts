@@ -24,7 +24,10 @@ import { criarRepositorioMundos, mundoParaAbrir, type MetaMundo } from './jogo/m
 import { CSS_INVENTARIO, criarInventarioUI } from './ui/inventario';
 import { criarDicaMira } from './ui/dicaMira';
 import { CSS_CRIACAO, criarCriacao } from './ui/criacao';
-import { CSS_CONTEINER, criarPainelBau, criarPainelFornalha } from './ui/conteiner';
+import { CSS_CONTEINER, criarPainelBau, criarPainelFogao, criarPainelFornalha } from './ui/conteiner';
+import { TAMANHO_GELADEIRA, mudancaAceita } from './jogo/fogao';
+import { idDoBloco } from './jogo/itens';
+import { iconeDoItem } from './ui/icones';
 import { CSS_TROCAS, criarPainelTrocas } from './ui/trocas';
 import type { Profissao } from './world/povoado';
 import type { ConteinerReplica } from './cliente/replica';
@@ -508,6 +511,20 @@ function ligarInventario(
   });
   const painelBau = criarPainelBau(ui, hotbar.inventario);
   const painelFornalha = criarPainelFornalha(ui);
+  // spec 039b: a geladeira (9 lugares, só comida) e o fogão (sem carvão), com a mesma regra do
+  // núcleo (`mudancaAceita`) e o ícone do móvel
+  const painelGeladeira = criarPainelBau(ui, hotbar.inventario, {
+    tamanho: TAMANHO_GELADEIRA,
+    prefixo: 'gel',
+    rotulo: 'Geladeira',
+    icone: () => iconeDoItem(idDoBloco(Bloco.GELADEIRA)),
+    aceita: (i, antes, depois) => mudancaAceita('gel', i, antes, depois),
+  });
+  const painelFogao = criarPainelFogao(ui, () => iconeDoItem(idDoBloco(Bloco.FOGAO)));
+  const fecharMoveis = () => {
+    painelGeladeira.fechar();
+    painelFogao.fechar();
+  };
   // trocas: o núcleo confere e faz; a tela mostra o pedido e o inventário novo
   let moradorAtual = 0;
   const painelTrocas = criarPainelTrocas(ui, hotbar.inventario, {
@@ -531,9 +548,11 @@ function ligarInventario(
     painelBau.fechar();
     painelFornalha.fechar();
     painelTrocas.fechar();
+    fecharMoveis();
     cena.fecharConteiner();
   });
   const abrir = (lado: 2 | 3) => {
+    fecharMoveis();
     painelBau.fechar();
     painelFornalha.fechar();
     painelTrocas.fechar();
@@ -548,6 +567,7 @@ function ligarInventario(
     painelBau.fechar();
     painelFornalha.fechar();
     painelTrocas.fechar();
+    fecharMoveis();
     criacao.devolver();
     criacao.mostrar(false);
     f();
@@ -566,14 +586,23 @@ function ligarInventario(
       e as CustomEvent<{ conteiner: ConteinerReplica | null; novo: boolean }>
     ).detail;
     if (!c) {
-      // quebraram o contêiner aberto
-      if (painelBau.aberto || painelFornalha.aberta) ui.fechar();
+      // quebraram o contêiner aberto (spec 039b: ou o núcleo fechou a geladeira ou o fogão:
+      // longe, quebrado, o lote, só passeando)
+      if (painelBau.aberto || painelFornalha.aberta || painelGeladeira.aberto || painelFogao.aberta)
+        ui.fechar();
       return;
     }
     if (novo) {
       if (c.tipo === 'bau' && c.slots) {
         const slots = c.slots;
         abrirConteiner(() => painelBau.abrir(slots));
+      } else if (c.tipo === 'geladeira' && c.slots) {
+        const slots = c.slots;
+        abrirConteiner(() => painelGeladeira.abrir(slots));
+        window.dispatchEvent(new CustomEvent('brumaluz:somMovel', { detail: { som: 'geladeira', x: c.x, z: c.z } }));
+      } else if (c.tipo === 'fogao' && c.fogao) {
+        const f = c.fogao;
+        abrirConteiner(() => painelFogao.abrir(f));
       } else if (c.fornalha) {
         const f = c.fornalha;
         abrirConteiner(() => painelFornalha.abrir(f));
@@ -581,6 +610,8 @@ function ligarInventario(
       return;
     }
     if (c.tipo === 'bau') painelBau.render();
+    else if (c.tipo === 'geladeira') painelGeladeira.render();
+    else if (c.tipo === 'fogao') painelFogao.render();
     else if (painelFornalha.aberta) painelFornalha.render();
   });
   // cama: o núcleo põe o ponto de renascer e decide se dá para dormir

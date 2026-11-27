@@ -353,6 +353,53 @@ export const RECEITAS: readonly Receita[] = [
     mesa: true,
     categoria: 'casa',
   },
+  // spec 039b: a parte 2 (o estudo, seção 8); a geladeira, o fogão, a TV e o som pedem ferro de
+  // verdade (decisão do dono)
+  {
+    // o baú de guardar no ferro
+    id: 'geladeira',
+    forma: ['FF', 'FB', 'FF'],
+    chaves: { F: 'lingote_ferro', B: b(Bloco.BAU) },
+    resultado: { item: b(Bloco.GELADEIRA), qtd: 1 },
+    mesa: true,
+    categoria: 'casa',
+  },
+  {
+    // a fornalha (que já cozinha) no ferro
+    id: 'fogao',
+    forma: ['FFF', 'FAF'],
+    chaves: { F: 'lingote_ferro', A: b(Bloco.FORNALHA) },
+    resultado: { item: b(Bloco.FOGAO), qtd: 1 },
+    mesa: true,
+    categoria: 'casa',
+  },
+  {
+    // o tampo de tábua e os pés de graveto (a "mesa" é a de trabalho: esta é a da casa)
+    id: 'mesa_casa',
+    forma: ['TTT', 'G G'],
+    chaves: { T: '#tabuas', G: 'graveto' },
+    resultado: { item: b(Bloco.MESA), qtd: 1 },
+    mesa: true,
+    categoria: 'casa',
+  },
+  {
+    // a tela de vidro com moldura no rack de madeira
+    id: 'tv',
+    forma: ['FVF', 'TTT'],
+    chaves: { F: 'lingote_ferro', V: b(Bloco.VIDRO), T: '#tabuas' },
+    resultado: { item: b(Bloco.TV), qtd: 1 },
+    mesa: true,
+    categoria: 'casa',
+  },
+  {
+    // os dois alto-falantes de ferro na caixa de madeira
+    id: 'som',
+    forma: ['TFT', 'TFT'],
+    chaves: { T: '#tabuas', F: 'lingote_ferro' },
+    resultado: { item: b(Bloco.SOM), qtd: 1 },
+    mesa: true,
+    categoria: 'casa',
+  },
   {
     id: 'ensopado',
     ingredientes: [b(Bloco.COGUMELO_BRILHANTE), b(Bloco.COGUMELO_BRILHANTE), '#tabuas'],

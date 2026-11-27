@@ -574,4 +574,41 @@ describe('a cópia do cliente', () => {
       { onde: 'fog', i: 0, antes: null, depois: { item: 'milho', qtd: 2 } },
     ]);
   });
+
+  it('spec 039b (T04): a mudança que o núcleo recusaria nem vai, e a cópia volta no mesmo passo', () => {
+    const enviados: Comando[] = [];
+    let id = 200;
+    const inv = criarInventario();
+    inv.definir(0, { item: 'graveto', qtd: 3 });
+    const s = criarSincronizadorItens(
+      inv,
+      (c) => enviados.push(c),
+      () => ++id,
+    );
+    const slots = Array.from({ length: TAMANHO_GELADEIRA }, () => null);
+    const c = s.conteiner({ tipo: 'geladeira', abertura: 9, ...GEL, slots }, 0)!;
+    // o graveto da mochila para a geladeira (como um painel sem a regra faria)
+    inv.definir(0, null);
+    c.slots![2] = { item: 'graveto', qtd: 3 };
+    s.verificar();
+    expect(enviados.filter((e) => e.t === 'transacao')).toEqual([]);
+    expect(c.slots![2]).toBeNull();
+    expect(inv.obter(0)).toEqual({ item: 'graveto', qtd: 3 });
+    // a comida entra
+    c.slots![3] = { item: 'pipoca', qtd: 1 };
+    s.verificar();
+    expect(enviados.filter((e) => e.t === 'transacao')).toHaveLength(1);
+    // o fogão: pôr na saída não vale; a pedra na entrada também não
+    const f = s.conteiner(
+      { tipo: 'fogao', abertura: 10, ...FOG, fogao: { entrada: null, saida: null, progresso: 0 } },
+      0,
+    )!;
+    f.fogao!.saida = { item: 'pipoca', qtd: 1 };
+    s.verificar();
+    expect(f.fogao!.saida).toBeNull();
+    f.fogao!.entrada = { item: idDoBloco(Bloco.PEDRA_LISA), qtd: 1 };
+    s.verificar();
+    expect(f.fogao!.entrada).toBeNull();
+    expect(enviados.filter((e) => e.t === 'transacao')).toHaveLength(1);
+  });
 });

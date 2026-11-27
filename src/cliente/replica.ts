@@ -9,7 +9,7 @@
  */
 import type { Inventario, Slot } from '../jogo/inventario';
 import type { EstadoFornalha } from '../jogo/fornalha';
-import type { EstadoFogao } from '../jogo/fogao';
+import { mudancaAceita, type EstadoFogao } from '../jogo/fogao';
 import type {
   Comando,
   ConteinerVisto,
@@ -147,6 +147,26 @@ export function criarSincronizadorItens(
       }
     }
     if (!mudancas.length) return;
+    // spec 039b: a mesma regra do núcleo na cópia (a geladeira só guarda comida; a entrada do
+    // fogão, só o que ele cozinha; a saída, só tirar). A mudança que ela recusa nem vai: tudo
+    // volta como estava, no mesmo passo (o graveto não fica na geladeira nem por um quadro)
+    const recusada = mudancas.some(
+      (m) =>
+        (m.onde === 'gel' || m.onde === 'fog') && !mudancaAceita(m.onde, m.i, m.antes, m.depois),
+    );
+    if (recusada) {
+      aplicando = true;
+      try {
+        for (const m of mudancas) {
+          fonte(m.onde)?.gravar(m.i, copia(m.antes));
+          const b = base.get(m.onde);
+          if (b) b[m.i] = copia(m.antes);
+        }
+      } finally {
+        aplicando = false;
+      }
+      return;
+    }
     const id = proximoId();
     pendentes.push({ id, mudancas });
     if (fabricadas.size) {

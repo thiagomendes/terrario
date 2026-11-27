@@ -103,7 +103,8 @@
         "src/ui/status.ts",
         "src/ui/abasCategoria.ts",
         "src/render/moveis/",
-        "src/render/poseMovel.ts"
+        "src/render/poseMovel.ts",
+        "src/audio/somMoveis.ts"
       ],
       "suites": [
         "ajustes-filho.spec.ts",
@@ -115,7 +116,8 @@
         "interacao.spec.ts",
         "inventario.spec.ts",
         "mineracao.spec.ts",
-        "moveis-039.spec.ts"
+        "moveis-039.spec.ts",
+        "moveis-039b.spec.ts"
       ]
     },
     "temas-e-mundos": {

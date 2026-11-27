@@ -134,6 +134,7 @@ import { PIPOQUEIRO, VENDEDORA_DE_BALOES } from '../nucleo/vila';
 import { criarSomParque, type SomParque } from '../audio/somParque';
 import { criarSomRua, type SomRua } from '../audio/somRua';
 import { criarSomCasa, type SomCasa } from '../audio/somCasa';
+import { criarSomMoveis, maisPertos, type SomLigado } from '../audio/somMoveis';
 import { ligarCasaNaCena, JUNTAS_SOFA } from './vila/casaNaCena';
 import { criarMissoesParque } from './vila/missoesParque';
 import { criarMissoesCasa } from './vila/missoesCasa';
@@ -472,6 +473,13 @@ const INTERATIVOS = new Set<number>([
   // spec 039 (T06): os toques só da tela (as portas e a troca de roupa; a água da pia)
   Bloco.GUARDA_ROUPA,
   Bloco.PIA,
+  // spec 039b (T04): o fogão e a geladeira abrem o painel; a mesa recebe a comida da mão; a TV
+  // passa o desenho; o som toca a musiquinha (o núcleo decide todos)
+  Bloco.FOGAO,
+  Bloco.GELADEIRA,
+  Bloco.MESA,
+  Bloco.TV,
+  Bloco.SOM,
 ]);
 let raioChunks = RAIO_INICIAL;
 /**
@@ -663,6 +671,12 @@ export interface EstadoDepuracao {
     };
   };
   somCasa?: () => ReturnType<SomCasa['info']> | null;
+  /** Spec 039b (T04): a musiquinha do som tocando agora (testes). */
+  somMoveis?: () => { tocando: string[]; pronto: boolean };
+  /** Spec 039b (T04): quantos pratos postos na mesa esta tela viu (testes). */
+  pratosVistos?: () => number;
+  /** Spec 039b (T04): os móveis ligados perto, como o núcleo mandou (testes). */
+  ligados?: () => readonly import('../nucleo/protocolo').MovelLigado[];
   /** Spec 026: toca um brinquedo do bairro (a tela da máquina mexe, o rádio liga, a fita rebobina). */
   vilaBrinquedo?: (qual: import('./vila/brinquedos').ToqueVila, i?: number) => void;
   /** Spec 026 (testes): o que os brinquedos do bairro mostram agora. */
@@ -1600,7 +1614,9 @@ export function criarCena(
   function pedirUso(x: number, y: number, z: number, id = proximoId()): void {
     ultimaAbertura = id;
     enviarTelemetria(true);
-    enviar({ t: 'usar', id, x, y, z });
+    // spec 039b (T04): a mesa leva o lugar da mochila com a comida que vai para o prato
+    const mesa = blocoEm(x, y, z) === Bloco.MESA;
+    enviar({ t: 'usar', id, x, y, z, ...(mesa ? { slot: hotbar.ativo } : {}) });
   }
   const proximoId = () => cliente.proximoId();
 
@@ -6238,8 +6254,62 @@ export function criarCena(
   let calarDaVila = 0;
   let calarDoParque = 0;
   let calarDaCasa = 0;
+  let calarDosMoveis = 0;
   const calarTrilha = () =>
-    ambiente?.definirCalar(Math.max(calarDaVila, calarDoParque, calarDaCasa));
+    ambiente?.definirCalar(Math.max(calarDaVila, calarDoParque, calarDaCasa, calarDosMoveis));
+  // ------------------------------------------------------------ spec 039b (T04): os sons dos móveis
+  // a musiquinha do som (só os dois mais perto tocam, do ponto em que o núcleo diz); a TV que liga,
+  // o fogão cozinhando, a porta da geladeira e o comer junto (um som de móvel por vez, perto)
+  const somMoveis = criarSomMoveis({
+    motor: motorAudio,
+    musica: () => configAtual?.volumeMusica ?? 0.6,
+    aoCalarTrilha: (f) => {
+      calarDosMoveis = f;
+      calarTrilha();
+    },
+  });
+  window.addEventListener('pagehide', () => somMoveis.liberar());
+  estado.somMoveis = () => somMoveis.info();
+  let versaoLigadosVista = -1;
+  /** Testes: quantos pratos esta tela viu na mesa. */
+  let pratosVistos = 0;
+  estado.pratosVistos = () => pratosVistos;
+  estado.ligados = () => cliente.ligados.lista;
+  /** A TV de cada âncora e o desenho que passava (para o som de ligar só na troca). */
+  let tvsVistas = new Map<string, number>();
+  let proximaPanela = 0;
+  function quadroSomMoveis(): void {
+    const l = cliente.ligados;
+    const eu = controle.jogador;
+    somMoveis.quadro(eu, l.relogio, l.lista as SomLigado[]);
+    if (l.versao !== versaoLigadosVista) {
+      versaoLigadosVista = l.versao;
+      const agora = new Map<string, number>();
+      for (const e of l.lista) {
+        if (e.tipo !== 'tv') continue;
+        const k = `${e.x},${e.y},${e.z}`;
+        agora.set(k, e.desde);
+        // ligou, ou passou para o próximo desenho: o "tic" e o brilho (perto)
+        if (tvsVistas.get(k) !== e.desde && maisPertos(l.lista, 'tv', eu).includes(e))
+          somMovel('tvLiga', e.x, e.z);
+      }
+      tvsVistas = agora;
+    }
+    // a panelinha cozinhando perto: umas bolhinhas de tempos em tempos
+    const t = performance.now();
+    if (t >= proximaPanela) {
+      proximaPanela = t + 2600;
+      const fogao = l.lista.find(
+        (e) => e.tipo === 'fogao' && Math.hypot(e.x + 0.5 - eu.x, e.z + 0.5 - eu.z) < 6,
+      );
+      if (fogao) somMovel('fogao', fogao.x, fogao.z);
+    }
+  }
+  window.addEventListener('brumaluz:somMovel', (ev) => {
+    const d = (ev as CustomEvent<{ som?: unknown; x?: unknown; z?: unknown }>).detail;
+    if (d?.som === 'geladeira' && typeof d.x === 'number' && typeof d.z === 'number')
+      somMovel('geladeira', d.x, d.z);
+  });
   // spec 026 (parte 2): os sons do parque, feitos na hora (nada no pacote): o realejo que cresce
   // perto do carrossel, o "tum", as risadas, o sininho da pipoca e o zumbido das lâmpadas
   if (planoVila) {
@@ -6687,6 +6757,7 @@ export function criarCena(
       cam: { x: cameraVisao.position.x, z: cameraVisao.position.z },
     });
     somRua?.quadro(controle.jogador);
+    quadroSomMoveis(); // spec 039b (T04)
     // (o parque não toca música com o show ou as caixas tocando perto: uma música por vez)
     somParque?.quadro(
       controle.jogador,
@@ -8749,6 +8820,24 @@ export function criarCena(
       case 'espantou':
         window.dispatchEvent(new CustomEvent('brumaluz:espantou', { detail: e.tipo }));
         break;
+      case 'prato': {
+        // spec 039b (T04): todos comem juntos na mesa: as notinhas e um coraçãozinho em cima de
+        // cada um que come (os mais perto da mesa, até `quantos`)
+        somMovel('comerJunto', e.x, e.z);
+        // (T03: os pratinhos com a comida aparecem na mesa)
+        moveis.prato(e.x, e.y, e.z, e.item, e.quantos);
+        const corpos = [
+          { x: controle.jogador.x, y: controle.jogador.y, z: controle.jogador.z },
+          ...outrosJogadores.lista.map((o) => ({ x: o.x, y: o.y, z: o.z })),
+        ]
+          .map((c) => ({ c, d: Math.hypot(c.x - (e.x + 1), c.z - (e.z + 0.5)) }))
+          .filter((k) => k.d < 3.5)
+          .sort((a, b) => a.d - b.d)
+          .slice(0, e.quantos);
+        for (const { c } of corpos) coracoes.soltar(c.x, c.y + 1.9, c.z, 2);
+        pratosVistos++;
+        break;
+      }
       case 'comeu':
         // spec 032: a refeição já começou no toque (as mordidas fazem os sons); se ela veio de
         // outro jeito (um atalho de teste), começa agora
