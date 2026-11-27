@@ -101,8 +101,9 @@ export function gruposDoLote(lote: readonly EntradaLote[], l: LeitorMoveis): Gru
   const tomadas = new Set<string>();
   for (const a of ancoras) {
     const k = chave(a.x, a.y, a.z);
-    // a célula já é parte de um móvel que veio antes no lote: esta âncora fica de fora
-    if (tomadas.has(k)) continue;
+    // a célula já é parte de um móvel que veio antes no lote, ou o lote pediu outra coisa nela
+    // depois (a última vale): esta âncora fica de fora
+    if (tomadas.has(k) || pedido.get(k)?.v !== a.v) continue;
     const b = a.v & 255;
     const d = (a.v >> 8) & 3;
     const celulas = celulasDoMovel(b, a.x, a.y, a.z, d);

@@ -296,6 +296,17 @@ describe('o lote do criativo com os móveis', () => {
     expect(dois.filter((x) => !x.naoCabe).flatMap((x) => x.celulas)).toHaveLength(2);
   });
 
+  it('a âncora que o próprio lote troca depois (a última vale) não deixa a parte sozinha', () => {
+    const l = mundo();
+    aplicar(l, [
+      { x: 0, y: 1, z: 0, v: Bloco.SOFA },
+      { x: 0, y: 1, z: 0, v: Bloco.TABUAS },
+    ]);
+    expect(l.bloco(0, 1, 0)).toBe(Bloco.TABUAS);
+    expect(l.bloco(1, 1, 0)).toBe(Bloco.AR);
+    semPecaSolta(l);
+  });
+
   it('trocar uma parte do móvel leva o móvel inteiro (nada vira peça solta)', () => {
     const l = mundo();
     porMovel(l, Bloco.GUARDA_ROUPA, 0, 1, 0, 0);
