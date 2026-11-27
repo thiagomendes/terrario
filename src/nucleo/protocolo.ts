@@ -335,11 +335,15 @@ export interface JogadorVisto {
 }
 
 /**
- * Spec 039 (T04): o assento do móvel como a tela desenha: a célula do assento, a direção do
- * móvel (a de `jogo/moveis.ts`: a frente do móvel olha para quem o pôs), o ponto do corpo (x, z)
- * e se é deitado (a cama). O bloco da célula diz qual móvel é.
+ * Spec 039 (T04): o assento do móvel como a tela desenha (a pose): qual móvel, a célula do
+ * assento (no sofá deitado e na cama, a âncora), a direção do móvel (a de `jogo/moveis.ts`: a
+ * frente do móvel olha para quem o pôs), o ponto do corpo (x, z: no sofá deitado e na cama, o
+ * meio do móvel inteiro) e se é deitado. As poses: sentado na cadeira ou no sofá; deitado na
+ * cama (de costas, com o edredom); deitado no sofá, encolhidinho (decisão do dono, 27 nov: à
+ * noite, o sofá deita e conta para o dormir).
  */
 export interface AssentoVisto {
+  movel: 'cama' | 'sofa' | 'cadeira';
   x: number;
   y: number;
   z: number;

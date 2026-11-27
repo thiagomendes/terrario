@@ -128,7 +128,15 @@ describe('sentar no sofá e na cadeira (nuvem)', () => {
       expect.objectContaining({ e: 'sentou', x: SOFA.x, z: SOFA.z, px: SOFA.x + 0.5, pz: SOFA.z + 0.5 }),
     );
     // o amigo vê quem está sentado onde
-    expect(visto(q, 'caio', 'ana')).toEqual({ x: SOFA.x, y: YP, z: SOFA.z, d: 0, px: SOFA.x + 0.5, pz: SOFA.z + 0.5 });
+    expect(visto(q, 'caio', 'ana')).toEqual({
+      movel: 'sofa',
+      x: SOFA.x,
+      y: YP,
+      z: SOFA.z,
+      d: 0,
+      px: SOFA.x + 0.5,
+      pz: SOFA.z + 0.5,
+    });
     expect(visto(q, 'ana', 'bia')).toMatchObject({ x: SOFA.x + 1 });
     // a cadeira tem um lugar só
     usar(n, 'caio', CADEIRA.x, CADEIRA.z);
@@ -278,6 +286,7 @@ describe('deitar e dormir (nuvem)', () => {
     expect(eventos(q, 'bia')).toContainEqual({ e: 'recusa', comando: 0, motivo: 'sentar' });
     // o deitado vai no jogador visto, com o ponto do corpo no meio da cama
     expect(visto(q, 'bia', 'ana')).toEqual({
+      movel: 'cama',
       x: X0 + 1,
       y: YP,
       z: Z0 + 2,
@@ -299,6 +308,93 @@ describe('deitar e dormir (nuvem)', () => {
     n.desconectar('bia');
     q = passo(n);
     expect(eventos(q, 'ana')).toContainEqual({ e: 'sono', dormiu: true });
+  });
+});
+
+describe('o sofá também deita, à noite (decisão do dono, 27 nov)', () => {
+  const CAMA = { x: X0 + 1, z: Z0 + 2 };
+  const SOFA_N = { x: X0 + 4, z: Z0 + 3 };
+  const noite = (n: Nucleo) => mandar(n, 'ana', { t: 'depurar', d: { f: 'hora', hora: 0.9 } });
+
+  it('dois irmãos, uma cama e um sofá: a noite passa; o lugar de nascer é só o da cama', () => {
+    const n = abrir(2);
+    porMovel(n, Bloco.CAMA, CAMA.x, CAMA.z);
+    porMovel(n, Bloco.SOFA, SOFA_N.x, SOFA_N.z);
+    passo(n);
+    noite(n);
+    const spawnBia = { ...n.estado.jogadores.get('bia')!.spawn };
+    // a Ana deita na cama; a Bia deita no sofá (os dois lugares dele)
+    usar(n, 'ana', CAMA.x, CAMA.z);
+    ir(n, 'ana', CAMA.x + 0.5, CAMA.z + 1);
+    let q = passo(n);
+    expect(eventos(q, 'ana')).toContainEqual({ e: 'sonoEspera', faltam: 1 });
+    usar(n, 'bia', SOFA_N.x + 1, SOFA_N.z);
+    q = passo(n);
+    expect(sentado(n, 'bia')).toMatchObject({ deitado: true, x: SOFA_N.x, z: SOFA_N.z });
+    // a Ana vê a Bia deitada no sofá inteiro, com o corpo no meio dele
+    expect(visto(q, 'ana', 'bia')).toEqual({
+      movel: 'sofa',
+      x: SOFA_N.x,
+      y: YP,
+      z: SOFA_N.z,
+      d: 0,
+      px: SOFA_N.x + 1,
+      pz: SOFA_N.z + 0.5,
+      deitado: true,
+    });
+    expect(eventos(q, 'bia')).toContainEqual(
+      expect.objectContaining({ e: 'sentou', movel: 'sofa', deitado: true }),
+    );
+    // todos deitados: a noite passa para os dois
+    expect(eventos(q, 'ana')).toContainEqual({ e: 'sono', dormiu: true });
+    expect(eventos(q, 'bia')).toContainEqual({ e: 'sono', dormiu: true });
+    for (let i = 0; i < 40; i++) n.passo();
+    expect(n.estado.hora).toBeLessThan(0.3);
+    // o sofá não marca o lugar de nascer; a cama, sim
+    expect(n.estado.jogadores.get('bia')!.spawn).toEqual(spawnBia);
+    expect(n.estado.jogadores.get('ana')!.spawn).not.toEqual({ x: X0 + 0.5, z: Z0 - 0.5 });
+  });
+
+  it('com alguém sentado, ninguém deita no sofá; deitado nele, ninguém senta; de dia, ele é de sentar', () => {
+    const n = abrir(3);
+    porMovel(n, Bloco.SOFA, SOFA_N.x, SOFA_N.z);
+    passo(n);
+    // de dia: dois sentados, um em cada lugar
+    usar(n, 'ana', SOFA_N.x, SOFA_N.z);
+    usar(n, 'bia', SOFA_N.x + 1, SOFA_N.z);
+    passo(n);
+    expect(sentado(n, 'ana')).toMatchObject({ deitado: false, x: SOFA_N.x });
+    expect(sentado(n, 'bia')).toMatchObject({ deitado: false, x: SOFA_N.x + 1 });
+    // as duas chegam aos lugares (a tela leva o boneco)
+    ir(n, 'ana', SOFA_N.x + 0.5, SOFA_N.z + 0.5);
+    ir(n, 'bia', SOFA_N.x + 1.5, SOFA_N.z + 0.5);
+    passo(n);
+    // de noite, a Bia levanta; com a Ana sentada, o Caio não deita (o "não" curtinho)
+    noite(n);
+    passo(n);
+    ir(n, 'bia', SOFA_N.x + 3.5, SOFA_N.z - 2.5);
+    usar(n, 'caio', SOFA_N.x + 1, SOFA_N.z);
+    let q = passo(n);
+    expect(sentado(n, 'bia')).toBeNull();
+    expect(sentado(n, 'caio')).toBeNull();
+    expect(eventos(q, 'caio')).toContainEqual({ e: 'recusa', comando: 0, motivo: 'sentar' });
+    // a Ana levanta; o Caio deita no sofá inteiro, e a Bia não senta mais nele
+    ir(n, 'ana', SOFA_N.x + 0.5, SOFA_N.z - 2.5);
+    passo(n);
+    usar(n, 'caio', SOFA_N.x + 1, SOFA_N.z);
+    passo(n);
+    expect(sentado(n, 'caio')).toMatchObject({ deitado: true });
+    usar(n, 'bia', SOFA_N.x, SOFA_N.z);
+    q = passo(n);
+    expect(sentado(n, 'bia')).toBeNull();
+    expect(eventos(q, 'bia')).toContainEqual({ e: 'recusa', comando: 0, motivo: 'sentar' });
+    // quem está deitado no sofá levanta como sempre (pulou), e os dois lugares ficam livres
+    ir(n, 'caio', SOFA_N.x + 1, SOFA_N.z + 0.5, { pulos: 1 });
+    passo(n);
+    expect(sentado(n, 'caio')).toBeNull();
+    usar(n, 'ana', SOFA_N.x, SOFA_N.z);
+    passo(n);
+    expect(sentado(n, 'ana')).toMatchObject({ deitado: true });
   });
 });
 

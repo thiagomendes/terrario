@@ -197,6 +197,7 @@ import {
   type Quadro,
   type SalvoNucleo,
   type Telemetria,
+  type AssentoVisto,
 } from './protocolo';
 
 /** Distância máxima para bater, domar e trocar com uma criatura. */
@@ -357,8 +358,8 @@ type Cel = { x: number; y: number; z: number };
 
 /** Spec 039 (T04): onde o jogador está sentado (ou deitado). */
 interface SentadoNoMovel {
-  /** A chave do assento (a âncora do móvel e o número do assento). */
-  chave: string;
+  /** As chaves dos assentos (a âncora do móvel e o número): o sofá deitado ocupa os dois. */
+  chaves: string[];
   bloco: number;
   ancora: Cel;
   d: number;
@@ -2377,21 +2378,31 @@ export function criarNucleo(op: OpcoesNucleo) {
         j.eventos.push({ e: 'sono', dormiu: false });
         return;
       }
-      // a noite só passa com todos deitados (com um jogador só, na hora); quem deitou espera
-      // os outros enquanto ficar deitado
-      const faltam = [...jogadores.values()].filter((o) => !o.sentado?.deitado).length;
-      if (faltam > 0) {
-        j.eventos.push({ e: 'sonoEspera', faltam });
-        return;
-      }
-      dormirTodos();
+      depoisDeDeitar(j);
     } else if (ehDeSentar(b)) {
       // spec 039 (T04): o sofá e a cadeira; tocar de novo no mesmo móvel levanta
       const m = movelEm(leitorMoveis, x, y, z);
       if (!m) return;
       if (noMesmoMovel(j, m.ancora)) levantar(j);
-      else sentarNoMovel(j, m, c);
+      // decisão do dono (27 nov): à noite, o sofá deita (inteiro, encolhidinha) e conta para o
+      // dormir; o lugar de nascer continua sendo só o da cama
+      else if (m.bloco === Bloco.SOFA && noiteNaHora(hora) >= 0.4) {
+        if (deitarNoSofa(j, m)) depoisDeDeitar(j);
+      } else sentarNoMovel(j, m, c);
     }
+  }
+
+  /**
+   * Deitou de noite: a noite só passa com todos deitados, numa cama ou num sofá (com um jogador
+   * só, na hora); quem deitou espera os outros enquanto ficar deitado.
+   */
+  function depoisDeDeitar(j: Jogador): void {
+    const faltam = [...jogadores.values()].filter((o) => !o.sentado?.deitado).length;
+    if (faltam > 0) {
+      j.eventos.push({ e: 'sonoEspera', faltam });
+      return;
+    }
+    dormirTodos();
   }
 
   /** A noite passa para todos (cada um dorme, e acorda junto em `acordar`). */
@@ -2415,7 +2426,11 @@ export function criarNucleo(op: OpcoesNucleo) {
   const assentos = new Map<string, string>();
   const chaveDoMovel = (a: Cel) => `${a.x},${a.y},${a.z}`;
   const noMesmoMovel = (j: Jogador, a: Cel) =>
-    !!j.sentado && j.sentado.chave.startsWith(`${chaveDoMovel(a)}:`);
+    !!j.sentado && j.sentado.chaves[0].startsWith(`${chaveDoMovel(a)}:`);
+  const livreParaMim = (j: Jogador, chave: string) => {
+    const dono = assentos.get(chave);
+    return dono === undefined || dono === j.id;
+  };
 
   /**
    * Senta (ou deita, na cama) no assento livre do móvel: o da parte tocada primeiro (o sofá tem
@@ -2431,14 +2446,39 @@ export function criarNucleo(op: OpcoesNucleo) {
           Number(!(a.l.x === tocada.x && a.l.z === tocada.z)) -
           Number(!(b.l.x === tocada.x && b.l.z === tocada.z)),
       );
-    const livre = ordem.find(({ i }) => {
-      const dono = assentos.get(`${base}:${i}`);
-      return dono === undefined || dono === j.id;
-    });
+    const livre = ordem.find(({ i }) => livreParaMim(j, `${base}:${i}`));
     if (!livre) {
       j.eventos.push({ e: 'recusa', comando: 0, motivo: 'sentar' });
       return false;
     }
+    ocupar(j, m, [`${base}:${livre.i}`], livre.l);
+    return true;
+  }
+
+  /**
+   * Decisão do dono (27 nov): à noite, o sofá deita a criança, encolhidinha, no sofá inteiro (os
+   * dois lugares; o corpo no meio dele). Com alguém sentado nele, o "não" curtinho.
+   */
+  function deitarNoSofa(j: Jogador, m: MovelAchado): boolean {
+    const base = chaveDoMovel(m.ancora);
+    const chaves = assentosDoMovel(m).map((_, i) => `${base}:${i}`);
+    if (!chaves.every((k) => livreParaMim(j, k))) {
+      j.eventos.push({ e: 'recusa', comando: 0, motivo: 'sentar' });
+      return false;
+    }
+    const px = m.celulas.reduce((s, c) => s + c.x + 0.5, 0) / m.celulas.length;
+    const pz = m.celulas.reduce((s, c) => s + c.z + 0.5, 0) / m.celulas.length;
+    ocupar(j, m, chaves, { ...m.ancora, px, pz, deitado: true });
+    return true;
+  }
+
+  /** Ocupa os assentos (quem está montado desce antes) e conta a quem sentou. */
+  function ocupar(
+    j: Jogador,
+    m: MovelAchado,
+    chaves: string[],
+    l: { x: number; y: number; z: number; px: number; pz: number; deitado: boolean },
+  ): void {
     levantar(j);
     // quem está no brinquedo de andar desce antes de sentar
     const montado = j.perfil.aparencia.montado === true;
@@ -2447,11 +2487,9 @@ export function criarNucleo(op: OpcoesNucleo) {
       void _m;
       aplicarAparencia(j, resto);
     }
-    const chave = `${base}:${livre.i}`;
-    assentos.set(chave, j.id);
-    const { l } = livre;
+    for (const k of chaves) assentos.set(k, j.id);
     j.sentado = {
-      chave,
+      chaves,
       bloco: m.bloco,
       ancora: { ...m.ancora },
       d: m.d,
@@ -2466,22 +2504,29 @@ export function criarNucleo(op: OpcoesNucleo) {
     };
     j.eventos.push({
       e: 'sentou',
-      x: l.x,
-      y: l.y,
-      z: l.z,
-      d: m.d,
-      px: l.px,
-      pz: l.pz,
-      ...(l.deitado ? { deitado: true as const } : {}),
+      ...assentoVisto(j.sentado),
       ...(montado ? { desceu: true as const } : {}),
     });
-    return true;
   }
 
-  /** Fica de pé (o assento fica livre para outro). */
+  /** O assento como a tela desenha (o jogador visto e o evento `sentou`). */
+  function assentoVisto(s: SentadoNoMovel): AssentoVisto {
+    return {
+      movel: s.bloco === Bloco.CAMA ? 'cama' : s.bloco === Bloco.SOFA ? 'sofa' : 'cadeira',
+      x: s.x,
+      y: s.y,
+      z: s.z,
+      d: s.d,
+      px: s.px,
+      pz: s.pz,
+      ...(s.deitado ? { deitado: true as const } : {}),
+    };
+  }
+
+  /** Fica de pé (os assentos ficam livres para outro). */
   function levantar(j: Jogador): void {
     if (!j.sentado) return;
-    if (assentos.get(j.sentado.chave) === j.id) assentos.delete(j.sentado.chave);
+    for (const k of j.sentado.chaves) if (assentos.get(k) === j.id) assentos.delete(k);
     j.sentado = null;
     j.eventos.push({ e: 'levantou' });
   }
@@ -3604,19 +3649,7 @@ export function criarNucleo(op: OpcoesNucleo) {
         // spec 032: o que está comendo (o amigo vê as mordidas na comida certa)
         ...(o.comendo && n * PASSO < o.comendo.ate ? { come: o.comendo.item } : {}),
         // spec 039 (T04): sentado no móvel (ou deitado na cama): o amigo vê, e quem entra também
-        ...(o.sentado
-          ? {
-              sentado: {
-                x: o.sentado.x,
-                y: o.sentado.y,
-                z: o.sentado.z,
-                d: o.sentado.d,
-                px: o.sentado.px,
-                pz: o.sentado.pz,
-                ...(o.sentado.deitado ? { deitado: true as const } : {}),
-              },
-            }
-          : {}),
+        ...(o.sentado ? { sentado: assentoVisto(o.sentado) } : {}),
       };
     });
     const perfis = perfisSujos
