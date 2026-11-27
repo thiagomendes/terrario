@@ -284,13 +284,22 @@ const giro = (nome: SubjuntaPremium, pivo: V3) => ({ subjunta: { nome, pivo, pai
  * Um tubo (cilindro) de `a` até `b`: o meio, o comprimento e o giro que leva o eixo y do cilindro
  * para a direção a→b (o Babylon gira em z, depois em x, depois em y).
  */
-function tubo(P: Pecas, nome: string, a: V3, b: V3, r: number, cor: string, lados?: number): void {
+function tubo(
+  P: Pecas,
+  nome: string,
+  a: V3,
+  b: V3,
+  r: number,
+  cor: string,
+  lados?: number,
+  no: { subjunta: { nome: SubjuntaPremium; pivo: V3; pai?: 'brinquedo' } } = NO,
+): void {
   const d: V3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
   const l = Math.hypot(d[0], d[1], d[2]);
   const n: V3 = [d[0] / l, d[1] / l, d[2] / l];
   const rz = -Math.asin(Math.max(-1, Math.min(1, n[0])));
   const rx = Math.atan2(n[2], n[1]);
-  P.cone(nome, J, undefined, l, r, r, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], cor, { rot: [rx, 0, rz], ...(lados ? { lados } : {}), ...NO });
+  P.cone(nome, J, undefined, l, r, r, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], cor, { rot: [rx, 0, rz], ...(lados ? { lados } : {}), ...no });
 }
 
 function patinete(P: Pecas): void {
@@ -508,8 +517,9 @@ function bicicleta(P: Pecas): void {
 /**
  * Spec 038 (T03): a motoquinha dourada (pedido do filho do dono), saída do esboço aprovado: a moto
  * de brinquedo de criança, gordinha e baixa, com o tanque e a estrela, o farol redondo, o guidão
- * alto com as manoplas creme, o escapamento curtinho, os para-lamas em dois gomos e as rodinhas
- * de apoio. Original, sem cara de marca ou de modelo; sem espelhinhos (de frente pareciam dragonas).
+ * alto com as manoplas creme, o escapamento curtinho e os para-lamas em dois gomos; sem rodinhas
+ * de apoio desde 27 nov (o filho do dono queria sem), com o descansinho de lado. Original, sem cara
+ * de marca ou de modelo; sem espelhinhos (de frente pareciam dragonas).
  * O ouro é um amarelo quente e fundo com o ouro escuro embaixo e o reflexo lustroso; só o farol
  * acende, com a luz mansa do farol do carrinho.
  */
@@ -592,14 +602,29 @@ function moto(P: Pecas): void {
       P.bola(`andar-moto-marca-${no}${s}`, J, undefined, R * 0.09, [s * fora, R * 0.36, 0], '#ffffff', [0.5, 1, 1], { gomos: 6, ...g });
     }
   }
-  // as rodinhas de apoio de criança, atrás (as duas no mesmo nó)
-  const rr = 0.075;
-  for (const s of [-1, 1]) tubo(P, `andar-moto-haste-rodinha${s}`, [s * 0.25, rr, tras[2]], [s * 0.07, 0.3, tras[2] + 0.02], 0.014, PRATA, 6);
-  const gr = giro('andarRodinhaE', [0, rr, tras[2]]);
-  for (const s of [-1, 1]) {
-    P.cone(`andar-moto-rodinha${s}`, J, undefined, 0.045, rr, rr, [s * 0.25, 0, 0], CREME, { rot: deitado, lados: 10, ...gr });
-    P.bola(`andar-moto-rodinha-marca${s}`, J, undefined, 0.012, [s * 0.275, 0.045, 0], OURO_ESC, [0.6, 1, 1], { gomos: 6, ...gr });
-  }
+  // sem rodinhas de apoio (pedido do filho do dono, 27 nov): o descansinho de ouro escuro do lado
+  // esquerdo, preso embaixo do motor. Parada, ele desce até o chão e a moto inclina um tico para o
+  // lado dele; andando, ele gira para trás e fica deitado junto do quadro (`descansoDaMoto`)
+  const gd = giro('andarDescanso', DESCANSO_PIVO);
+  const pe = DESCANSO_PE;
+  tubo(P, 'andar-moto-descanso', [0, 0, 0], pe, 0.02, OURO_ESC, 6, gd);
+  P.caixa('andar-moto-descanso-pe', J, undefined, [0.07, 0.025, 0.09], [pe[0], pe[1] + 0.0125, pe[2]], OURO_ESC, 0.01, gd);
+}
+
+/** O pivô do descansinho (no espaço do brinquedo) e o pé dele, a partir do pivô, descido. */
+const DESCANSO_PIVO: V3 = [-0.1, 0.24, -0.1];
+const DESCANSO_PE: V3 = [-0.13, -0.24 + 0.012, -0.09];
+/** Recolhido, o giro dele (rad, para trás) e, parada, a moto inclinada para o lado dele (rad). */
+export const DESCANSO_RECOLHIDO = 1.35;
+export const INCLINA_NO_DESCANSO = 0.06;
+
+/**
+ * O descansinho da motoquinha e a inclinação dela (0 andando; parada, a moto e a criança em cima
+ * inclinam juntas para a esquerda), pelo "andando" suavizado: sem tranco ao arrancar e ao parar.
+ */
+export function descansoDaMoto(e: EstadoAndar): { giro: number; inclina: number } {
+  const a = Math.max(0, Math.min(1, e.andando));
+  return { giro: DESCANSO_RECOLHIDO * a, inclina: INCLINA_NO_DESCANSO * (1 - a) };
 }
 
 function nuvem(P: Pecas): void {
@@ -657,7 +682,7 @@ export function vestirBrinquedoAndar(id: string, lista: Peca[]): void {
 }
 
 /** Os nós que giram dentro do brinquedo (o desenho gira; os testes conferem). */
-export const NOS_DO_ANDAR: readonly SubjuntaPremium[] = ['andarRodaF', 'andarRodaT', 'andarRodinhaE', 'andarPedal', 'andarBandeira'];
+export const NOS_DO_ANDAR: readonly SubjuntaPremium[] = ['andarRodaF', 'andarRodaT', 'andarRodinhaE', 'andarPedal', 'andarBandeira', 'andarDescanso'];
 
 /**
  * A pose de quem está montada: o corpo na altura do brinquedo, as pernas (de pé no deque com o

@@ -204,6 +204,8 @@ export type SubjuntaPremium =
   | 'andarNuvem'
   /** Spec 038 (T02): a bandeirinha do carrinho, que tremula em volta do mastro. */
   | 'andarBandeira'
+  /** O descansinho da motoquinha (sem rodinhas, 27 nov): em pé parada, recolhido andando. */
+  | 'andarDescanso'
   /**
    * Spec 038 (T02): o joelho (a canela e o sapato, dentro da perna), só com brinquedo de pedal ou
    * de apoio vestido. Esticado, é a mesma perna de antes.

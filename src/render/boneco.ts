@@ -32,6 +32,7 @@ import {
   GUIDAO,
   avancarAndar,
   bandeiraNoVento,
+  descansoDaMoto,
   boiarNuvem,
   corpoNoAssento,
   estadoAndar,
@@ -1129,6 +1130,8 @@ export function criarBoneco(
     // (as rodinhas de apoio são menores: giram mais depressa no mesmo chão)
     if (s.andarRodinhaE) s.andarRodinhaE.rotation.x = (andar.roda * 2.5) % (Math.PI * 2);
     if (s.andarPedal) s.andarPedal.rotation.x = andar.pedal;
+    // o descansinho da motoquinha: no chão parada, recolhido para trás andando
+    if (s.andarDescanso) s.andarDescanso.rotation.x = descansoDaMoto(andar).giro;
     // a nuvem boia inteira (o nó do brinquedo), junto com o corpo da criança
     if (andarVestido === 'nuvem-fofa' && s.brinquedo) {
       s.brinquedo.position.y = boiarNuvem(andar);
@@ -1238,6 +1241,9 @@ export function criarBoneco(
     }
     animarTesouros(dt, extras?.vista);
     if (montado) animarBrinquedo();
+    // a motoquinha parada no descansinho inclina um tico para o lado dele, com a criança em cima
+    // (as duas juntas: as mãos no guidão e os pés nos apoios não mudam); andando, fica reta
+    escalar.rotation.z = montado && andarVestido === 'motoquinha-dourada' ? descansoDaMoto(andar).inclina : 0;
     // spec 032: a carinha feliz depois de comer (os olhos fecham sorrindo)
     const pisca = pose.piscar ? 0.1 : 1 - (pose.feliz ?? 0) * 0.78;
     for (const o of olhos) o.scaling.y = (baseY.get(o) ?? 1) * pisca;

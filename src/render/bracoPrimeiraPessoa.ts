@@ -33,7 +33,9 @@ import type { PluginPlastico } from './formas';
 import type { Aparencia } from '../personagem/aparencia';
 import { curvaGolpe, PERIODO_MINERAR } from '../personagem/poses';
 import { obterItem } from '../jogo/itens';
-import type { Vista } from '../player/animacao';
+import { DURACAO_COMER, type Vista } from '../player/animacao';
+import { jeitoDeComer, mordidasAte } from '../jogo/refeicao';
+import { MIGALHAS } from './refeicao';
 import {
   ACENAR,
   BRACO,
@@ -46,6 +48,7 @@ import {
   GANHO_PASSO,
   GANHO_PULO,
   MEIA_MANGA,
+  bracoDeDentro,
   TELA_BAIXA,
   criarCacheOmbro,
   direcaoDoBraco,
@@ -126,6 +129,13 @@ const BALANCO_VOO = 0.02;
 /** O golpe dura um intervalo de golpe do jogo; o empurrão de colocar, 0,3 s. */
 const DURACAO_GOLPE = PERIODO_MINERAR;
 const DURACAO_EMPURRAO = 0.3;
+/** Comendo de dentro, o quanto a comida da mão diminui a cada mordida (fração do tamanho). */
+const ENCOLHE_POR_MORDIDA = 0.15;
+/** Os farelinhos de dentro, maiores que os de fora (os de fora se veem de longe; estes, de perto). */
+const TAMANHO_FARELO = 1.8;
+/** Onde nascem: tanto mais perto da câmera que o meio da comida, e nunca mais perto que isto. */
+const FARELO_NA_FRENTE = 0.09;
+const FARELO_PERTO = 0.3;
 /** Fora: o braço gira para baixo até a mão sumir pela beira de baixo. */
 const FORA_X = 0.2;
 /** O "não" curtinho: um balanço rápido do item (s, rad). */
@@ -697,9 +707,103 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     if (eixo.length() > 1e-6) Quaternion.RotationAxisToRef(eixo.normalize(), ang, fio.rotationQuaternion!);
   };
 
+  /**
+   * Comer de dentro (conserto pedido pelo filho do dono, 27 nov 2026): a cada mordida saem
+   * farelinhos da comida, na cor dela, mansos (devagar, caindo um tico e sumindo), sem brilho. Eles
+   * ficam no espaço da câmera, por cima do mundo como a mão (os de fora somem perto da câmera).
+   */
+  const farelos: { m: Mesh; v: Vector3; vida: number; total: number; tam: number }[] = [];
+  const matsFarelo = new Map<string, StandardMaterial>();
+  let nFarelo = 0;
+  const matFarelo = (cor: string) => {
+    let m = matsFarelo.get(cor);
+    if (!m) {
+      m = new StandardMaterial(`pp-farelo-${cor}`, scene);
+      m.diffuseColor = Color3.FromHexString(cor);
+      m.emissiveColor = Color3.FromHexString(cor).scale(0.45);
+      m.specularColor = Color3.Black();
+      matsFarelo.set(cor, m);
+    }
+    return m;
+  };
+  const tirarFarelos = () => {
+    for (const f of farelos) f.m.dispose();
+    farelos.length = 0;
+  };
+  const soltarFarelos = (item: string, mordida: number) => {
+    const pega = vista?.noDaMao();
+    if (!pega) return;
+    const jeito = jeitoDeComer(item);
+    const cores = MIGALHAS[item] ?? ['#e0b080'];
+    const docinho = jeito === 'pipoca' && item !== 'pipoca';
+    const quantas = jeito === 'caneca' ? 1 : jeito === 'canudinho' || jeito === 'colherada' || docinho ? 2 : jeito === 'nuvem' ? 4 : 5;
+    const tam = (docinho ? 0.01 : jeito === 'pipoca' ? 0.02 : jeito === 'canudinho' || jeito === 'caneca' ? 0.011 : jeito === 'nuvem' ? 0.017 : 0.014) * TAMANHO_FARELO;
+    // de onde a comida está (um tico acima do nó do item, onde se morde), no espaço do suporte
+    // (a cadeia toda, do suporte à comida: o braço acabou de girar neste quadro)
+    const cadeia: TransformNode[] = [];
+    for (let n: TransformNode | null = pega; n && n !== suporte.parent; n = n.parent as TransformNode | null) cadeia.unshift(n);
+    for (const n of cadeia) n.computeWorldMatrix(true);
+    const inv = suporte.getWorldMatrix().clone().invert();
+    const onde = Vector3.TransformCoordinates(pega.getAbsolutePosition(), inv);
+    // (na frente da comida, do lado da boca: de dentro dela, eles ficavam escondidos; e nunca rente
+    // à câmera, onde o plano de corte os cortava num risco)
+    const dist = onde.length();
+    onde.scaleInPlace(Math.max(FARELO_PERTO, dist - FARELO_NA_FRENTE) / dist);
+    onde.y += 0.02;
+    for (let i = 0; i < quantas; i++) {
+      if (farelos.length >= 16) farelos.shift()?.m.dispose();
+      const m = MeshBuilder.CreateSphere(`pp-farelo-${nFarelo++}`, { diameter: 1, segments: 3 }, scene);
+      m.material = matFarelo(cores[(i + mordida) % cores.length]);
+      m.parent = suporte;
+      m.position.copyFrom(onde);
+      m.position.x += (Math.random() - 0.5) * 0.04;
+      m.scaling.setAll(tam);
+      m.renderingGroupId = GRUPO;
+      m.isPickable = false;
+      m.alwaysSelectAsActiveMesh = true;
+      semBrilho(m);
+      const ang = Math.random() * Math.PI * 2;
+      const leve = jeito === 'nuvem';
+      // (para os lados e um tico para cima, e para longe da câmera, nunca para ela)
+      const v = new Vector3(Math.cos(ang) * (leve ? 0.06 : 0.14), (leve ? 0.05 : 0.1) + Math.random() * 0.08, 0.02 + Math.abs(Math.sin(ang)) * 0.05);
+      const vida = leve ? 0.9 : 0.7;
+      farelos.push({ m, v, vida, total: vida, tam });
+    }
+  };
+  const animarFarelos = (dt: number) => {
+    for (let i = farelos.length - 1; i >= 0; i--) {
+      const f = farelos[i];
+      f.vida -= dt;
+      if (f.vida <= 0) {
+        f.m.dispose();
+        farelos.splice(i, 1);
+        continue;
+      }
+      f.v.y -= 0.9 * dt;
+      f.m.position.addInPlace(f.v.scale(dt));
+      // somem encolhendo no fim (nada pisca)
+      f.m.scaling.setAll(f.tam * Math.min(1, f.vida / (f.total * 0.4)));
+    }
+  };
+  /** As mordidas já vistas da refeição de agora, e a comida dela. */
+  let mordidasVistas = 0;
+  let comidaAgora: string | null = null;
+  /** Comendo de dentro: a comida e as migalhas do boneco de fora somem de perto da câmera. */
+  let esconderDeFora = false;
+  // (logo antes de escolher o que desenhar, depois de toda a atualização do quadro)
+  const antesDeDesenhar = scene.onBeforeActiveMeshesEvaluationObservable.add(() => {
+    if (!esconderDeFora) return;
+    for (const n of [...scene.transformNodes, ...scene.meshes])
+      if ((n.name.startsWith('refeicao') || n.name.startsWith('migalha-')) && n.isEnabled() && Vector3.Distance(n.getAbsolutePosition(), camera.globalPosition) < 1.2)
+        n.setEnabled(false);
+  });
+
   const quadro = (dt: number, en: EntradaBraco) => {
     const e = suave(en.fracao);
+    animarFarelos(dt);
+    esconderDeFora = e > 0 && en.vista.comer !== null;
     if (e <= 0) {
+      tirarFarelos();
       if (corpoMexido) mostrarCorpo(true, true);
       corpoMexido = false;
       apagar();
@@ -766,6 +870,14 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     if (naoT >= 0 && (naoT += dt / DURACAO_NAO_DENTRO) >= 1) naoT = -1;
     const agindo = golpeT >= 0 || empurraoT >= 0;
     const comendo = en.vista.comer !== null;
+    // (o instante da refeição, em s, e a comida dela, guardada no começo: na última mordida a
+    // comida da mão já pode ser a próxima da pilha)
+    const tComer = comendo ? en.vista.comer! * DURACAO_COMER : 0;
+    if (!comendo) {
+      mordidasVistas = 0;
+      comidaAgora = null;
+    } else if (comidaAgora === null) comidaAgora = en.naMao.item;
+    let vaiABoca = 0;
     // sem item da barra, o tesouro da mão vestido aparece na mão da frente
     const comTesouro = !temItem && !!tesouroId && !en.aparencia.montado;
     // (a mão vazia só entra para agir: tocar, colocar, acenar, comer)
@@ -793,8 +905,16 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
       // o aceno: o braço sobe para a frente, no tempo do aceno do boneco, e a mão abana com ele
       x += (ACENAR[0] - x) * wAceno;
       z += (ACENAR[1] - z) * wAceno + (rz - 2.6) * wAceno;
+    } else if (comendo && achado.boca) {
+      // o comer de dentro (27 nov): a mão leva a comida à boca em cada mordida, volta um tico entre
+      // elas e desce no fim, no tempo da refeição do boneco (o "nhac" e o som); o ombro vem junto,
+      // sempre fora da tela (a conta em `poseDaBoca`)
+      const vai = bracoDeDentro(tComer);
+      x += (achado.boca.pose[0] - x) * vai;
+      z += (achado.boca.pose[1] - z) * vai;
+      vaiABoca = vai;
     } else if (comendo) {
-      // o comer: a comida sobe para o meio, no tempo da refeição do boneco
+      // (sem pose da boca nesta tela: a comida sobe no lugar, como antes)
       x += (rx - descansoX) * GANHO_COMER_X;
       z += (rz - 0.09) * GANHO_COMER_Z * leva;
     } else {
@@ -827,6 +947,11 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     const s = Math.tan(camera.fov / 2) / Math.tan(FOV_BRACO / 2);
     suporte.scaling.set(s, s, 1);
     const ombro = new Vector3(achado.ombro[0], achado.ombro[1], achado.ombro[2]);
+    // (comendo de dentro, o ombro vai junto para o da boca, sempre fora da tela)
+    if (vaiABoca > 0 && achado.boca) {
+      const b = achado.boca.ombro;
+      ombro.set(ombro.x + (b[0] - ombro.x) * vaiABoca, ombro.y + (b[1] - ombro.y) * vaiABoca, ombro.z + (b[2] - ombro.z) * vaiABoca);
+    }
     osso.setEnabled(true);
     osso.position.copyFrom(ombro);
     Quaternion.RotationYawPitchRollToRef(0, x, z, osso.rotationQuaternion!);
@@ -841,19 +966,21 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
       juntaMao.rotationQuaternion = Quaternion.FromRotationMatrix(matrizDesejada.multiply(matrizOsso.transpose()));
     }
     const pega = vista!.noDaMao();
-    pega.scaling.setAll(1);
+    // comendo de dentro, a comida diminui a cada mordida (a bebida não: o copo fica)
+    const mordidas = comendo ? mordidasAte(tComer) : 0;
+    const bebida = comidaAgora !== null && ['canudinho', 'caneca'].includes(jeitoDeComer(comidaAgora));
+    pega.scaling.setAll(comendo && !bebida ? 1 - ENCOLHE_POR_MORDIDA * mordidas : 1);
     pega.position.set(p.pega[0], p.pega[1], p.pega[2]);
     pega.rotation.set(0, 0, p.torce);
+    // e os farelinhos de cada mordida, de onde a comida está
+    if (comendo && mordidas > mordidasVistas) {
+      if (comidaAgora && achado.boca) soltarFarelos(comidaAgora, mordidas);
+      mordidasVistas = mordidas;
+    }
     // a comida mordida do boneco de verdade e as migalhas passam logo abaixo dos olhos: de
-    // dentro, somem de perto da câmera (a comida da mão da frente fica)
-    if (comendo)
-      for (const n of [...scene.transformNodes, ...scene.meshes])
-        if (
-          (n.name.startsWith('refeicao') || n.name.startsWith('migalha-')) &&
-          n.isEnabled() &&
-          Vector3.Distance(n.getAbsolutePosition(), camera.position) < 1.2
-        )
-          n.setEnabled(false);
+    // dentro, somem de perto da câmera (a comida da mão da frente fica). Na hora de desenhar,
+    // depois de tudo: as migalhas de fora nascem depois deste quadro do braço e apareciam num
+    // quadro, rente à câmera, como um risco (o farelinho de dentro é o daqui): `antesDeDesenhar`
     // ---------------- a pipa no céu da frente, com o fio até a mão
     if (tesouroId === 'pipa-lacinhos' && tesouroNaMao) pipaNoCeu(dt);
     else apagarPipa();
@@ -961,6 +1088,9 @@ export function criarBracoPrimeiraPessoa(op: OpcoesBraco): BracoPrimeiraPessoa {
     },
     descartar() {
       if (corpoMexido) mostrarCorpo(true, true);
+      tirarFarelos();
+      for (const m of matsFarelo.values()) m.dispose();
+      scene.onBeforeActiveMeshesEvaluationObservable.remove(antesDeDesenhar);
       noTesouro.parent = null;
       vista?.descartar();
       noTesouro.dispose();
