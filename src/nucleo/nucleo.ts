@@ -139,7 +139,9 @@ import {
   celulasDoTapete,
   criarCamadaTapetes,
   recusaPorTapete,
+  recusaChaoDoTapete,
   tapeteParaTirar,
+  tapeteSemApoio,
   tapetesDoSalvo,
   type Tapete,
   type TapeteMudado,
@@ -1327,9 +1329,11 @@ export function criarNucleo(op: OpcoesNucleo) {
         if (modo === 'sobrevivencia') soltarColheita(cima, x, y + 1, z);
       }
     }
-    // spec 039 (o tapete que perdeu o chão): a célula de chão embaixo de um tapete sumiu (uma
-    // explosão, o lote do criativo, uma amiga): o tapete sai inteiro e volta para o dono, para
-    // não ficar flutuando nem deixar a criança cair pelo buraco
+    // spec 039 (o tapete que perdeu o chão): a célula de chão embaixo de um tapete sumiu sem
+    // ninguém querer tirar o tapete (o lote da própria dona, a lavoura, uma porta): o tapete sai
+    // inteiro e volta para a dona, para não ficar boiando nem deixar a criança cair pelo buraco.
+    // O chão do tapete de outra criança não sai pelas mãos de quem não pode mexer nele
+    // (`recusaChaoDoTapete`, no quebrar, no arar e no lote)
     if (!blocoApoia(bloco)) {
       const t = tapetes.em(x, y + 1, z);
       if (t) tapeteSemChao(t);
@@ -1349,8 +1353,16 @@ export function criarNucleo(op: OpcoesNucleo) {
     const dono = donoDoTapete(t);
     const j = dono ? jogadores.get(dono) : undefined;
     const sobra = j ? j.inventario.adicionar(item, 1) : 1;
-    if (sobra > 0) mundoItens.soltar(item, sobra, t.x + 0.5, t.y + 0.2, t.z + 0.5, rngDrops);
+    if (sobra <= 0) return;
+    // (cai numa célula do tapete que ainda tem chão, e não no buraco)
+    const c =
+      celulasDoTapete(t.x, t.y, t.z, t.d).find((q) => blocoApoia(mundo.bloco(q.x, q.y - 1, q.z))) ?? t;
+    mundoItens.soltar(item, sobra, c.x + 0.5, c.y + 0.2, c.z + 0.5, rngDrops);
   }
+
+  /** Spec 039: a recusa de mexer no chão embaixo do tapete de quem não se pode mexer. */
+  const recusaChao = (j: Jogador, x: number, y: number, z: number) =>
+    recusaChaoDoTapete(regra, tapetes, j.id, x, y, z, donoDoTapete);
 
   function soltarColheita(b: number, x: number, y: number, z: number): void {
     for (const d of colheita(b, rngPlantio))
@@ -1524,7 +1536,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
     // spec 016: o que o mundo construiu não quebra; o que alguém pôs, só ele e o dono do mundo
     // (o móvel, em todas as células)
-    let protegido = recusaQuebrar(regra, j.id, x, y, z);
+    let protegido = recusaQuebrar(regra, j.id, x, y, z) ?? recusaChao(j, x, y, z);
     for (const q of movel?.celulas ?? []) protegido ??= recusaQuebrar(regra, j.id, q.x, q.y, q.z);
     if (protegido) {
       recusar(j, c.id, 'quebrar', voltam, protegido);
@@ -1618,6 +1630,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     // spec 016: arar é mexer no chão (e na planta de cima): a mesma regra de quebrar
     const protegido =
       recusaQuebrar(regra, j.id, x, y, z) ??
+      recusaChao(j, x, y, z) ??
       (acima !== Bloco.AR ? recusaQuebrar(regra, j.id, x, y + 1, z) : null);
     if (protegido) {
       recusar(j, c.id, 'arar', [c, { x, y: y + 1, z }], protegido);
@@ -1917,7 +1930,21 @@ export function criarNucleo(op: OpcoesNucleo) {
     // a igual não muda nada (nem o dono), a lavoura do mundo só se colhe
     const atual = (x: number, y: number, z: number) =>
       empacotar(mundo.bloco(x, y, z), edicoes.obterMeta(x, y, z));
-    const r = decidirLote(grupos, regra, j.id, atual, corposDoLote);
+    // spec 039: o grupo que tira o chão do tapete de quem não se pode mexer volta inteiro (o
+    // mesmo aviso "amigo"); o resto do lote segue
+    let recusaTapete: RecusaProtecao | null = null;
+    const gruposLivres = grupos.filter((g) => {
+      const rr = g.celulas.reduce<RecusaProtecao | null>(
+        (a, e) => a ?? (blocoApoia(e.v & 255) ? null : recusaChao(j, e.x, e.y, e.z)),
+        null,
+      );
+      if (!rr) return true;
+      recusaTapete ??= rr;
+      for (const e of g.celulas) corrigir(j, e.x, e.y, e.z);
+      return false;
+    });
+    const r = decidirLote(gruposLivres, regra, j.id, atual, corposDoLote);
+    r.primeira ??= recusaTapete;
     for (const e of r.voltam) corrigir(j, e.x, e.y, e.z);
     for (const e of r.vai) {
       const b = e.v & 255;
@@ -3888,6 +3915,11 @@ export function criarNucleo(op: OpcoesNucleo) {
       } else editar(x, y, z, Bloco.AR);
     }
   }
+  // spec 039 (o tapete que não saía, no ar em 27 nov): um mundo salvo pode ter tapete boiando
+  // sobre um buraco (o chão de baixo foi quebrado no lugar dele). Ao abrir, depois da peça
+  // solta, o tapete com alguma célula sem chão sai inteiro. Ninguém está na sala ainda: ele cai
+  // numa célula dele que ainda tem chão (o caminho de `tapeteSemChao`), na sobrevivência
+  for (const t of tapetes.todos()) if (tapeteSemApoio(mundo, t)) tapeteSemChao(t);
 
   return {
     semente,
