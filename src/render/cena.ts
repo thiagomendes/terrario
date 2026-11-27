@@ -144,6 +144,8 @@ import { temVarinha } from '../personagem/fantasias';
 import { VARINHA, pontosDasMissoes } from '../jogo/baile';
 import { N_BAILE, POVOADO_BAILE } from '../jogo/baile';
 import { criarLampioes, ROSTO_DO_LAMPIAO } from './lampioes';
+import { criarRenderMoveis } from './moveis';
+import { criarPoseMovel, type AssentoNaTela } from './poseMovel';
 import { metaGerada } from '../world/chunk';
 import { LARGURA_CIDADE, PROFUNDIDADE_CIDADE } from '../world/cidade';
 import { criarAgua } from './agua';
@@ -569,6 +571,13 @@ export interface EstadoDepuracao {
   bailePortas?: () => { x: number; y: number; z: number }[];
   /** Spec 027 (T06): os lampiões e caldeirões postos desenhados como peça (malhas e instâncias). */
   lampioes?: () => { malhas: number; lampioes: number; caldeiroes: number };
+  /** Spec 039 (T05): os móveis desenhados por pedaço e o que mexe (testes, fotos e medida). */
+  moveis?: import('./moveis').RenderMoveis;
+  /**
+   * Spec 039 (T05): o assento da criança (sentada ou deitada; null: em pé). A T04 chama no evento
+   * `sentou` e `levantou`; as fotos chamam direto.
+   */
+  meuAssento?: (a: import('./poseMovel').AssentoNaTela | null) => void;
   /** Spec 026: o estado do bairro que o núcleo mandou (show, estojos, caixas, lhamas). */
   vilaEstado?: () => import('../nucleo/vila').VilaVista | null;
   /** Spec 026: manda a caixa do palco ou o toque no palco ao núcleo. */
@@ -2207,6 +2216,29 @@ export function criarCena(
     (m) => glow.addExcludedMesh(m),
   );
   estado.lampioes = () => lampioes.contagem();
+  // spec 039 (T05): os móveis e os tapetes, desenhados por pedaço, junto com a remalha
+  const leitorDoDesenho: LeitorMoveis = {
+    bloco: (x, y, z) => blocoEm(x, y, z),
+    meta: (x, y, z) => edicoes.obterMeta(x, y, z),
+    dono: (x, y, z) => edicoes.indiceDono(x, y, z),
+  };
+  const moveis = criarRenderMoveis(scene, {
+    leitor: leitorDoDesenho,
+    tapetes: () => cliente.tapetes,
+    aoCriar: (m) => glow.addExcludedMesh(m),
+  });
+  estado.moveis = moveis;
+  // spec 039 (T05): sentada e deitada (a criança e os amigos); o assento da criança chega pelo
+  // `definirMeuAssento` (o evento `sentou` e `levantou` da T04), e o dos amigos pelo jogador visto
+  const poseMovel = criarPoseMovel(leitorDoDesenho, moveis);
+  let meuAssento: AssentoNaTela | null = null;
+  const definirMeuAssento = (a: AssentoNaTela | null) => {
+    meuAssento = a;
+  };
+  estado.meuAssento = definirMeuAssento;
+  outrosJogadores.definirPoseMovel((p, v, id) =>
+    poseMovel.aplicar(p, (v as { sentado?: AssentoNaTela }).sentado ?? null, id),
+  );
   const showVila = planoVila
     ? criarShowVila(scene, planoVila, {
         temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
@@ -3177,6 +3209,8 @@ export function criarCena(
     malhas.set(k, lista);
     // spec 027 (T06): os lampiões e os caldeirões postos do chunk (o gerado e o editado)
     lampioes.chunk(r.cx, r.cz, r.base, edicoes.doChunk(r.cx, r.cz));
+    // spec 039 (T05): os móveis e os tapetes do chunk, junto com a malha dele
+    moveis.chunk(r.cx, r.cz, r.base, edicoes.doChunk(r.cx, r.cz));
   }
 
   function solicitar(cx: number, cz: number, urgente = false): void {
@@ -4578,6 +4612,8 @@ export function criarCena(
     personagem.posicionar(j.x, j.y, j.z, animador.yaw() + giroCorpo);
     // parte 3: na curva da rampa o boneco deita junto com a prancha
     personagem.raiz.rotation.x = -(casaCena?.noTrilho()?.inclina ?? 0) * 0.85;
+    // spec 039 (T05): sentada no sofá ou na cadeira, deitada na cama
+    poseMovel.aplicar(personagem, meuAssento, 'eu');
     gestos?.atualizar(dt); // spec 015: balão do gesto
     // estimativa de luz no jogador: teto opaco acima = caverna (escurece braço e corpo)
     const ex = Math.floor(camera.position.x);
@@ -4715,6 +4751,7 @@ export function criarCena(
       malhas.delete(k);
       const [dcx, dcz] = k.split(',').map(Number);
       lampioes.soltar(dcx, dcz);
+      moveis.soltar(dcx, dcz);
       pedidos.delete(k);
       prioritarios.delete(k);
     }
@@ -6154,6 +6191,7 @@ export function criarCena(
     quadroConstrucao?.(tempo);
     atualizarFantasmas(tempo);
     renderVeiculos?.quadro(Math.min(dtBruto, 0.1), tempo);
+    moveis.quadro(controle.jogador.x, controle.jogador.z, Math.min(dtBruto, 0.1), 0.45 + 0.55 * luzDia);
     renderVila?.quadro(
       tempo,
       controle.jogador.x,
@@ -8288,6 +8326,13 @@ export function criarCena(
       }
       case 'sono':
         window.dispatchEvent(new CustomEvent('brumaluz:sono', { detail: { dormiu: e.dormiu } }));
+        break;
+      // spec 039 (T05): a pose de sentada e de deitada da criança (o núcleo decide, T04)
+      case 'sentou':
+        definirMeuAssento({ x: e.x, y: e.y, z: e.z, d: e.d, px: e.px, pz: e.pz, ...(e.deitado ? { deitado: true } : {}) });
+        break;
+      case 'levantou':
+        definirMeuAssento(null);
         break;
       case 'acordou': {
         // as estações não esperam a transição: o dia novo já amanhece com elas

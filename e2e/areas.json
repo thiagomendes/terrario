@@ -99,11 +99,14 @@
         "src/ui/icones.ts",
         "src/ui/status.ts",
         "src/esboco/moveis.ts",
-        "src/esboco/moveisPecas.ts"
+        "src/esboco/moveisPecas.ts",
+        "src/render/moveis/",
+        "src/render/poseMovel.ts"
       ],
       "suites": [
         "ajustes-filho.spec.ts",
         "bloco-some.spec.ts",
+        "capturas-039-t05.spec.ts",
         "construir-037.spec.ts",
         "cristal.spec.ts",
         "dar-item.spec.ts",

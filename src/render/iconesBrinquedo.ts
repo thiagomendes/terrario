@@ -129,12 +129,13 @@ export function gerarIconesBrinquedo(
       raiz.rotation.set(-0.5, Math.PI / 4, 0);
       return raiz;
     }
-    if (b?.forma === 'cama') {
-      // a cama do ícone é a mesma da mão (com lençol e travesseiro), maior
+    if (b?.forma === 'cama' || b?.forma === 'movel') {
+      // a cama do ícone é a mesma da mão (com lençol e travesseiro), maior; spec 039 (T05): os
+      // móveis também (o modelo do mundo em miniatura)
       const m = modeloNaMao(scene, mats, bloco, null, `icone-${id}`);
       if (m) {
         m.no.parent = raiz;
-        m.no.scaling.setAll(4);
+        m.no.scaling.setAll(3.5);
         raiz.rotation.set(-0.5, Math.PI / 4, 0);
         return raiz;
       }

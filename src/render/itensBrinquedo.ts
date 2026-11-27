@@ -20,6 +20,8 @@ import { Bloco, obterBloco } from '../world/blocks';
 import { caixaArredondada, cilindro, esfera, type Plasticos } from './formas';
 import { modeloDeBloco } from './blocosBrinquedo';
 import { tema } from '../temas/ativo';
+import { ehMovel } from '../jogo/moveis';
+import { montarModeloMovel } from './moveis/pecas';
 
 /** Cor da cabeça da ferramenta por material (as mesmas do catálogo). */
 const MATERIAL: Record<string, string> = {
@@ -716,6 +718,33 @@ export function modeloNaMao(
     for (const m of modeloVidro(scene, `${prefixo}-mao`, 0.24))
       add(m, m.position.x, m.position.y, m.position.z);
     return { no, malhas, ferramenta: false };
+  }
+  // spec 039 (T05): os móveis (a cama nova também) e o tapete na mão são o modelo do mundo, em
+  // miniatura (o maior lado com 0,3)
+  if (bloco !== null && (ehMovel(bloco) || bloco === Bloco.TAPETE)) {
+    const vd = montarModeloMovel(bloco).corpo;
+    if (vd) {
+      const P = vd.positions!;
+      let x0 = Infinity;
+      let x1 = -Infinity;
+      let y1 = 0;
+      let z0 = Infinity;
+      let z1 = -Infinity;
+      for (let i = 0; i < P.length; i += 3) {
+        x0 = Math.min(x0, P[i]);
+        x1 = Math.max(x1, P[i]);
+        y1 = Math.max(y1, P[i + 1]);
+        z0 = Math.min(z0, P[i + 2]);
+        z1 = Math.max(z1, P[i + 2]);
+      }
+      const k = 0.3 / Math.max(x1 - x0, y1, z1 - z0);
+      const m = new Mesh(`${prefixo}-movel`, scene);
+      vd.applyToMesh(m);
+      m.material = mats.corVertice(0.3) ?? mats.cor('#ffffff', 0.3);
+      m.scaling.setAll(k);
+      add(m, -((x0 + x1) / 2) * k, -(y1 / 2) * k, -((z0 + z1) / 2) * k);
+      return { no, malhas, ferramenta: false };
+    }
   }
   // porta e porteira têm modelinho próprio (janela e almofadas; mourões e diagonal), mais abaixo
   if (

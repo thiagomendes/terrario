@@ -17,6 +17,7 @@ import {
   indiceDoTile,
 } from '../art/tiles';
 import { ehPorta } from '../world/portas';
+import { ehMovel } from '../jogo/moveis';
 import { corDaCopa, plantaDeBrinquedo } from './plantasBrinquedo';
 
 const TILE_TERRA = indiceDoTile('terra');
@@ -37,6 +38,13 @@ QUINA_RETA_T[Bloco.JANELA] = 1;
 const SEM_CUBO_T = new Uint8Array(256);
 SEM_CUBO_T[Bloco.LAMPIAO_ABOBORA] = 1;
 SEM_CUBO_T[Bloco.CALDEIRAO] = 1;
+/**
+ * Spec 039 (T05): os móveis (a cama nova também) são desenhados por pedaço, fora da malha do chunk
+ * (`render/moveis/`); aqui não entra nada deles. O tapete numa célula (só por truque) é peça solta.
+ */
+const MOVEL_T = new Uint8Array(256);
+for (let i = 0; i < 256; i++) MOVEL_T[i] = ehMovel(i) ? 1 : 0;
+MOVEL_T[Bloco.TAPETE] = 1;
 const FOLHAS_T = new Uint8Array(256);
 for (let i = 0; i < 256; i++) FOLHAS_T[i] = obterBloco(i)?.folhas ? 1 : 0;
 import { ALTURA, TAM_X, TAM_Z, indice } from '../world/chunk';
@@ -856,6 +864,7 @@ export function gerarMalha(
           adicionarPlanta(id, x, y, z);
           continue;
         }
+        if (MOVEL_T[id]) continue;
         if (temFormaParcial(id)) {
           const meta = metas.get(indice(x, y, z)) ?? 0;
           const caixas = caixasDaMalha(id, meta, (d) => {
