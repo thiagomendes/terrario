@@ -622,6 +622,133 @@ for (const modo of ['local', 'nuvem'] as const)
         expect(bloco(n, T.x + 2, YP, T.z + 1)).toBe(Bloco.FLOR);
       });
 
+    it('o chão embaixo some (quebrado ou pelo lote do criativo): o tapete sai inteiro e volta para o dono', () => {
+      // na sobrevivência: a Ana quebra uma tábua do chão embaixo do tapete dela
+      const n = abrir(modo, { jogo: 'sobrevivencia' });
+      const ana = n.estado.jogadores.get('ana')!;
+      const TAPETE = idDoBloco(Bloco.TAPETE);
+      ana.inventario.definir(0, { item: TAPETE, qtd: 1 });
+      porTapete(n, 'ana', T.x, T.z, 0);
+      expect(recusasDe(passo(n).get('ana'))).toEqual([]);
+      expect(contar(n, TAPETE)).toBe(0);
+      quebrar(n, 'ana', T.x + 1, T.z + 1, YP - 1);
+      const q = passo(n).get('ana')!;
+      expect(recusasDe(q)).toEqual([]);
+      expect(bloco(n, T.x + 1, YP - 1, T.z + 1)).toBe(Bloco.AR);
+      expect(n.estado.tapetes.tamanho).toBe(0);
+      expect(q.tapetesMudados).toEqual([{ x: T.x, y: YP, z: T.z, fora: true }]);
+      // volta para a mochila de quem pôs (um só, e nada no chão)
+      expect(ana.inventario.contar(TAPETE)).toBe(1);
+      expect(contar(n, TAPETE)).toBe(1);
+      // no criativo: o lote que tira o chão leva o tapete junto (sem item)
+      const m = abrir(modo);
+      porTapete(m, 'ana', T.x, T.z, 0);
+      passo(m);
+      expect(m.estado.tapetes.tamanho).toBe(1);
+      mandar(m, 'ana', { t: 'editar', lote: [{ x: T.x + 2, y: YP - 1, z: T.z, v: Bloco.AR }] });
+      const q2 = passo(m).get('ana')!;
+      expect(bloco(m, T.x + 2, YP - 1, T.z)).toBe(Bloco.AR);
+      expect(m.estado.tapetes.tamanho).toBe(0);
+      expect(q2.tapetesMudados).toEqual([{ x: T.x, y: YP, z: T.z, fora: true }]);
+      // trocar o chão por outro bloco que apoia não mexe no tapete
+      porTapete(m, 'ana', T.x, T.z + 3, 0);
+      passo(m);
+      mandar(m, 'ana', { t: 'editar', lote: [{ x: T.x, y: YP - 1, z: T.z + 3, v: Bloco.PEDRA_LISA }] });
+      passo(m);
+      expect(m.estado.tapetes.tamanho).toBe(1);
+      if (modo === 'nuvem') {
+        // a Bia não tira o chão (nem o dela) embaixo do tapete da Ana: o aviso "amigo", e o tapete
+        // não cai aos pés dela; com a Ana fora da sala, também não
+        const s = abrir(modo, { jogo: 'sobrevivencia' });
+        const a = s.estado.jogadores.get('ana')!;
+        a.inventario.definir(0, { item: TAPETE, qtd: 1 });
+        porTapete(s, 'ana', T.x, T.z, 0);
+        passo(s);
+        expect(s.estado.tapetes.tamanho).toBe(1);
+        s.estado.edicoes.definir(T.x + 1, YP - 1, T.z, Bloco.TABUAS, 0, s.estado.edicoes.donos.indice('bia'));
+        for (const fora of [false, true]) {
+          if (fora) {
+            s.desconectar('ana');
+            passo(s);
+          }
+          const id = quebrar(s, 'bia', T.x + 1, T.z, YP - 1);
+          const r = recusasDe(passo(s).get('bia'));
+          expect(r.map((x) => x.comando), `ana fora: ${fora}`).toEqual([id]);
+          expect(r[0].protecao?.motivo).toBe('amigo');
+          expect(bloco(s, T.x + 1, YP - 1, T.z)).toBe(Bloco.TABUAS);
+          expect(s.estado.tapetes.tamanho).toBe(1);
+          expect(contar(s, TAPETE)).toBe(0);
+        }
+        // no criativo, o lote da Bia que tira o chão do tapete da Ana volta (o resto do lote vale)
+        const c = abrir(modo);
+        porTapete(c, 'ana', T.x, T.z, 0);
+        passo(c);
+        const idLote = mandar(c, 'bia', {
+          t: 'editar',
+          lote: [
+            { x: T.x + 1, y: YP - 1, z: T.z, v: Bloco.AR },
+            { x: T.x + 5, y: YP, z: T.z + 5, v: Bloco.PEDRA_LISA },
+          ],
+        });
+        const rb = recusasDe(passo(c).get('bia'));
+        expect(rb.map((x) => x.comando)).toEqual([idLote]);
+        expect(rb[0].protecao?.motivo).toBe('amigo');
+        expect(bloco(c, T.x + 1, YP - 1, T.z)).toBe(Bloco.TABUAS);
+        expect(bloco(c, T.x + 5, YP, T.z + 5)).toBe(Bloco.PEDRA_LISA);
+        expect(c.estado.tapetes.tamanho).toBe(1);
+      }
+    });
+
+    it('a mochila cheia: o tapete sem chão cai numa célula dele que ainda tem chão', () => {
+      const n = abrir(modo, { jogo: 'sobrevivencia' });
+      const ana = n.estado.jogadores.get('ana')!;
+      const TAPETE = idDoBloco(Bloco.TAPETE);
+      ana.inventario.definir(0, { item: TAPETE, qtd: 1 });
+      porTapete(n, 'ana', T.x, T.z, 0);
+      passo(n);
+      // a mochila cheia de pedra
+      for (let i = 0; i < ana.inventario.slots.length; i++)
+        ana.inventario.definir(i, { item: idDoBloco(Bloco.PEDRA_LISA), qtd: 64 });
+      quebrar(n, 'ana', T.x, T.z, YP - 1);
+      passo(n);
+      expect(bloco(n, T.x, YP - 1, T.z)).toBe(Bloco.AR);
+      expect(n.estado.tapetes.tamanho).toBe(0);
+      expect(ana.inventario.contar(TAPETE)).toBe(0);
+      const caidos = n.estado.mundoItens.itens.filter((i) => i.item === TAPETE);
+      expect(caidos.reduce((s, i) => s + i.qtd, 0)).toBe(1);
+      // em cima do chão de tábuas (não no buraco)
+      expect(bloco(n, Math.floor(caidos[0].x), YP - 1, Math.floor(caidos[0].z))).toBe(Bloco.TABUAS);
+    });
+
+    it('o mundo salvo com um tapete boiando sobre um buraco: ao abrir, ele sai e cai onde há chão', () => {
+      const n = abrir(modo, { jogo: 'sobrevivencia' });
+      const ana = n.estado.jogadores.get('ana')!;
+      const TAPETE = idDoBloco(Bloco.TAPETE);
+      ana.inventario.definir(0, { item: TAPETE, qtd: 2 });
+      porTapete(n, 'ana', T.x, T.z, 0);
+      porTapete(n, 'ana', T.x, T.z + 3, 0);
+      passo(n);
+      expect(n.estado.tapetes.tamanho).toBe(2);
+      // o buraco do defeito de antes: o chão saiu e o tapete ficou (sem passar pela regra)
+      n.estado.edicoes.definir(T.x + 2, YP - 1, T.z + 1, Bloco.AR);
+      const s = n.salvar();
+      expect((s.extras['tapetes'] as unknown[]).length).toBe(2);
+      const m = abrir(modo, {
+        jogo: 'sobrevivencia',
+        dados: { versao: 1, edicoes: s.edicoes, jogador: null, hora: s.hora, extras: s.extras },
+      });
+      // o boiando saiu; o outro (com chão) ficou
+      expect(m.estado.tapetes.tamanho).toBe(1);
+      expect(m.estado.tapetes.em(T.x, YP, T.z)).toBeUndefined();
+      expect(m.estado.tapetes.em(T.x, YP, T.z + 3)).toBeDefined();
+      // nada some: o tapete caiu numa célula dele com chão
+      const caidos = m.estado.mundoItens.itens.filter((i) => i.item === TAPETE);
+      expect(caidos.reduce((t, i) => t + i.qtd, 0)).toBe(1);
+      expect(bloco(m, Math.floor(caidos[0].x), YP - 1, Math.floor(caidos[0].z))).toBe(Bloco.TABUAS);
+      // e o salvamento seguinte já não tem o boiando
+      expect(m.salvar().extras['tapetes']).toEqual([[T.x, YP, T.z + 3, 0, 0]]);
+    });
+
     it('não entra sem chão, em cima de outro tapete ou na água; ninguém fica preso', () => {
       let n = abrir(modo);
       n.estado.edicoes.definir(T.x + 2, YP - 1, T.z + 1, Bloco.AR);
