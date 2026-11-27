@@ -4405,9 +4405,10 @@ export function criarCena(
   function olharParaQuemSentou(a: AssentoNaTela): void {
     if (primeiraPessoa.ligada()) return;
     const deitadaNaCama = !!a.deitado && blocoEm(a.x, a.y, a.z) === Bloco.CAMA;
-    // spec 039b (portão visual): sentada à mesa (a mesa na frente dela), a câmera vem por cima do
-    // ombro, de três-quartos, olhando para onde ela olha: a mesa, os pratos e quem está do outro
-    // lado ficam à vista (de frente para ela, a cabeça tapava a mesa)
+    // spec 039b (portão visual): sentada à mesa (a mesa na frente dela), a câmera vem de lado e
+    // baixa, quase na altura dos olhos, olhando para onde ela olha: o rosto da amiga do outro lado,
+    // a mesa com os pratinhos e um pedaço dela de três-quartos (de frente, a cabeça tapava a mesa;
+    // do alto, as duas viravam só o alto do cabelo: "o rosto alegre é o que faz a cena funcionar")
     const [vx, vz] = [
       [0, 1],
       [1, 0],
@@ -4419,14 +4420,14 @@ export function criarCena(
     // deitada na cama, a câmera vem do pé e olha para a cabeceira (-vetor(d))
     const base = ((deitadaNaCama || aMesa ? a.d + 2 : a.d) & 3) * (Math.PI / 2);
     const deYaw = camera.rotation.y;
-    let dYaw = (base + (aMesa ? 0.75 : 0.62) - deYaw) % (Math.PI * 2);
+    let dYaw = (base + (aMesa ? 1.15 : 0.62) - deYaw) % (Math.PI * 2);
     if (dYaw > Math.PI) dYaw -= Math.PI * 2;
     if (dYaw < -Math.PI) dYaw += Math.PI * 2;
     giroAoSentar = {
       deYaw,
       dYaw,
       dePitch: camera.rotation.x,
-      atePitch: deitadaNaCama ? 0.75 : aMesa ? 0.9 : 0.42,
+      atePitch: deitadaNaCama ? 0.75 : aMesa ? 0.2 : 0.42,
       t0: performance.now() / 1000,
     };
   }
@@ -6001,6 +6002,23 @@ export function criarCena(
     const def = obterBlocoDef(b);
     if (!def) return CUBO;
     if (def.planta) return [0.18, 0, 0.18, 0.82, 0.85, 0.82];
+    // spec 039b (portão visual): o móvel ganha o contorno inteiro (todas as células, a partir da
+    // célula mirada), e não só a parte tocada (na TV de 2 × 2, o cubo pegava metade do rack)
+    const m = ehMovel(b) ? movelEm(leitorMoveis, x, y, z) : null;
+    if (m) {
+      const u = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
+      for (const q of m.celulas) {
+        const cs = caixasDoBloco(b, edicoes.obterMeta(q.x, q.y, q.z), () => false);
+        const lista = cs && cs.length ? cs : [CUBO];
+        const o = [q.x - x, q.y - y, q.z - z];
+        for (const c of lista)
+          for (let i = 0; i < 3; i++) {
+            u[i] = Math.min(u[i], c[i] + o[i]);
+            u[i + 3] = Math.max(u[i + 3], c[i + 3] + o[i]);
+          }
+      }
+      return u as unknown as CaixaLocal;
+    }
     const caixas = caixasDoBloco(b, edicoes.obterMeta(x, y, z), (dd) => {
       const [dx, dz] = vetorDirecao(dd);
       return cercaConecta(blocoEm(x + dx, y, z + dz));

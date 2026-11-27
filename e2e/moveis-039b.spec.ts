@@ -20,7 +20,7 @@ import { abrirMundo, type Tamanho } from './guia-palco';
  * Fotos em capturas-039b/t04/.
  */
 /** (as da T04 ficam em capturas-039b/t04; as do conserto do portão visual, aqui) */
-const PASTA = 'capturas-039b/t09/tela';
+const PASTA = 'capturas-039b/t09b/tela';
 mkdirSync(PASTA, { recursive: true });
 
 type P = { x: number; y: number; z: number };
@@ -297,6 +297,11 @@ test('pôr e tocar no aparelho: a geladeira guarda (só comida), o fogão cozinh
   await ir(p, cx + 0.5, cz - 4.5, y);
   await p.waitForTimeout(1500);
   await p.screenshot({ path: `${PASTA}/tv-e-som-ligados-pc.png` });
+  // o contorno da mira pega a TV inteira (as 2 × 2 células), e não só a parte mirada
+  await ir(p, M.tv.x + 1, M.tv.z - 3.5, y);
+  await mirarAte(p, M.tv);
+  await p.waitForTimeout(600);
+  await p.screenshot({ path: `${PASTA}/tv-contorno-da-mira-pc.png` });
   passo('tv e som');
 
   // a mesa: sem ninguém sentado em volta, o "não" e nada sai da mochila
