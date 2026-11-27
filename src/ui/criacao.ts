@@ -13,7 +13,7 @@ import {
   type Grade,
   type Receita,
 } from '../jogo/receitas';
-import { iconeDoItem } from './icones';
+import { EVENTO_ICONES, iconeDoItem } from './icones';
 import { rolarAoFocar, type InventarioUI } from './inventario';
 import { trocar } from './conteiner';
 import { criarAbasCategoria } from './abasCategoria';
@@ -139,6 +139,13 @@ export function criarCriacao(
     renderLivro();
   });
   busca.addEventListener('input', () => renderLivro());
+  // spec 039: os ícones de brinquedo chegam aos poucos: o livro aberto troca as figuras no lugar
+  // (sem refazer a lista: um toque no meio não se perde)
+  window.addEventListener(EVENTO_ICONES, () => {
+    if (livro.hidden) return;
+    for (const i of lista.querySelectorAll<HTMLImageElement>('img[data-icone]'))
+      i.src = iconeDoItem(i.dataset.icone!);
+  });
   ui.areaExtra.append(raiz, livro);
 
   let celulas: HTMLButtonElement[] = [];
@@ -188,6 +195,7 @@ export function criarCriacao(
       el.dataset.receita = r.id;
       const img = document.createElement('img');
       img.src = iconeDoItem(r.resultado.item);
+      img.dataset.icone = r.resultado.item;
       img.alt = '';
       const txt = document.createElement('div');
       txt.append(`${def!.nome}${r.resultado.qtd > 1 ? ` ×${r.resultado.qtd}` : ''}`);
@@ -203,7 +211,10 @@ export function criarCriacao(
       for (const c of lista2) {
         const i = document.createElement('img');
         const exemplo = c.startsWith('#') ? TAGS[c]?.[0] : c;
-        if (exemplo) i.src = iconeDoItem(exemplo);
+        if (exemplo) {
+          i.src = iconeDoItem(exemplo);
+          i.dataset.icone = exemplo;
+        }
         i.title = c.startsWith('#') ? (NOMES_TAG[c] ?? c) : (obterItem(c)?.nome ?? c);
         ingr.appendChild(i);
       }

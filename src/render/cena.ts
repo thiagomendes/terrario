@@ -598,6 +598,8 @@ export interface EstadoDepuracao {
     agua: string[];
     assento: import('./poseMovel').AssentoNaTela | null;
     chegando: boolean;
+    /** Onde o corpo da criança está (a física, não a câmera). */
+    jogador: [number, number, number];
   };
   /** Spec 026: o estado do bairro que o núcleo mandou (show, estojos, caixas, lhamas). */
   vilaEstado?: () => import('../nucleo/vila').VilaVista | null;
@@ -3401,8 +3403,16 @@ export function criarCena(
     // spec 039: quebrar qualquer parte do móvel leva o móvel inteiro (o núcleo faz o mesmo)
     const movelQuebrado = quebra ? movelEm(leitorMoveis, x, y, z) : null;
     const id = proximoId();
+    // spec 039 (T06): o móvel previsto tem o mesmo dono em todas as células (quem ainda não está
+    // na tabela fica com o do mundo até o núcleo mandar): senão, cada célula ficava com o dono que
+    // já tinha (a peça solta de um amigo, o ar) e a cópia da tela tinha só peças soltas, que um
+    // salvamento antes da correção gravaria (e que somem ao abrir)
+    const donoDoMovel = movelPosto ? (meuIndiceDono() ?? 0) : undefined;
+    if (movelPosto && meuIndiceDono() === undefined && meusSemTabela.size < 4096)
+      for (const c of [{ x, y, z }, ...extras]) meusSemTabela.add(`${c.x},${c.y},${c.z}`);
     // o replantio fica com o dono que a lavoura já tinha (o núcleo faz igual)
     if (quebra && b !== Bloco.AR) cliente.prever(id, x, y, z, b, meta);
+    else if (movelPosto) cliente.prever(id, x, y, z, b, meta, donoDoMovel);
     else prever(id, x, y, z, b, meta);
     lote.push({ x, y, z, antes, depois: empacotar(b, meta) });
     // a lavoura não flutua: quebrar a terra arada leva a planta de cima (o núcleo faz o mesmo)
@@ -3429,7 +3439,10 @@ export function criarCena(
     for (const e of extras) {
       const a = valorEm(e.x, e.y, e.z);
       const me = e.meta ?? meta;
-      if (prever(id, e.x, e.y, e.z, b, me) || movelPosto) {
+      const previu = movelPosto
+        ? cliente.prever(id, e.x, e.y, e.z, b, me, donoDoMovel)
+        : prever(id, e.x, e.y, e.z, b, me);
+      if (previu || movelPosto) {
         lote.push({ x: e.x, y: e.y, z: e.z, antes: a, depois: empacotar(b, me) });
         extrasFeitos.push({ x: e.x, y: e.y, z: e.z });
       }
@@ -4302,6 +4315,7 @@ export function criarCena(
     agua: [...aguasAbertas.keys()],
     assento: noAssento?.fase === 'sentado' ? noAssento.a : null,
     chegando: noAssento?.fase === 'indo',
+    jogador: [controle.jogador.x, controle.jogador.y, controle.jogador.z],
   });
 
   /** Abre ou fecha a porta (e a metade de cima/baixo, se houver). */

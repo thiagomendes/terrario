@@ -111,7 +111,8 @@
         "dar-item.spec.ts",
         "interacao.spec.ts",
         "inventario.spec.ts",
-        "mineracao.spec.ts"
+        "mineracao.spec.ts",
+        "moveis-039.spec.ts"
       ]
     },
     "temas-e-mundos": {

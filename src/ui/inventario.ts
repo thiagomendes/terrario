@@ -300,7 +300,14 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
   }
 
   // os ícones de brinquedo chegam aos poucos: redesenha o que estiver aberto
-  window.addEventListener(EVENTO_ICONES, () => render());
+  // (spec 039: o catálogo também, senão os móveis da aba "casa" ficavam com o ícone de pixel)
+  window.addEventListener(EVENTO_ICONES, () => {
+    render();
+    // (no lugar, sem trocar os botões: um toque no meio não se perde)
+    if (aberto && op.criativo())
+      for (const b of gradeCat.querySelectorAll<HTMLElement>('[data-catalogo]'))
+        desenharSlot(b, { item: b.dataset.catalogo!, qtd: 1 });
+  });
 
   function render(): void {
     if (!aberto) return;
