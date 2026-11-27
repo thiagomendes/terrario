@@ -330,6 +330,23 @@ export interface JogadorVisto {
   acoes?: [number, number, number];
   /** Spec 032: o que ele está comendo (durante a refeição): o amigo vê as mordidas certas. */
   come?: string;
+  /** Spec 039 (T04): sentado num móvel (ou deitado na cama), também para quem entra no meio. */
+  sentado?: AssentoVisto;
+}
+
+/**
+ * Spec 039 (T04): o assento do móvel como a tela desenha: a célula do assento, a direção do
+ * móvel (a de `jogo/moveis.ts`: a frente do móvel olha para quem o pôs), o ponto do corpo (x, z)
+ * e se é deitado (a cama). O bloco da célula diz qual móvel é.
+ */
+export interface AssentoVisto {
+  x: number;
+  y: number;
+  z: number;
+  d: number;
+  px: number;
+  pz: number;
+  deitado?: true;
 }
 
 /** Criatura como o cliente a desenha. */
@@ -443,6 +460,13 @@ export type EventoNucleo =
   | { e: 'relampago'; atrasoTrovao: number }
   | { e: 'sono'; dormiu: boolean }
   | { e: 'acordou' }
+  /**
+   * Spec 039 (T04): este jogador sentou no móvel (ou deitou na cama): o assento e, se estava no
+   * brinquedo de andar, `desceu` (a tela tira o brinquedo). Levanta com `levantou` (andou, pulou,
+   * o móvel saiu, tocou de novo, renasceu ou voltou para casa).
+   */
+  | ({ e: 'sentou'; desceu?: true } & AssentoVisto)
+  | { e: 'levantou' }
   | { e: 'trocou'; profissao: Profissao; troca: string }
   | { e: 'entrou'; id: string; apelido: string }
   | { e: 'saiu'; id: string; apelido: string }

@@ -350,6 +350,43 @@ export function pecaSolta(l: LeitorMoveis, x: number, y: number, z: number): boo
   return MOVEIS.has(b) && movelEm(l, x, y, z) === null;
 }
 
+/**
+ * Spec 039 (T04): os assentos do móvel (o núcleo é dono de cada um, como as cadeiras do parque):
+ * o sofá tem 2 (um em cada parte), a cadeira 1 e a cama 1 (deitado; a curtinha também). Cada
+ * assento é a célula onde a criança fica e o ponto do corpo (no meio da célula; na cama, no meio
+ * da cama inteira). Vazio: o móvel não tem assento.
+ */
+export function assentosDoMovel(
+  m: MovelAchado,
+): { x: number; y: number; z: number; px: number; pz: number; deitado: boolean }[] {
+  const meio = (c: Celula) => ({
+    x: c.x,
+    y: c.y,
+    z: c.z,
+    px: c.x + 0.5,
+    pz: c.z + 0.5,
+    deitado: false,
+  });
+  switch (m.bloco) {
+    case Bloco.SOFA:
+      return m.celulas.map(meio);
+    case Bloco.CADEIRA:
+      return [meio(m.ancora)];
+    case Bloco.CAMA: {
+      const px = m.celulas.reduce((s, c) => s + c.x + 0.5, 0) / m.celulas.length;
+      const pz = m.celulas.reduce((s, c) => s + c.z + 0.5, 0) / m.celulas.length;
+      return [{ x: m.ancora.x, y: m.ancora.y, z: m.ancora.z, px, pz, deitado: true }];
+    }
+    default:
+      return [];
+  }
+}
+
+/** O bloco é um móvel de sentar ou deitar? */
+export function ehDeSentar(b: number): boolean {
+  return b === Bloco.SOFA || b === Bloco.CADEIRA || b === Bloco.CAMA;
+}
+
 /** O abajur e o criado-mudo: o toque acende e apaga (o id do outro estado, ou null). */
 export function acesoOuApagado(b: number): number | null {
   switch (b) {

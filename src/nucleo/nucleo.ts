@@ -121,6 +121,9 @@ import { comPecas } from '../jogo/caminho';
 import { celulaTomadaPelaVila } from '../world/vilaSolidos';
 import {
   acesoOuApagado,
+  assentosDoMovel,
+  ehDeSentar,
+  type MovelAchado,
   celulasDoMovel,
   ehMetaDeAncora,
   ehMovel,
@@ -228,8 +231,6 @@ export const INTERVALO_APARENCIA = 0.5;
 const ALCANCE_MADURA = 24;
 /** Espera entre deitar na cama e acordar (o véu escurece a tela). */
 const ESPERA_SONO = 1.5;
-/** Quanto tempo quem deitou espera os outros deitarem. */
-const ESPERA_TODOS = 10;
 
 export interface OpcoesNucleo {
   semente: number;
@@ -300,8 +301,11 @@ interface Jogador {
   correcoesTapete: TapeteMudado[];
   /** Acorda quando chega a zero (dormindo). */
   sono: number;
-  /** Deitado esperando os outros deitarem (segundos que ainda vale). */
-  querDormir: number;
+  /**
+   * Spec 039 (T04): o assento do móvel em que está sentado (ou deitado, na cama), ou null. Não é
+   * salvo: ao abrir o mundo, ao voltar de uma queda e ao renascer, todo mundo está em pé.
+   */
+  sentado: SentadoNoMovel | null;
   perfil: PerfilJogador;
   constroi: boolean;
   /** Golpes, colocações e comidas desde que entrou (os amigos veem o movimento). */
@@ -350,6 +354,31 @@ interface Jogador {
 export type Nucleo = ReturnType<typeof criarNucleo>;
 
 type Cel = { x: number; y: number; z: number };
+
+/** Spec 039 (T04): onde o jogador está sentado (ou deitado). */
+interface SentadoNoMovel {
+  /** A chave do assento (a âncora do móvel e o número do assento). */
+  chave: string;
+  bloco: number;
+  ancora: Cel;
+  d: number;
+  /** A célula do assento e o ponto do corpo (x, z). */
+  x: number;
+  y: number;
+  z: number;
+  px: number;
+  pz: number;
+  deitado: boolean;
+  /** A posição do jogador já chegou ao assento (a tela leva o boneco até ele). */
+  chegou: boolean;
+  /** O passo em que sentou. */
+  desde: number;
+}
+
+/** Spec 039 (T04): chega ao assento quem está até aqui do ponto dele; levanta quem se afasta mais. */
+const PERTO_DO_ASSENTO = 0.9;
+/** Spec 039 (T04): quem sentou e não chegou ao assento nesse tempo (segundos) fica de pé. */
+const ESPERA_CHEGAR_ASSENTO = 3;
 
 /** Spec 039: as duas listas têm as mesmas células (sem repetir, em qualquer ordem)? */
 function mesmasCelulas(a: readonly Cel[], b: readonly Cel[]): boolean {
@@ -1153,7 +1182,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       correcoes: [],
       correcoesTapete: [],
       sono: 0,
-      querDormir: 0,
+      sentado: null,
       acoes: [0, 0, 0],
       comendo: null,
       passoTelemetria: n,
@@ -1229,6 +1258,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     const d = dadosJogador(id);
     const j = jogadores.get(id);
     if (!j) return d;
+    // spec 039 (T04): quem sai deixa o assento livre
+    levantar(j);
     jogadores.delete(id);
     almaPendente.delete(id);
     perfisSujos = true;
@@ -2333,25 +2364,156 @@ export function criarNucleo(op: OpcoesNucleo) {
       // spec 039: a cama inteira (de qualquer parte); a peça solta não é cama
       const cama = movelEm(leitorMoveis, x, y, z);
       if (!cama) return;
+      // tocar de novo na cama em que está deitado: levanta
+      if (noMesmoMovel(j, cama.ancora)) {
+        levantar(j);
+        return;
+      }
       // nasce ao lado da cama, na célula livre mais perto (nunca em cima da cabeceira)
       j.spawn = ladoDaCama(cama.celulas, cama.d) ?? { x: x + 0.5, z: z + 0.5 };
+      // spec 039 (T04): deita (a cama tem um lugar só: a de um amigo deitado não serve)
+      if (!sentarNoMovel(j, cama, c)) return;
       if (noiteNaHora(hora) < 0.4) {
         j.eventos.push({ e: 'sono', dormiu: false });
         return;
       }
-      // a noite só passa quando todos estão deitados (com um jogador só, na hora)
-      j.querDormir = ESPERA_TODOS;
-      const faltam = [...jogadores.values()].filter((o) => o.querDormir <= 0).length;
+      // a noite só passa com todos deitados (com um jogador só, na hora); quem deitou espera
+      // os outros enquanto ficar deitado
+      const faltam = [...jogadores.values()].filter((o) => !o.sentado?.deitado).length;
       if (faltam > 0) {
         j.eventos.push({ e: 'sonoEspera', faltam });
         return;
       }
-      for (const o of jogadores.values()) {
-        o.querDormir = 0;
-        o.sono = ESPERA_SONO;
-        o.eventos.push({ e: 'sono', dormiu: true });
-      }
+      dormirTodos();
+    } else if (ehDeSentar(b)) {
+      // spec 039 (T04): o sofá e a cadeira; tocar de novo no mesmo móvel levanta
+      const m = movelEm(leitorMoveis, x, y, z);
+      if (!m) return;
+      if (noMesmoMovel(j, m.ancora)) levantar(j);
+      else sentarNoMovel(j, m, c);
     }
+  }
+
+  /** A noite passa para todos (cada um dorme, e acorda junto em `acordar`). */
+  function dormirTodos(): void {
+    for (const o of jogadores.values()) {
+      o.sono = ESPERA_SONO;
+      o.eventos.push({ e: 'sono', dormiu: true });
+    }
+  }
+
+  /** Spec 039 (T04): de noite, com todos deitados (e ninguém dormindo ainda), a noite passa. */
+  function conferirSono(): void {
+    if (jogadores.size === 0 || noiteNaHora(hora) < 0.4) return;
+    for (const o of jogadores.values()) if (!o.sentado?.deitado || o.sono !== 0) return;
+    dormirTodos();
+  }
+
+  // ------------------------------------------------------------ assentos (spec 039, T04)
+
+  /** Os assentos dos móveis ocupados: a chave (a âncora e o número) → quem está ali. */
+  const assentos = new Map<string, string>();
+  const chaveDoMovel = (a: Cel) => `${a.x},${a.y},${a.z}`;
+  const noMesmoMovel = (j: Jogador, a: Cel) =>
+    !!j.sentado && j.sentado.chave.startsWith(`${chaveDoMovel(a)}:`);
+
+  /**
+   * Senta (ou deita, na cama) no assento livre do móvel: o da parte tocada primeiro (o sofá tem
+   * dois). Quem está montado desce antes. Devolve se sentou (todos ocupados: o "não" curtinho).
+   */
+  function sentarNoMovel(j: Jogador, m: MovelAchado, tocada: Cel): boolean {
+    const lugares = assentosDoMovel(m);
+    const base = chaveDoMovel(m.ancora);
+    const ordem = lugares
+      .map((l, i) => ({ l, i }))
+      .sort(
+        (a, b) =>
+          Number(!(a.l.x === tocada.x && a.l.z === tocada.z)) -
+          Number(!(b.l.x === tocada.x && b.l.z === tocada.z)),
+      );
+    const livre = ordem.find(({ i }) => {
+      const dono = assentos.get(`${base}:${i}`);
+      return dono === undefined || dono === j.id;
+    });
+    if (!livre) {
+      j.eventos.push({ e: 'recusa', comando: 0, motivo: 'sentar' });
+      return false;
+    }
+    levantar(j);
+    // quem está no brinquedo de andar desce antes de sentar
+    const montado = j.perfil.aparencia.montado === true;
+    if (montado) {
+      const { montado: _m, ...resto } = j.perfil.aparencia;
+      void _m;
+      aplicarAparencia(j, resto);
+    }
+    const chave = `${base}:${livre.i}`;
+    assentos.set(chave, j.id);
+    const { l } = livre;
+    j.sentado = {
+      chave,
+      bloco: m.bloco,
+      ancora: { ...m.ancora },
+      d: m.d,
+      x: l.x,
+      y: l.y,
+      z: l.z,
+      px: l.px,
+      pz: l.pz,
+      deitado: l.deitado,
+      chegou: Math.hypot(j.tel.x - l.px, j.tel.z - l.pz) <= PERTO_DO_ASSENTO,
+      desde: n,
+    };
+    j.eventos.push({
+      e: 'sentou',
+      x: l.x,
+      y: l.y,
+      z: l.z,
+      d: m.d,
+      px: l.px,
+      pz: l.pz,
+      ...(l.deitado ? { deitado: true as const } : {}),
+      ...(montado ? { desceu: true as const } : {}),
+    });
+    return true;
+  }
+
+  /** Fica de pé (o assento fica livre para outro). */
+  function levantar(j: Jogador): void {
+    if (!j.sentado) return;
+    if (assentos.get(j.sentado.chave) === j.id) assentos.delete(j.sentado.chave);
+    j.sentado = null;
+    j.eventos.push({ e: 'levantou' });
+  }
+
+  /**
+   * A cada passo: quem está sentado levanta se o móvel saiu ou mudou (quebrado, trocado pelo
+   * lote), se desmaiou ou se não chegou ao assento a tempo.
+   */
+  function cuidarDosAssentos(): void {
+    for (const j of jogadores.values()) {
+      const s = j.sentado;
+      if (!s) continue;
+      const m = movelEm(leitorMoveis, s.ancora.x, s.ancora.y, s.ancora.z);
+      const mesmo =
+        !!m &&
+        m.bloco === s.bloco &&
+        m.d === s.d &&
+        m.ancora.x === s.ancora.x &&
+        m.ancora.y === s.ancora.y &&
+        m.ancora.z === s.ancora.z;
+      const tarde = !s.chegou && (n - s.desde) * PASSO > ESPERA_CHEGAR_ASSENTO;
+      if (!mesmo || tarde || j.sobrevivencia.estado.morto) levantar(j);
+    }
+  }
+
+  /** A posição nova do jogador sentado: chegou ao assento, ou se afastou (andou, pulou). */
+  function assentoNaTelemetria(j: Jogador, c: Telemetria): void {
+    const s = j.sentado;
+    if (!s) return;
+    const longe = Math.hypot(c.x - s.px, c.z - s.pz) > PERTO_DO_ASSENTO;
+    if (c.pulos > 0 || (s.chegou && longe)) levantar(j);
+    else if (!longe) s.chegou = true;
   }
 
   /** A noite passa (uma vez) e quem dormia acorda. */
@@ -2818,8 +2980,38 @@ export function criarNucleo(op: OpcoesNucleo) {
       return;
     }
     j.passoVoltaCasa = n;
+    irParaCasa(j);
+  }
+
+  /**
+   * Leva o jogador ao lugar de nascer (renascer, voltar para casa): ele levanta do móvel e, se o
+   * lugar cai numa cama (o lugar gravado antes da 039, no meio da cama de uma célula), passa
+   * para o lado dela, pela regra do nascer ao lado. O lugar corrigido fica gravado.
+   */
+  function irParaCasa(j: Jogador): void {
+    j.spawn = foraDaCama(j.spawn);
+    levantar(j);
     j.saltoPermitido = true;
     j.eventos.push({ e: 'teleporte', x: j.spawn.x, z: j.spawn.z });
+  }
+
+  /**
+   * Spec 039: o lugar de nascer (só x e z) fora da cama. A tela põe a criança no primeiro vão de
+   * dois blocos da coluna, subindo do terreno: se antes dele há uma cama, ela nasceria em cima
+   * da cama, então vai para o lado dela.
+   */
+  function foraDaCama(s: { x: number; z: number }): { x: number; z: number } {
+    const x = Math.floor(s.x);
+    const z = Math.floor(s.z);
+    const livre = (y: number) => !obterBloco(mundo.bloco(x, y, z))?.solido;
+    for (let y = alturaTerreno(x, z, semente) + 1; y < ALTURA - 2; y++) {
+      if (mundo.bloco(x, y, z) === Bloco.CAMA) {
+        const cama = movelEm(leitorMoveis, x, y, z);
+        return (cama && ladoDaCama(cama.celulas, cama.d)) || s;
+      }
+      if (livre(y) && livre(y + 1)) return s;
+    }
+    return s;
   }
 
   /** Spec 021: o mundo como o lugar do pulo o vê (blocos, proteção da 016 e donos). */
@@ -2851,6 +3043,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     const l = lugarDoPulo(mundoDoPulo, j.id, j.tel, o.tel);
     if (!l) return void recusa();
     j.passoPulo = n;
+    levantar(j);
     j.saltoPermitido = true;
     j.destinoSalto = { x: l[0], z: l[2], ate: n + Math.round(3 / PASSO) };
     j.eventos.push({ e: 'teleporte', x: l[0], z: l[2], y: l[1], pulo: alvo });
@@ -2899,6 +3092,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (chegouNoDestino || (j.destinoSalto && n > j.destinoSalto.ate)) j.destinoSalto = null;
     j.passoTelemetria = n;
     j.tel = { ...c, quedas: [], pulos: 0, golpes: 0 };
+    // spec 039 (T04): andar, pular ou voar levanta do móvel
+    assentoNaTelemetria(j, c);
     if (golpes > 0) j.acoes[0] += Math.min(golpes, 20);
     for (let i = 0; i < golpes; i++) j.sobrevivencia.acao();
     if (modo !== 'sobrevivencia' || j.sobrevivencia.estado.morto) return;
@@ -3098,9 +3293,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       case 'renascer':
         // na nuvem só quem desmaiou renasce (senão seria cura e teletransporte de graça)
         if (!confiar && !j.sobrevivencia.estado.morto) break;
-        j.saltoPermitido = true;
         j.sobrevivencia.renascer();
-        j.eventos.push({ e: 'teleporte', x: j.spawn.x, z: j.spawn.z });
+        irParaCasa(j);
         break;
       case 'voltarCasa':
         voltarCasa(j);
@@ -3241,8 +3435,11 @@ export function criarNucleo(op: OpcoesNucleo) {
 
     aparenciasPendentes();
     let amanhece = false;
+    // spec 039 (T04): quem está sentado no móvel que saiu (ou desmaiou) levanta; de noite, com
+    // todos deitados (alguém saiu da sala, ou levantou e deitou de novo), a noite passa
+    cuidarDosAssentos();
+    conferirSono();
     for (const j of jogadores.values()) {
-      if (j.querDormir > 0) j.querDormir = Math.max(0, j.querDormir - dt);
       if (j.sono > 0) {
         j.sono -= dt;
         if (j.sono <= 0) {
@@ -3406,6 +3603,20 @@ export function criarNucleo(op: OpcoesNucleo) {
         acoes: [o.acoes[0], o.acoes[1], o.acoes[2]],
         // spec 032: o que está comendo (o amigo vê as mordidas na comida certa)
         ...(o.comendo && n * PASSO < o.comendo.ate ? { come: o.comendo.item } : {}),
+        // spec 039 (T04): sentado no móvel (ou deitado na cama): o amigo vê, e quem entra também
+        ...(o.sentado
+          ? {
+              sentado: {
+                x: o.sentado.x,
+                y: o.sentado.y,
+                z: o.sentado.z,
+                d: o.sentado.d,
+                px: o.sentado.px,
+                pz: o.sentado.pz,
+                ...(o.sentado.deitado ? { deitado: true as const } : {}),
+              },
+            }
+          : {}),
       };
     });
     const perfis = perfisSujos
@@ -3569,7 +3780,9 @@ export function criarNucleo(op: OpcoesNucleo) {
         x,
         y,
         z,
-        v: edicoes.obterValor(x, y, z) ?? empacotar(mundo.bloco(x, y, z), edicoes.obterMeta(x, y, z)),
+        v:
+          edicoes.obterValor(x, y, z) ??
+          empacotar(mundo.bloco(x, y, z), edicoes.obterMeta(x, y, z)),
       });
     converterCamas({
       edicoes,
@@ -3634,6 +3847,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     reiniciarQuadros(id: string) {
       const j = jogadores.get(id);
       if (!j) return;
+      // spec 039 (T04): quem volta de uma queda volta de pé (a tela nova não sabe do assento)
+      levantar(j);
       j.iniciado = false;
       j.inventarioSujo = true;
       j.transitoSujo = true;

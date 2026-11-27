@@ -239,7 +239,18 @@ describe('móveis e tapetes na sala da nuvem', () => {
     const bv = b.recebidas.find((m) => m.t === 'bemvindo') as Extract<RespostaServidor, { t: 'bemvindo' }>;
     expect(JSON.stringify(bv.edicoes)).toContain(String(Bloco.ABAJUR_ACESO));
 
-    // a Ana cai e volta: a sequência recomeça com a camada inteira
+    // spec 039 (T04): a Ana senta no sofá; a Bia vê no jogador visto
+    await mandar({ t: 'usar', id: 5, x: X + 2, y: Y, z: Z + 1 });
+    await avancar(200);
+    const ultimo = (c: ReturnType<typeof canal>) => quadros(c).filter((q) => q.jogadores).at(-1)!;
+    expect(ultimo(b).jogadores!.find((o) => o.id === 'ana')?.sentado).toMatchObject({
+      x: X + 2,
+      y: Y,
+      z: Z + 1,
+    });
+    expect(nucleo().estado.jogadores.get('ana')!.sentado).not.toBeNull();
+
+    // a Ana cai e volta: a sequência recomeça com a camada inteira, e ela volta de pé
     g.caiu(a);
     await avancar(2000);
     const a2 = canal();
@@ -249,6 +260,9 @@ describe('móveis e tapetes na sala da nuvem', () => {
     );
     await avancar(200);
     expect(quadros(a2).find((q) => q.primeiro)!.tapetes).toEqual([tapete]);
+    expect(nucleo().estado.jogadores.get('ana')!.sentado).toBeNull();
+    await avancar(100);
+    expect(ultimo(b).jogadores!.find((o) => o.id === 'ana')?.sentado).toBeUndefined();
 
     // todos saem; a sala dorme e acorda com tudo
     g.caiu(a2);

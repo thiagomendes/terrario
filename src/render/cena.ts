@@ -450,6 +450,13 @@ const INTERATIVOS = new Set<number>([
   Bloco.CAMA,
   Bloco.PORTEIRA,
   Bloco.PORTEIRA_ABERTA,
+  // spec 039: sentar (o sofá e a cadeira) e acender (o abajur e o criado-mudo): o núcleo decide
+  Bloco.SOFA,
+  Bloco.CADEIRA,
+  Bloco.ABAJUR,
+  Bloco.ABAJUR_ACESO,
+  Bloco.CRIADO_MUDO,
+  Bloco.CRIADO_MUDO_ACESO,
 ]);
 let raioChunks = RAIO_INICIAL;
 /**
