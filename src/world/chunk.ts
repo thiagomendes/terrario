@@ -868,7 +868,7 @@ function guardarMetas(
  * mesma semente: o povoado de um não é o do outro), como a memória dos planos.
  */
 const chaveMetas = (cx: number, cz: number, semente: number) =>
-  `${cx},${cz},${semente},${TERRENO_NATURAL.planta},${chaveDoRelevo()}`;
+  `${cx},${cz},${semente},${versaoDosPovoados()},${TERRENO_NATURAL.planta},${chaveDoRelevo()}`;
 
 /**
  * Metadados que a geração deu no chunk (índice local → metadado). Spec 039: os povoados e o

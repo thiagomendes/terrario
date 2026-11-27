@@ -400,6 +400,42 @@ for (const modo of ['local', 'nuvem'] as const)
       expect((q.eventos ?? []).some((e) => e.e === 'recusa' && e.comando === id)).toBe(true);
       expect(bloco(n, C.x, YP, C.z)).toBe(Bloco.AR);
     });
+
+    it('a conversão rodada duas vezes não muda nada (sem depender só da marca)', () => {
+      const dados = mundoDeAntes(modo, (def) => {
+        def(X0 + 1, Z0 + 2, Bloco.CAMA, 0);
+        def(X0 + 3, Z0 + 2, Bloco.CAMA, 0);
+        def(X0 + 3, Z0 + 3, Bloco.TABUAS);
+        def(X0 + 5, Z0 + 2, Bloco.CAMA, 0, 1);
+      });
+      const n = abrir(modo, dados);
+      const s = n.salvar();
+      // a marca sumiu (um aparelho de antes regravou o mundo sem ela): a conversão roda de novo
+      const extras: Record<string, unknown> = { ...s.extras };
+      delete extras['camas'];
+      const m = abrir(modo, { versao: 1, edicoes: s.edicoes, jogador: null, hora: s.hora, extras });
+      expect(JSON.stringify(m.estado.edicoes.exportar())).toBe(
+        JSON.stringify(n.estado.edicoes.exportar()),
+      );
+      // a cama nova continua com o pé, e a curtinha continua curtinha
+      expect(meta(m, X0 + 1, YP, Z0 + 3)).toBe(metaDoMovel(0, 1));
+      expect(meta(m, X0 + 3, YP, Z0 + 2)).toBe(metaDoMovel(0, PARTE_CURTINHA));
+      expect(meta(m, X0 + 5, YP, Z0 + 3)).toBe(metaDoMovel(0, 1));
+    });
+
+    it('a cama de uma célula num mundo já marcado (de uma aba de antes) vira a curtinha, e não ar', () => {
+      const dados = mundoDeAntes(modo, (def) => {
+        def(X0 + 1, Z0 + 2, Bloco.CAMA, 1);
+        // e uma peça solta de sofá (a parte 1, sem a âncora)
+        def(X0 + 5, Z0 + 5, Bloco.SOFA, metaDoMovel(0, 1));
+      });
+      const extras = { ...dados.extras, camas: VERSAO_CAMAS };
+      const n = abrir(modo, { ...dados, extras });
+      expect(bloco(n, X0 + 1, YP, Z0 + 2)).toBe(Bloco.CAMA);
+      expect(meta(n, X0 + 1, YP, Z0 + 2)).toBe(metaDoMovel(1, PARTE_CURTINHA));
+      // a peça que não é cama continua virando ar
+      expect(bloco(n, X0 + 5, YP, Z0 + 5)).toBe(Bloco.AR);
+    });
   });
 
 describe('a cama da geração com edição de antes no pé (doce-reino)', () => {
@@ -419,10 +455,11 @@ describe('a cama da geração com edição de antes no pé (doce-reino)', () => 
     em: { x: number; y: number; z: number },
     b: number,
     doBia = false,
+    metaDaEdicao = 0,
   ): Nucleo {
     const base = criarNucleo({ semente: SEMENTE, modo: 'criativo', versaoMundo: 2, dono: 'ana' });
     const ed = base.estado.edicoes;
-    ed.definir(em.x, em.y, em.z, b, 0, doBia ? ed.donos.indice('bia', 'Bia') : 0);
+    ed.definir(em.x, em.y, em.z, b, metaDaEdicao, doBia ? ed.donos.indice('bia', 'Bia') : 0);
     const s = base.salvar();
     const extras = { ...s.extras };
     delete extras['camas'];
@@ -476,6 +513,32 @@ describe('a cama da geração com edição de antes no pé (doce-reino)', () => 
     n = abrirComEdicao('nuvem', cab, Bloco.TABUAS);
     expect(n.estado.mundo.bloco(cab.x, cab.y, cab.z)).toBe(Bloco.TABUAS);
     expect(n.estado.mundo.bloco(pe.x, pe.y, pe.z)).toBe(Bloco.AR);
+    definirEstiloMundo(ESTILO_PADRAO);
+    limparPovoados();
+  });
+
+  it('a cama fantasma: a cama que a criança pôs no pé gerado é outro bloco (a cabeceira fica curtinha)', () => {
+    const { cab, pe } = primeiraCama();
+    const d = movelEm(
+      { bloco: () => Bloco.CAMA, meta: (x, y, z) => metaGerada(x, y, z, SEMENTE), dono: () => 0 },
+      cab.x,
+      cab.y,
+      cab.z,
+    )!.d;
+    // a cama da Bia, de uma célula, em cima do pé gerado (posta antes da 039)
+    for (const modo of ['local', 'nuvem'] as const) {
+      const n = abrirComEdicao(modo, pe, Bloco.CAMA, true, (d + 1) & 3);
+      const l = leitorDe(n);
+      expect(parteDoMeta(n.estado.edicoes.obterMeta(cab.x, cab.y, cab.z)), modo).toBe(PARTE_CURTINHA);
+      expect(movelEm(l, cab.x, cab.y, cab.z)?.celulas, modo).toHaveLength(1);
+      // a cama da Bia continua (a nova, se coube, ou a curtinha): nada sumiu, nenhuma peça solta
+      expect(n.estado.mundo.bloco(pe.x, pe.y, pe.z), modo).toBe(Bloco.CAMA);
+      expect(movelEm(l, pe.x, pe.y, pe.z), modo).not.toBeNull();
+      expect(n.donoDoBloco(pe.x, pe.y, pe.z), modo).toBe('bia');
+    }
+    // só a edição que é exatamente o pé gerado fica como está: a cama da geração inteira
+    const n = abrirComEdicao('nuvem', pe, Bloco.CAMA, false, metaDoMovel(d, 1));
+    expect(movelEm(leitorDe(n), cab.x, cab.y, cab.z)?.celulas).toHaveLength(2);
     definirEstiloMundo(ESTILO_PADRAO);
     limparPovoados();
   });

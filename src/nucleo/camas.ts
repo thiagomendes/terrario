@@ -90,12 +90,18 @@ export function converterCamas(m: MundoDaConversao): ResultadoConversao {
     pesSemCabeceira: 0,
   };
   const todas = editadas(m.edicoes);
-  // 1. as camas da geração com edição na cabeceira ou no pé (antes da cama nova)
+  /** A edição é exatamente a parte da cama da geração (o mesmo bloco, a parte e o dono do mundo)? */
+  const exata = (v: number, d: number, parte: number) =>
+    (v & 255) === Bloco.CAMA && ((v >> 8) & 255) === metaDoMovel(d, parte) && v >>> 16 === 0;
+  // 1. as camas da geração com edição na cabeceira ou no pé (antes da cama nova). A edição de
+  // `CAMA` no pé gerado (a cama que a criança pôs ali antes da 039) é outro bloco: só a edição
+  // que é exatamente o pé fica como está
   for (const e of todas) {
     const atual = e.v & 255;
     // o pé editado: a cabeceira (da geração) vira curtinha, ou o pé volta (era ar)
-    const dPe = atual === Bloco.CAMA ? null : peGerado(m, e.x, e.y, e.z);
+    const dPe = peGerado(m, e.x, e.y, e.z);
     if (dPe !== null) {
+      if (exata(e.v, dPe, 1)) continue;
       const [dx, dz] = vetorDoMovel(dPe);
       const cab = { x: e.x - dx, y: e.y, z: e.z - dz };
       if (m.edicoes.obterValor(cab.x, cab.y, cab.z) !== undefined) continue;
@@ -108,13 +114,13 @@ export function converterCamas(m: MundoDaConversao): ResultadoConversao {
       }
       continue;
     }
-    // a cabeceira editada com outra coisa: o pé da geração ao lado fica sem cama (o metadado
-    // gerado do vizinho vem antes: o terreno inteiro só é gerado onde há cama)
-    if (atual === Bloco.CAMA) continue;
+    // a cabeceira editada com outra coisa (também outra cama): o pé da geração ao lado fica sem
+    // cama (o metadado gerado do vizinho vem antes: o terreno inteiro só é gerado onde há cama)
     for (let d = 0; d < 4; d++) {
       const [dx, dz] = vetorDoMovel(d);
       const pe = { x: e.x + dx, y: e.y, z: e.z + dz };
       if (peGerado(m, pe.x, pe.y, pe.z) !== d) continue;
+      if (exata(e.v, d, 0)) continue;
       if (m.edicoes.obterValor(pe.x, pe.y, pe.z) !== undefined) continue;
       if (m.gerado(e.x, e.y, e.z) !== Bloco.CAMA) continue;
       m.gravar(pe.x, pe.y, pe.z, Bloco.AR, 0, 0);
@@ -133,6 +139,13 @@ export function converterCamas(m: MundoDaConversao): ResultadoConversao {
     const dono = valor >>> 16;
     const [dx, dz] = vetorDoMovel(d);
     const pe = { x: e.x + dx, y: e.y, z: e.z + dz };
+    // a frente já é o pé certo (a cama já é a nova): nada a fazer (a conversão pode rodar de novo)
+    if (
+      m.bloco(pe.x, pe.y, pe.z) === Bloco.CAMA &&
+      m.edicoes.obterMeta(pe.x, pe.y, pe.z) === metaDoMovel(d, 1) &&
+      m.edicoes.indiceDono(pe.x, pe.y, pe.z) === dono
+    )
+      continue;
     const idDono = (dono ? m.edicoes.donos.id(dono) : undefined) || m.regra.donoDoMundo || '';
     const cabe =
       pe.y > 0 &&

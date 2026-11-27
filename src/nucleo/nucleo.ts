@@ -130,6 +130,7 @@ import {
   metaDoMovel,
   movelEm,
   pecaSolta,
+  PARTE_CURTINHA,
   vetorDoMovel,
   type LeitorMoveis,
 } from '../jogo/moveis';
@@ -1169,7 +1170,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       },
       inventario: novoInventario(legado ? extras['inventario'] : oc.salvo?.inventario),
       sobrevivencia: criarSobrevivencia(legado ? extras['sobrevivencia'] : oc.salvo?.sobrevivencia),
-      spawn: (legado ? spawnSalvo : oc.salvo?.spawn) ?? { x, z },
+      // spec 039: o lugar de nascer gravado em cima de uma cama passa para o lado dela
+      spawn: foraDaCama((legado ? spawnSalvo : oc.salvo?.spawn) ?? { x, z }),
       transito: Array.from({ length: 10 }, () => null),
       conteiner: null,
       ack: 0,
@@ -2383,10 +2385,12 @@ export function criarNucleo(op: OpcoesNucleo) {
       // spec 039 (T04): o sofá e a cadeira; tocar de novo no mesmo móvel levanta
       const m = movelEm(leitorMoveis, x, y, z);
       if (!m) return;
-      if (noMesmoMovel(j, m.ancora)) levantar(j);
+      const deitaNoSofa = m.bloco === Bloco.SOFA && noiteNaHora(hora) >= 0.4;
+      // à noite, quem já está sentado no sofá e toca nele deita (se o outro lugar está livre)
+      if (noMesmoMovel(j, m.ancora) && !(deitaNoSofa && !j.sentado!.deitado)) levantar(j);
       // decisão do dono (27 nov): à noite, o sofá deita (inteiro, encolhidinha) e conta para o
       // dormir; o lugar de nascer continua sendo só o da cama
-      else if (m.bloco === Bloco.SOFA && noiteNaHora(hora) >= 0.4) {
+      else if (deitaNoSofa) {
         if (deitarNoSofa(j, m)) depoisDeDeitar(j);
       } else sentarNoMovel(j, m, c);
     }
@@ -2486,6 +2490,13 @@ export function criarNucleo(op: OpcoesNucleo) {
       const { montado: _m, ...resto } = j.perfil.aparencia;
       void _m;
       aplicarAparencia(j, resto);
+    }
+    // a aparência que ainda espera a janela não monta de novo depois de sentar (o resto dela,
+    // uma roupa trocada, continua valendo)
+    if (j.aparenciaPendente?.montado === true) {
+      const { montado: _p, ...resto } = j.aparenciaPendente;
+      void _p;
+      j.aparenciaPendente = resto;
     }
     for (const k of chaves) assentos.set(k, j.id);
     j.sentado = {
@@ -2794,6 +2805,8 @@ export function criarNucleo(op: OpcoesNucleo) {
   const chaveAparencia = (a: unknown): string => JSON.stringify(normalizarAparencia(a));
 
   function aplicarAparencia(j: Jogador, a: Record<string, unknown>): void {
+    // spec 039 (T04): quem está sentado e monta no brinquedo de andar levanta (nunca os dois)
+    if (j.sentado && a.montado === true) levantar(j);
     j.perfil = { ...j.perfil, aparencia: a };
     j.passoAparencia = n;
     perfisSujos = true;
@@ -3843,7 +3856,14 @@ export function criarNucleo(op: OpcoesNucleo) {
       const x = cx * TAM_X + (i % TAM_X);
       const z = cz * TAM_Z + (Math.floor(i / TAM_X) % TAM_Z);
       const y = Math.floor(i / (TAM_X * TAM_Z));
-      if (pecaSolta(leitorMoveis, x, y, z)) editar(x, y, z, Bloco.AR);
+      if (!pecaSolta(leitorMoveis, x, y, z)) continue;
+      // a cama de uma célula (a cabeceira sem o pé) vira a curtinha, e não ar: num mundo já
+      // marcado, ela vem de um aparelho de antes (uma aba aberta antes da publicação)
+      const meta = (v >> 8) & 255;
+      if (b === Bloco.CAMA && meta >> 2 === 0) {
+        if (edicoes.definir(x, y, z, Bloco.CAMA, metaDoMovel(meta & 3, PARTE_CURTINHA)))
+          blocosMudados.push({ x, y, z, v: edicoes.obterValor(x, y, z)! });
+      } else editar(x, y, z, Bloco.AR);
     }
   }
 

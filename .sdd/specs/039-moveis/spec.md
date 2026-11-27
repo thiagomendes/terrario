@@ -115,6 +115,9 @@ A cama nova saiu da 038 e veio para cá. Sobre a cama de hoje, o dono disse: "o 
 - **Não há volta:** depois que o servidor 19 converte um mundo, um servidor 18 leria cada metade como uma cama inteira. Por isso:
   - a sala de teste da nuvem é conferida antes do site;
   - o servidor publica antes do site, pelo passo do `CLAUDE.md`.
+- **O risco do aparelho com a aba antiga** (revisão da T03, 27 nov): uma aba aberta antes da publicação continua com o jogo de antes, que abre o mundo do próprio aparelho já convertido e grava por cima dele (com a marca `extras.camas`, que ela não conhece e deixa como estava). Nela, a cama nova aparece como duas camas de uma célula; a cama posta nela é de uma célula; quebrar uma metade deixa a outra.
+  - O núcleo novo aguenta isso: a conversão não depende só da marca. Ela pula a cama cuja frente já é o pé certo (rodar de novo não muda nada), e a regra da peça solta transforma a cama de uma célula do mundo já marcado em curtinha, e não em ar (nada some). O pé que sobrou de uma metade quebrada na aba antiga sai (é peça solta).
+  - Na nuvem não acontece: o navegador de antes recebe "versão nova, recarregue".
 
 ### 2. A cama nova e as camas que já existem
 - **Nos geradores:** o `Pincel` e o `metasGeradasDoChunk` passam a valer para os povoados e o sítio (direção e parte), e as plantas da Cidade Grande também. A cama nova sai com as duas células. O núcleo e o aparelho leem o mesmo metadado, e um teste prova isso. O custo da geração é medido.

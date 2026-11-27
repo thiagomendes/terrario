@@ -396,6 +396,74 @@ describe('o sofá também deita, à noite (decisão do dono, 27 nov)', () => {
     passo(n);
     expect(sentado(n, 'ana')).toMatchObject({ deitado: true });
   });
+
+  it('à noite, quem já está sentado no sofá e toca nele deita, se o outro lugar está livre', () => {
+    const n = abrir(2);
+    porMovel(n, Bloco.SOFA, SOFA_N.x, SOFA_N.z);
+    passo(n);
+    // de dia as duas sentam; de noite, o toque da Ana não deita (a Bia está no outro lugar)
+    usar(n, 'ana', SOFA_N.x, SOFA_N.z);
+    usar(n, 'bia', SOFA_N.x + 1, SOFA_N.z);
+    passo(n);
+    ir(n, 'ana', SOFA_N.x + 0.5, SOFA_N.z + 0.5);
+    ir(n, 'bia', SOFA_N.x + 1.5, SOFA_N.z + 0.5);
+    passo(n);
+    noite(n);
+    usar(n, 'ana', SOFA_N.x, SOFA_N.z);
+    let q = passo(n);
+    expect(eventos(q, 'ana')).toContainEqual({ e: 'recusa', comando: 0, motivo: 'sentar' });
+    expect(sentado(n, 'ana')).toMatchObject({ deitado: false, x: SOFA_N.x });
+    // a Bia sai do sofá; o toque da Ana agora deita (no sofá inteiro)
+    ir(n, 'bia', SOFA_N.x + 3.5, SOFA_N.z - 2.5);
+    passo(n);
+    usar(n, 'ana', SOFA_N.x, SOFA_N.z);
+    q = passo(n);
+    expect(sentado(n, 'ana')).toMatchObject({ deitado: true, x: SOFA_N.x });
+    expect(eventos(q, 'ana')).toContainEqual(
+      expect.objectContaining({ e: 'sentou', movel: 'sofa', deitado: true }),
+    );
+    // deitada, o toque de novo levanta
+    usar(n, 'ana', SOFA_N.x, SOFA_N.z);
+    passo(n);
+    expect(sentado(n, 'ana')).toBeNull();
+  });
+});
+
+describe('sentada e montada nunca ao mesmo tempo', () => {
+  const MONTADA = {
+    nome: 'Bia',
+    modelo: 'herbolaria',
+    premium: { andar: 'motoquinha-dourada' },
+    montado: true,
+  };
+
+  it('quem está sentada e monta no brinquedo de andar levanta; a montaria que esperava a janela não volta', () => {
+    const n = abrir(2);
+    porMovel(n, Bloco.CADEIRA, CADEIRA.x, CADEIRA.z);
+    passo(n);
+    usar(n, 'bia', CADEIRA.x, CADEIRA.z);
+    passo(n);
+    expect(sentado(n, 'bia')).not.toBeNull();
+    // monta: levanta
+    for (let i = 0; i < 12; i++) n.passo();
+    mandar(n, 'bia', { t: 'aparencia', aparencia: MONTADA });
+    let q = passo(n);
+    expect(n.estado.jogadores.get('bia')!.perfil.aparencia.montado).toBe(true);
+    expect(sentado(n, 'bia')).toBeNull();
+    expect(eventos(q, 'bia')).toContainEqual({ e: 'levantou' });
+    // monta e senta logo em seguida (a montaria nova ainda espera a janela): senta desmontada e
+    // a montaria guardada não volta quando a janela fecha
+    mandar(n, 'bia', { t: 'aparencia', aparencia: { ...MONTADA, nome: 'Bia de novo' } });
+    usar(n, 'bia', CADEIRA.x, CADEIRA.z);
+    q = passo(n);
+    expect(sentado(n, 'bia')).not.toBeNull();
+    for (let i = 0; i < 20; i++) n.passo();
+    const bia = n.estado.jogadores.get('bia')!;
+    expect(bia.perfil.aparencia.montado).toBeUndefined();
+    expect(sentado(n, 'bia')).not.toBeNull();
+    expect(bia.perfil.aparencia.nome).toBe('Bia de novo');
+    void q;
+  });
 });
 
 describe('o lugar de nascer gravado antes da 039, no meio da cama', () => {
