@@ -25,8 +25,8 @@ O palco:
 | `sala-dia`, `meio-dia`, `quarto-dia`, `sala-noite`, `quarto-noite` | os cômodos de fora |
 | `sentada-sofa-dia`, `sentada-cadeira-dia` | a criança sentada (o boneco do jogo, pela pose da T05) |
 | `deitada-cama-dia`, `deitada-cama-noite` | deitada na cama nova: a cabeça no travesseiro e o edredom do queixo ao pé |
-| `deitada-curtinha-dia` | na curtinha, encolhidinha de lado, com o edredom |
-| `deitada-sofa-dia`, `deitada-sofa-noite` | no sofá, de noite e sem cama, encolhidinha, com a mantinha |
+| `deitada-curtinha-dia` | na curtinha, encolhidinha (pequena, os joelhos dobrados), de costas, com o edredom. De lado, a cara sumia no edredom |
+| `deitada-sofa-dia`, `deitada-sofa-noite` | no sofá, de noite e sem cama, de costas e encolhidinha, a cabeça na almofadinha e a mantinha por cima |
 | `guarda-aberto-dia`, `pia-agua-dia` | o que mexe: as portas do guarda-roupa abertas e a água da pia (a T06 liga isso ao toque) |
 | `barra-e-mao` | os oito ícones na barra e o sofá na mão, de dentro |
 | `*-dentro-dia`, `*-dentro-noite` | de dentro, na primeira pessoa, com o teto |
