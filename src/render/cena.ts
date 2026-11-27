@@ -4268,12 +4268,45 @@ export function criarCena(
       fase: 'saindo',
     };
   }
+  /**
+   * Portão visual: ao sentar, a câmera de fora ficava atrás do encosto, só com a nuca. Ela vira
+   * para a frente do móvel, de três-quartos (sentada: de frente para ela; deitada na cama: do
+   * lado do pé, mais do alto), e a órbita desvia do móvel como sempre. Na primeira pessoa, nada.
+   */
+  let giroAoSentar: { deYaw: number; dYaw: number; dePitch: number; atePitch: number; t0: number } | null =
+    null;
+  function olharParaQuemSentou(a: AssentoNaTela): void {
+    if (primeiraPessoa.ligada()) return;
+    const deitadaNaCama = !!a.deitado && blocoEm(a.x, a.y, a.z) === Bloco.CAMA;
+    // sentada, ela olha para -vetor(d): a câmera olha para +vetor(d), de frente para ela;
+    // deitada na cama, a câmera vem do pé e olha para a cabeceira (-vetor(d))
+    const base = ((deitadaNaCama ? a.d + 2 : a.d) & 3) * (Math.PI / 2);
+    const deYaw = camera.rotation.y;
+    let dYaw = (base + 0.62 - deYaw) % (Math.PI * 2);
+    if (dYaw > Math.PI) dYaw -= Math.PI * 2;
+    if (dYaw < -Math.PI) dYaw += Math.PI * 2;
+    giroAoSentar = {
+      deYaw,
+      dYaw,
+      dePitch: camera.rotation.x,
+      atePitch: deitadaNaCama ? 0.75 : 0.42,
+      t0: performance.now() / 1000,
+    };
+  }
   /** O lugar do boneco agora (preso ao assento), ou null (a física anda solta). */
   function lugarNoMovel(): { x: number; y: number; z: number } | null {
     const s = noAssento;
     if (!s) return null;
     const t = performance.now() / 1000;
     if (s.fase === 'sentado') {
+      // a câmera de fora vira devagar para ver a criança de três-quartos (meio segundo)
+      if (giroAoSentar) {
+        const g = giroAoSentar;
+        const u = Math.min(1, (t - g.t0) / 0.5);
+        const k = u * u * (3 - 2 * u);
+        controle.apontar(g.deYaw + g.dYaw * k, g.dePitch + (g.atePitch - g.dePitch) * k, true);
+        if (u >= 1) giroAoSentar = null;
+      }
       const tk = controle.teclas;
       if (tk.frente || tk.tras || tk.esquerda || tk.direita || tk.pular) {
         sairDoAssento();
@@ -4294,6 +4327,7 @@ export function criarCena(
         // chegou: a pose de sentada (ou deitada) entra agora
         definirMeuAssento(s.a);
         enviarTelemetria(true);
+        olharParaQuemSentou(s.a);
       } else {
         noAssento = null;
         lugarDeOndeVeio = null;

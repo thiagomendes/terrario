@@ -142,8 +142,28 @@ export const CSS_PAINEL =
   box-shadow: 0 1px 0 var(--amarela-fundo), inset 0 2px 0 rgba(255, 255, 255, 0.6),
     0 20px 0 18px var(--painel), 0 -16px 0 18px var(--painel);
 }
-/* spec 039: a troca de roupa do guarda-roupa, sem o "Jogar" (o "voltar" volta para o jogo) */
+/* spec 039: a troca de roupa do guarda-roupa, sem o "Jogar" (o "voltar" volta para o jogo). Um
+   fundo de céu por trás (o boneco do mundo não atravessa a prévia), a prévia pequena ao lado do
+   "voltar" e sem o nome e o dado: as roupas aparecem sem rolar, em pé e deitado */
 .tela-personagem.provador .painel-personagem .jogar { display: none; }
+.tela-personagem.provador {
+  min-height: 100%; min-height: 100dvh; max-width: none; align-items: start; align-content: start; gap: 10px;
+  padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 16px max(12px, env(safe-area-inset-left));
+  background: linear-gradient(180deg, #cfe3f7 0%, #e9e6f2 45%, #f7ecdc 100%);
+}
+.tela-personagem.provador .palco-personagem {
+  grid-auto-flow: column; grid-template-columns: auto auto; justify-content: start; align-items: end; gap: 14px; width: 100%;
+}
+.tela-personagem.provador .palco-personagem .pedestal { --lado: min(124px, 30vw); width: var(--lado); height: calc(var(--lado) * 4 / 3); }
+.tela-personagem.provador .palco-personagem canvas { height: 92%; width: auto; max-width: 100%; object-fit: contain; }
+.tela-personagem.provador .palco-personagem .nome-previa,
+.tela-personagem.provador .painel-personagem .topo-painel { display: none; }
+.tela-personagem.provador .voltar-titulo { align-self: start; }
+@media (orientation: landscape) and (max-height: 560px) {
+  .tela-personagem.provador { grid-template-columns: auto minmax(0, 1fr); }
+  .tela-personagem.provador .palco-personagem { grid-auto-flow: row; grid-template-columns: auto; justify-items: center; }
+  .tela-personagem.provador .palco-personagem .pedestal { --lado: min(150px, 20vw); }
+}
 ` +
   CSS_FANTASIAS +
   CSS_TESOUROS;

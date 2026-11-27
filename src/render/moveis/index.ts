@@ -23,6 +23,7 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import '@babylonjs/core/Rendering/outlineRenderer';
 import { Bloco, obterBloco } from '../../world/blocks';
 import { ALTURA, TAM_X, TAM_Z } from '../../world/chunk';
 import {
@@ -572,15 +573,18 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
   let matNaoCabe: StandardMaterial | null = null;
   function materiaisDoFantasma(): void {
     if (matFantasma) return;
+    // (portão visual: "cabe" num tom neutro, branco-azulado como os fantasmas da obra; "não cabe"
+    // em vermelho claro com contorno: no sofá coral, os dois se confundiam)
     matFantasma = new StandardMaterial('moveis-fantasma', scene);
-    matFantasma.alpha = 0.5;
+    matFantasma.alpha = 0.45;
     matFantasma.specularColor.set(0, 0, 0);
-    matFantasma.emissiveColor.set(0.35, 0.35, 0.35);
+    matFantasma.diffuseColor.set(0.22, 0.26, 0.32);
+    matFantasma.emissiveColor.set(0.66, 0.8, 1);
     matFantasma.backFaceCulling = true;
     matNaoCabe = new StandardMaterial('moveis-fantasma-nao', scene);
-    matNaoCabe.alpha = 0.55;
-    matNaoCabe.diffuseColor.set(0.95, 0.25, 0.2);
-    matNaoCabe.emissiveColor.set(0.55, 0.1, 0.08);
+    matNaoCabe.alpha = 0.5;
+    matNaoCabe.diffuseColor.set(0.3, 0.08, 0.06);
+    matNaoCabe.emissiveColor.set(1, 0.46, 0.42);
     matNaoCabe.specularColor.set(0, 0, 0);
   }
   function fantasma(b: number | null, x = 0, y = 0, z = 0, d = 0, cabe = true): void {
@@ -615,7 +619,11 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
     const { ox, oz } = m.metadata as { ox: number; oz: number };
     m.position.set(x + ox, y + (tapete ? 0.01 : 0), z + oz);
     m.material = cabe ? matFantasma : matNaoCabe;
-    m.useVertexColors = cabe;
+    m.useVertexColors = false;
+    // o contorno vermelho do "não cabe" (lê de relance, também no sofá coral)
+    m.renderOutline = !cabe;
+    m.outlineColor.set(0.86, 0.12, 0.1);
+    m.outlineWidth = 0.035;
     m.setEnabled(true);
   }
 

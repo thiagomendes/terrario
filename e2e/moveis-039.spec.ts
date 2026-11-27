@@ -23,7 +23,8 @@ import { abrirMundo, type Tamanho } from './guia-palco';
  *
  * Fotos em capturas-039/t06/.
  */
-const PASTA = 'capturas-039/t06';
+/** (as da T06 ficam em capturas-039/t06; as do conserto do portão visual, aqui) */
+const PASTA = 'capturas-039/t09/tela';
 mkdirSync(PASTA, { recursive: true });
 
 type P = { x: number; y: number; z: number };
@@ -116,6 +117,35 @@ async function porAMao(p: Page, b: number, a: P): Promise<{ posto: boolean; solt
   );
 }
 
+/**
+ * A troca de roupa aberta pelo guarda-roupa: a fileira das roupas inteira na tela, sem rolar, e
+ * um fundo por trás (o boneco do mundo não atravessa a prévia). Tira a foto.
+ */
+async function conferirProvador(p: Page, tamanho: Tamanho) {
+  await p.waitForTimeout(700);
+  const m = await p.evaluate(() => {
+    const painel = document.querySelector<HTMLElement>('.painel-personagem [data-aba-painel="roupa"]')!;
+    const primeira = painel.querySelector<HTMLElement>('button.miniatura')!.getBoundingClientRect();
+    const entrada = document.querySelector<HTMLElement>('.entrada')!;
+    const tela = document.querySelector<HTMLElement>('.tela-personagem.provador')!;
+    const fundo = getComputedStyle(tela).backgroundImage;
+    const r = tela.getBoundingClientRect();
+    // a prévia não passa por cima do painel
+    const c = document.querySelector<HTMLElement>('[data-previa-personagem]')!.getBoundingClientRect();
+    const pa = document.querySelector<HTMLElement>('.painel-personagem')!.getBoundingClientRect();
+    const sobrepoe = c.right > pa.left + 1 && c.left < pa.right - 1 && c.bottom > pa.top + 1 && c.top < pa.bottom - 1;
+    return {
+      sobrepoe,
+      roupaNaTela: primeira.top >= 0 && primeira.bottom <= innerHeight && primeira.right <= innerWidth,
+      rolou: entrada.scrollTop,
+      fundo: fundo !== 'none',
+      cobre: r.left <= 0 && r.top <= 0 && r.right >= innerWidth && r.bottom >= innerHeight - 1,
+    };
+  });
+  expect(m).toEqual({ sobrepoe: false, roupaNaTela: true, rolou: 0, fundo: true, cobre: true });
+  await p.screenshot({ path: `${PASTA}/troca-de-roupa-pelo-guarda-roupa-${tamanho}.png` });
+}
+
 test.describe.configure({ mode: 'parallel' });
 
 test('pôr à mão: os oito móveis inteiros na hora, o fantasma vermelho onde não cabe, e nada some no salvamento da saída', async ({ browser }) => {
@@ -175,11 +205,24 @@ test('pôr à mão: os oito móveis inteiros na hora, o fantasma vermelho onde n
   expect(await p.evaluate(() => window.__brumaluz!.interagir!('colocar'))).toBe(false);
   await p.waitForTimeout(600);
   expect(await p.evaluate((c) => window.__brumaluz!.bloco!(c.x, c.y, c.z), N)).toBe(Bloco.AR);
-  // onde cabe, o fantasma é o móvel de sempre (sem o vermelho)
-  const L = { x: cx + 1, y: Y + 1, z: cz + 3 + 4 };
+  // a cama com uma pedra no pé: vermelha também
+  const pedraPe = { x: N.x, y: N.y, z: N.z + 1 };
+  await p.evaluate(({ c, b }) => window.__brumaluz!.definirBloco!(c.x, c.y, c.z, b), { c: pedraPe, b: Bloco.PEDRA_LISA });
+  await naMao(p, Bloco.CAMA);
+  await mirarAte(p, { ...N, y: Y }, CIMA);
+  await expect.poll(() => p.evaluate(() => window.__brumaluz!.fantasmaMovel)).toMatchObject({ bloco: Bloco.CAMA, cabe: false });
+  await p.screenshot({ path: `${PASTA}/fantasma-cama-nao-cabe-empe.png` });
+  // onde cabe, o fantasma é neutro (branco-azulado), no sofá e na cama
+  // (a cama cresce para a frente: o pé fica em cz + 7, ainda na laje)
+  const L = { x: cx + 1, y: Y + 1, z: cz + 6 };
   await ir(p, L.x + 0.5, L.z - 2.5, L.y);
   await mirarAte(p, { ...L, y: Y }, CIMA);
   await expect.poll(() => p.evaluate(() => window.__brumaluz!.fantasmaMovel?.cabe)).toBe(true);
+  await p.screenshot({ path: `${PASTA}/fantasma-cama-cabe-empe.png` });
+  await naMao(p, Bloco.SOFA);
+  await mirarAte(p, { ...L, y: Y }, CIMA);
+  await expect.poll(() => p.evaluate(() => window.__brumaluz!.fantasmaMovel)).toMatchObject({ bloco: Bloco.SOFA, cabe: true });
+  await p.waitForTimeout(200);
   await p.screenshot({ path: `${PASTA}/fantasma-cabe-empe.png` });
 
   passo('fantasmas');
@@ -351,8 +394,7 @@ test('os toques: o abajur e o criado-mudo acendem inteiros, a pia, o guarda-roup
   expect(abriuEm, 'a troca de roupa abre em menos de 0,5 s (mais a folga do teste)').toBeLessThan(1500);
   await expect(p.locator('.painel-personagem [data-aba="roupa"]')).toHaveAttribute('aria-selected', 'true');
   await expect(p.locator('.painel-personagem [data-jogar]')).toBeHidden();
-  await p.waitForTimeout(500);
-  await p.screenshot({ path: `${PASTA}/troca-de-roupa-pelo-guarda-roupa-empe.png` });
+  await conferirProvador(p, 'empe');
   await p.locator('[data-voltar-titulo]').click();
   await expect(p.locator('.tela-personagem.provador')).toHaveCount(0);
   await expect.poll(() => p.evaluate(() => window.__brumaluz!.moveisTela!().portas)).toBeNull();
@@ -363,10 +405,13 @@ test('os toques: o abajur e o criado-mudo acendem inteiros, a pia, o guarda-roup
     await ir(p, de.x, de.z, y);
     await p.waitForTimeout(300);
     await mirarAte(p, c);
-    return p.evaluate(async () => {
+    return p.evaluate(async (c) => {
       const e = window.__brumaluz!;
+      // (mira de novo no mesmo passo: a câmera que volta sozinha para trás depois de andar)
+      e.mirarBloco!(c.x, c.y, c.z);
       const t0 = performance.now();
       let ys: number[] = [];
+      const antes = JSON.stringify({ alvo: e.alvo, b: e.alvo ? e.bloco!(e.alvo.x, e.alvo.y, e.alvo.z) : -1, m: e.moveisTela!() });
       e.usarOuColocar!();
       let sentou = -1;
       for (let i = 0; i < 200 && sentou < 0; i++) {
@@ -377,7 +422,10 @@ test('os toques: o abajur e o criado-mudo acendem inteiros, a pia, o guarda-roup
       }
       ys = ys.slice(0, 40);
       // sem pulo: a altura nunca passa do assento mais um tico
-      return { sentou, maiorY: Math.max(...ys), m: e.moveisTela!() };
+      return { sentou, maiorY: Math.max(...ys), m: e.moveisTela!(), antes };
+    }, c).then((r) => {
+      if (r.sentou < 0) console.log(`SENTAR não sentou: ${r.antes} depois ${JSON.stringify(r.m)}`);
+      return r;
     });
   };
   const sofa = await sentar(M.sofa, { x: M.sofa.x + 0.5, y, z: M.sofa.z - 2.5 });
@@ -482,6 +530,13 @@ test('montar na mesa: o sofá pela aba casa do livro, posto e quebrado (volta um
   await p.locator('.livro [data-receita="sofa"]').tap();
   await expect.poll(() => p.evaluate(() => document.querySelector<HTMLElement>('[data-resultado-criacao]')?.dataset.item)).toBe(`bloco:${Bloco.SOFA}`);
   await p.waitForTimeout(4000);
+  // o resultado mostra o modelo do sofá (o mesmo ícone do livro e da barra), e não o cubo de pixel
+  const icones = () =>
+    p.evaluate(() => ({
+      resultado: document.querySelector<HTMLImageElement>('[data-resultado-criacao] img')?.src,
+      livro: document.querySelector<HTMLImageElement>('.livro [data-receita="sofa"] img')?.src,
+    }));
+  await expect.poll(async () => { const i = await icones(); return i.resultado === i.livro; }, { timeout: 20_000 }).toBe(true);
   await p.screenshot({ path: `${PASTA}/mesa-de-montar-casa-empe.png` });
   const d = await dedo(p);
   await d.arrastar(await centro(p, '[data-resultado-criacao]'), await centro(p, '.inventario .slot-inv[data-indice="8"]'));
@@ -543,6 +598,26 @@ test('montar na mesa: o sofá pela aba casa do livro, posto e quebrado (volta um
     .toBe(1);
   await p.waitForTimeout(2000);
   expect(await p.evaluate((s) => window.__brumaluz!.inventario!.contar(`bloco:${s}`), Bloco.SOFA)).toBe(1);
+  expect(erros).toEqual([]);
+  await p.context().close();
+});
+
+test('a troca de roupa pelo guarda-roupa, deitado: as roupas sem rolar, com o fundo por trás', async ({ browser }) => {
+  test.setTimeout(300_000);
+  const p = await mundo(browser, 'moveis-t06-provador-deitado', 'deitado');
+  const erros: string[] = [];
+  p.on('pageerror', (e) => erros.push(String(e)));
+  const { cx, cz, Y } = await plataforma(p);
+  const G = { x: cx, y: Y + 1, z: cz };
+  await p.evaluate((c) => window.__brumaluz!.editarLote!([{ ...c.g, v: c.b | (2 << 8) }]), { g: G, b: Bloco.GUARDA_ROUPA });
+  const cs = celulasDoMovel(Bloco.GUARDA_ROUPA, G.x, G.y, G.z, 2);
+  await expect.poll(() => celulas(p, cs)).toEqual(esperado(Bloco.GUARDA_ROUPA, 2, cs));
+  await ir(p, G.x, G.z - 2.5, G.y);
+  await p.waitForTimeout(300);
+  await mirarAte(p, G);
+  await p.evaluate(() => window.__brumaluz!.usarOuColocar!());
+  await expect(p.locator('.tela-personagem.provador')).toBeVisible({ timeout: 3000 });
+  await conferirProvador(p, 'deitado');
   expect(erros).toEqual([]);
   await p.context().close();
 });
