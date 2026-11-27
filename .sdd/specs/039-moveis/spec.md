@@ -138,6 +138,7 @@ A cama nova saiu da 038 e veio para cá. Sobre a cama de hoje, o dono disse: "o 
 - **Deitar e dormir:** a cama passa a deitar a criança. A regra de dormir vira "todos deitados na cama, de noite".
   - Se alguém levanta antes de as outras deitarem, a espera continua para quem ficou deitado.
   - Como hoje, todos seguram a noite: ela só passa com **todos** deitados (decisão do dono, 27 nov).
+  - **Cada cama tem um lugar só, e o sofá também vale para dormir** (decisão do dono, 27 nov): à noite, tocar no sofá deita a criança nele, encolhidinha, ocupando o sofá inteiro. Deitada no sofá, ela conta para o dormir. De dia, o sofá é para sentar, com 2 lugares. Só a cama marca o lugar de nascer.
 - **A pose de sentar e a de deitar** valem para a criança e para os amigos, nas duas câmeras. Na cama, o corpo achata e o edredom vai do queixo ao pé, como na segunda volta.
 
 ### 4. O desenho
