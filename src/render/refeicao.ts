@@ -154,8 +154,8 @@ const MORDIDAS_DE: Readonly<Record<string, DefMordida>> = {
   ovo_cozido: { partes: { clara: ['#fbf7ee', '#fffdf6'], gema: ['#ffc23a', '#ffd970'] }, ponta: 1 },
 };
 
-/** As cores das migalhas (ou gotinhas, ou fiapos) de cada comida. */
-const MIGALHAS: Readonly<Record<string, string[]>> = {
+/** As cores das migalhas (ou gotinhas, ou fiapos) de cada comida (também as do comer de dentro). */
+export const MIGALHAS: Readonly<Record<string, string[]>> = {
   cachorro_quente: ['#f2c27a', '#e8b067', '#ffd23d'],
   pao: ['#e0a860', '#f6e2b8'],
   maca: ['#fff1d0', '#e84a4a'],

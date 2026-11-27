@@ -15,6 +15,7 @@
  * só refina (de 0,006 em 0,006) perto das duas pontas do trecho que serve: o mesmo resultado, uma
  * fração das contas. E quem chama faz a conta fora do quadro e guarda por tela (`criarCacheOmbro`).
  */
+import { afastaNaRefeicao, bracoNaRefeicao } from '../jogo/refeicao';
 
 export type Vec3 = [number, number, number];
 
@@ -146,6 +147,156 @@ export interface ResultadoOmbro {
   segurar: readonly [number, number];
   /** Achado pela regra da tela baixa (a mão do tamanho da tela de pé, o item inteiro na tela). */
   baixa?: boolean;
+  /** Comendo, o ombro e a pose da mão com a comida na boca (`poseDaBoca`; posta pelo `criarCacheOmbro`). */
+  boca?: PoseBoca | null;
+}
+
+/** O ombro e a pose (x, z) do braço com a comida na boca. */
+export interface PoseBoca {
+  ombro: Vec3;
+  pose: readonly [number, number];
+}
+
+/**
+ * Comer de dentro (conserto pedido pelo filho do dono, 27 nov 2026: "só balança um pouquinho a
+ * comida; não traz na boca"). A boca fica embaixo e no meio do quadro: a comida (o círculo do item,
+ * acima da mão) vai até o meio da tela, o mais embaixo que a interface deixa.
+ *
+ * O braço é rígido e o ombro fica fora da beira direita: com o ombro parado, a mão não chega ao
+ * meio (ela só ia de 330 a 300 px no celular em pé). Então, comendo, o ombro também vem para
+ * perto da câmera e para o meio, sempre fora da tela (com a manga): fora da beira direita é um
+ * semiespaço, então o caminho reto entre os dois ombros também fica fora. A mão fica inteira na
+ * tela, de 1 a `MAO_NA_BOCA_MAX` vezes o tamanho de segurar (mais perto do rosto, um tico maior),
+ * e a mão e a comida ficam fora da interface (na tela baixa, o comer pode passar atrás dela, como
+ * antes, mas a comida fica inteira na tela). Entre as soluções, a de ombro que menos anda.
+ */
+export const BOCA_NA_TELA = { x: 0.5, y: 0.8 };
+export const MAO_NA_BOCA_MAX = 2.4;
+const PASSOS_MAO = 28;
+/** Quanto custa a mão crescer (por vez a mais do tamanho de segurar), contra a comida longe da boca. */
+const PESO_MAO_GRANDE = 0.25;
+/**
+ * A boca mais alta que se aceita (em frações da altura) e o quanto ela pode ir para a direita do
+ * meio (em frações da largura), quando a interface ocupa o meio de baixo.
+ */
+const BOCA_MAIS_ALTA = 0.4;
+const BOCA_DE_LADO = 0.1;
+/**
+ * Na tela mais larga que alta, o meio fica longe do ombro (o braço é rígido): a comida pode parar
+ * até um quarto da tela à direita do meio, ainda na frente do rosto.
+ */
+const BOCA_DE_LADO_LARGA = 0.25;
+
+/** A mão na tela (px) e o raio, numa pose (x, z) do braço, ou null atrás do plano de corte. */
+export function maoNaTela(ombro: Vec3, x: number, z: number, tela: Tela, fovV = FOV_BRACO): { x: number; y: number; r: number } | null {
+  const tanV = Math.tan(fovV / 2);
+  const tanH = tanV * (tela.w / tela.h);
+  const d = direcaoDoBraco(x, z);
+  const m: Vec3 = [ombro[0] + d[0] * BRACO, ombro[1] + d[1] * BRACO, ombro[2] + d[2] * BRACO];
+  if (m[2] < PERTO) return null;
+  return {
+    x: (tela.w / 2) * (1 + m[0] / (m[2] * tanH)),
+    y: (tela.h / 2) * (1 - m[1] / (m[2] * tanV)),
+    r: (RAIO_MAO / (m[2] * tanV)) * (tela.h / 2),
+  };
+}
+
+/** A pose do comer de antes (a do boneco de fora, em escala): a que a conta do ombro já garante. */
+export const comerDeAntes = (s: readonly [number, number]): [number, number] => [s[0] - 1.5 * GANHO_COMER_X, s[1] - 0.78 * GANHO_COMER_Z];
+
+/** As direções do braço numa grade grossa de poses (x, z), feita uma vez. */
+let GRADE_POSES: { x: number; z: number; d: Vec3 }[] | null = null;
+const PASSO_POSE = 0.2;
+function gradePoses() {
+  if (!GRADE_POSES) {
+    GRADE_POSES = [];
+    for (let x = -3.2; x <= 0.4 + 1e-9; x += PASSO_POSE)
+      for (let z = -2.6; z <= 0.6 + 1e-9; z += PASSO_POSE) GRADE_POSES.push({ x, z, d: direcaoDoBraco(x, z) });
+  }
+  return GRADE_POSES;
+}
+
+/**
+ * O ombro e a pose do braço com a comida na boca, para uma tela (a busca numa grade), ou null
+ * quando nada serve (aí a mão come no lugar, como antes).
+ */
+export function poseDaBoca(ombro: Vec3, tela: Tela, segurar: readonly [number, number], fovV = FOV_BRACO): PoseBoca | null {
+  const { w, h } = tela;
+  const tanV = Math.tan(fovV / 2);
+  const tanH = tanV * (w / h);
+  const r0 = maoNaTela(ombro, segurar[0], segurar[1], tela, fovV)?.r;
+  if (!r0) return null;
+  const poses = gradePoses();
+  const ladoMax = BOCA_NA_TELA.x + (tela.w > tela.h ? BOCA_DE_LADO_LARGA : BOCA_DE_LADO);
+  /**
+   * O ombro e a pose para a comida em (fx, fy) da tela com a mão de raio r, ou null (a mão fora da
+   * tela, atrás da interface, ou nenhum ombro fora da tela que alcance). `fino` refina a pose.
+   */
+  const resolver = (fx: number, fy: number, r: number, fino: boolean): PoseBoca | null => {
+      let melhor: PoseBoca | null = null;
+      let menor = Infinity;
+      const bx = fx * w;
+      const cy = fy * h;
+      const hy = cy + ITEM_ACIMA * r;
+      // a mão inteira na tela, e a mão e a comida fora da interface (na baixa, a comida na tela)
+      if (bx - r < 0 || bx + r > w || hy - r < 0 || hy + r > h || cy - ITEM_RAIO * r < 0) return null;
+      if (tela.baixa) {
+        if (bx + ITEM_CAIXA_BAIXA.direita * r > w - 4 || hy - ITEM_CAIXA_BAIXA.cima * r < 4) return null;
+      } else if (tela.obstaculos?.some((o) => encosta(bx, hy, r, o) || encosta(bx, cy, ITEM_RAIO * r, o))) return null;
+      // a mão no espaço da câmera, nessa distância
+      const zc = (RAIO_MAO * h) / (2 * r * tanV);
+      const mao: Vec3 = [(bx / (w / 2) - 1) * zc * tanH, (1 - hy / (h / 2)) * zc * tanV, zc];
+      /** O ombro desta pose, se ele e o caminho até ele ficam fora da tela; e o quanto ele anda. */
+      const tentar = (x: number, z: number, d: Vec3): boolean => {
+        const o: Vec3 = [mao[0] - d[0] * BRACO, mao[1] - d[1] * BRACO, mao[2] - d[2] * BRACO];
+        if (o[2] < PERTO || foraDaTela(o, MEIA_MANGA, tela, fovV) < FOLGA_OMBRO_PX) return false;
+        // (fora por baixo também vale, mas o caminho do ombro de segurar até ele fica fora inteiro)
+        for (let f = 0.2; f < 1; f += 0.2)
+          if (
+            foraDaTela([ombro[0] + (o[0] - ombro[0]) * f, ombro[1] + (o[1] - ombro[1]) * f, ombro[2] + (o[2] - ombro[2]) * f], MEIA_MANGA, tela, fovV) <
+            FOLGA_OMBRO_PX
+          )
+            return false;
+        // o ombro que menos anda
+        const nota = Math.hypot(o[0] - ombro[0], o[1] - ombro[1], o[2] - ombro[2]);
+        if (nota < menor) {
+          menor = nota;
+          melhor = { ombro: o, pose: [x, z] };
+        }
+        return true;
+      };
+      // na grade grossa e, achando, mais fino em volta de cada pose que serviu
+      const serviram: [number, number][] = [];
+      for (const p of poses) if (tentar(p.x, p.z, p.d)) serviram.push([p.x, p.z]);
+      if (!serviram.length || !fino) return melhor;
+      for (const [x0, z0] of serviram)
+        for (let x = x0 - PASSO_POSE; x <= x0 + PASSO_POSE + 1e-9; x += 0.04)
+          for (let z = z0 - PASSO_POSE; z <= z0 + PASSO_POSE + 1e-9; z += 0.04) tentar(x, z, direcaoDoBraco(x, z));
+      return melhor;
+  };
+  // entre os lugares que servem, o de menor custo: a comida longe da boca (o de lado pesa o dobro:
+  // a boca é no meio) e a mão grande demais (perto demais do rosto)
+  let escolha: { fx: number; fy: number; r: number } | null = null;
+  let menorCusto = Infinity;
+  for (let fx = BOCA_NA_TELA.x; fx <= ladoMax + 1e-9; fx += 0.025)
+    for (let fy = BOCA_NA_TELA.y; fy >= BOCA_MAIS_ALTA - 1e-9; fy -= 0.025)
+      for (let k = 0; k <= PASSOS_MAO; k += 2) {
+        const r = r0 * (1 + ((MAO_NA_BOCA_MAX - 1) * k) / PASSOS_MAO);
+        const custo = Math.hypot(2 * (fx - BOCA_NA_TELA.x) * w, (BOCA_NA_TELA.y - fy) * h) / h + PESO_MAO_GRANDE * (r / r0 - 1);
+        if (custo >= menorCusto) continue;
+        if (!resolver(fx, fy, r, false)) continue;
+        menorCusto = custo;
+        escolha = { fx, fy, r };
+        // (com este lugar, a mão maior só custa mais)
+        break;
+      }
+  return escolha ? resolver(escolha.fx, escolha.fy, escolha.r, true) : null;
+}
+
+/** Comendo de dentro, o quanto a mão vai à boca (0 segurando, 1 na boca) no instante `t` (s). */
+export const NA_BOCA_ENTRE_MORDIDAS = 0.5;
+export function bracoDeDentro(t: number): number {
+  return bracoNaRefeicao(t) * (1 - (1 - NA_BOCA_ENTRE_MORDIDAS) * afastaNaRefeicao(t));
 }
 
 /** Quanto (px) a bola de raio `r` em `p` fica além da beira da tela (positivo: fora). */
@@ -339,7 +490,10 @@ export function criarCacheOmbro(agendar: (f: () => void) => void, fovV = FOV_BRA
         pedidos.add(k);
         const t = { ...tela };
         agendar(() => {
-          guardados.set(k, acharOmbro(t, fovV));
+          const r = acharOmbro(t, fovV);
+          // (e a pose da comida na boca, na mesma tela: na baixa, com a regra dela)
+          if (r) r.boca = poseDaBoca(r.ombro, r.baixa ? { ...t, baixa: true } : t, r.segurar, fovV);
+          guardados.set(k, r);
           pedidos.delete(k);
         });
       }

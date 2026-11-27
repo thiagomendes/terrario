@@ -11,6 +11,7 @@ import { comecarGravacao, pararGravacao } from './gravarCena';
  *   T04=fotos   (em pé, deitado e no computador, de dia e de noite; a volta e o "não")
  *   T04=video   (o vídeo em pé)
  *   T04=itens   (a folha dos itens na mão)
+ *   T04=comer   (o comer de dentro: a sequência nas três telas, os farelinhos, a comida diminuindo)
  */
 declare const process: { env: Record<string, string | undefined> };
 const MODO = process.env.T04;
@@ -303,5 +304,87 @@ test('T04: a folha dos itens na mão', async ({ browser }) => {
   <div class="g">${feitos.map((id) => `<div class="c"><img src="${img(id.replace(/[^a-z0-9_]/gi, '_'))}"><b>${id}</b></div>`).join('')}</div></body></html>`);
   await f.waitForTimeout(400);
   await f.screenshot({ path: `${PASTA}/folha-dos-itens.png`, fullPage: true });
+  await c2.close();
+});
+
+test('comer de dentro: a comida à boca em cada mordida, os farelinhos e a comida diminuindo', async ({ browser }) => {
+  test.skip(MODO !== 'comer', 'só com T04=comer');
+  const pasta = 'capturas-037/comer';
+  mkdirSync(pasta, { recursive: true });
+  // a sequência da refeição (s): segurando, levando, 1ª mordida, entre, 2ª, entre, 3ª, descendo, fim
+  const tempos = [0, 0.3, 0.62, 0.92, 1.22, 1.55, 1.87, 2.35, 3.0];
+  const telas: [string, number, number, boolean, number][] = [
+    ['empe-dia', 390, 844, true, 0.42],
+    ['empe-noite', 390, 844, true, 0.92],
+    ['deitado-dia', 844, 390, true, 0.42],
+    ['computador-dia', 1280, 720, false, 0.42],
+  ];
+  const resumo: Record<string, unknown> = {};
+  for (const [nome, w, h, toque, hora] of telas) {
+    const { ctx, page: p } = await abrir(browser, w, h, toque, hora);
+    await slot(p, 3);
+    await olhar(p, 0, 0.12);
+    await entrar(p);
+    await p.waitForTimeout(800);
+    await p.evaluate(() => window.__brumaluz!.primeiraPessoa!.zerarPonta());
+    const maos: { t: number; x: number; y: number; px: number; farelos: number; escala: number; deFora: number[] }[] = [];
+    const t0 = Date.now();
+    await p.evaluate(() => window.__brumaluz!.comer!());
+    for (let i = 0; i < tempos.length; i++) {
+      const espera = tempos[i] * 1000 - (Date.now() - t0);
+      if (espera > 0) await p.waitForTimeout(espera);
+      const t = (Date.now() - t0) / 1000;
+      const m = await p.evaluate(() => {
+        const e = window.__brumaluz!;
+        const s = e.cenaBabylon!();
+        const tela = e.primeiraPessoa!.tela();
+        return {
+          x: tela.mao[0],
+          y: tela.mao[1],
+          px: tela.maoPx,
+          farelos: s.meshes.filter((m) => m.name.startsWith('pp-farelo-') && m.isEnabled()).length,
+          escala: s.getTransformNodeByName('pp-braco-pega')?.scaling.x ?? -1,
+          // (as migalhas do boneco de fora à vista: de dentro, elas ficam escondidas)
+          deFora: s.meshes.filter((m) => m.name.startsWith('migalha-') && m.isEnabled()).map((m) => +m.getAbsolutePosition().subtract(s.activeCamera!.globalPosition).length().toFixed(2)),
+        };
+      });
+      maos.push({ t: +t.toFixed(2), ...m });
+      await p.screenshot({ path: `${pasta}/${nome}-${i + 1}.jpg`, type: 'jpeg', quality: 86 });
+    }
+    await p.waitForTimeout(1200);
+    const ponta = await p.evaluate(() => window.__brumaluz!.primeiraPessoa!.ponta());
+    resumo[nome] = { ponta, maos };
+    console.log(nome, JSON.stringify({ ponta, maos }));
+    await ctx.close();
+    // o ombro nunca apareceu; a mão foi para o meio na mordida e voltou; saíram farelinhos e a
+    // comida diminuiu
+    expect(ponta.menorFolgaPx, nome).toBeGreaterThan(0);
+    const segurando = maos[0].x;
+    const naBoca = Math.min(...maos.slice(2, 7).map((m) => m.x));
+    expect(segurando - naBoca, nome).toBeGreaterThan(w * 0.12);
+    expect(Math.max(...maos.map((m) => m.farelos)), nome).toBeGreaterThan(0);
+    expect(Math.min(...maos.map((m) => m.escala)), nome).toBeLessThan(0.9);
+    // as migalhas do boneco de fora (rente à câmera, um risco) nunca à vista de dentro
+    expect(maos.flatMap((m) => m.deFora), nome).toEqual([]);
+  }
+  writeFileSync(`${pasta}/medidas.json`, JSON.stringify(resumo, null, 1));
+  // a prancha da sequência de cada tela (no lugar do vídeo)
+  const c2 = await browser.newContext({ viewport: { width: 1600, height: 900 } });
+  const f = await c2.newPage();
+  for (const [nome, w, h] of telas) {
+    const imgs = tempos
+      .map((t, i) => `<figure><img src="data:image/jpeg;base64,${readFileSync(`${pasta}/${nome}-${i + 1}.jpg`, 'base64')}"><figcaption>${i + 1} · ${t.toFixed(2)} s</figcaption></figure>`)
+      .join('');
+    const colunas = w > h ? 3 : 5;
+    await f.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>
+      body { margin: 0; background: #fbf6ec; font: 600 14px system-ui, sans-serif; color: #3a2f4a; width: 1600px; }
+      h1 { margin: 14px 18px 6px; font-size: 22px; }
+      .g { display: grid; grid-template-columns: repeat(${colunas}, 1fr); gap: 8px; padding: 0 18px 18px; }
+      figure { margin: 0; position: relative; } img { width: 100%; display: block; border-radius: 10px; }
+      figcaption { position: absolute; left: 8px; top: 6px; background: #fff; border-radius: 99px; padding: 2px 10px; }
+    </style></head><body><h1>Comer de dentro (${nome}): segurando, levando, as três mordidas e descendo</h1><div class="g">${imgs}</div></body></html>`);
+    await f.waitForTimeout(300);
+    await f.screenshot({ path: `${pasta}/sequencia-${nome}.jpg`, type: 'jpeg', quality: 86, fullPage: true });
+  }
   await c2.close();
 });
