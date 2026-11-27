@@ -358,13 +358,22 @@ function geladeira(o: Oficina): void {
   });
   // a porta do congelador (fica fechada) e a grande, com o pivô na dobradiça da direita
   r.caixa(W, 0.46, 0.08, 0, 1.4, D / 2 + 0.04, M.menta, 0.05);
-  r.barra([-W / 2 + 0.1, 1.48, D / 2 + 0.1], [-W / 2 + 0.1, 1.72, D / 2 + 0.1], 0.04, M.cromo);
+  // (os puxadores gordinhos e a fresta escura entre as portas: no ícone pequeno, a frente se lê)
+  r.barra([-W / 2 + 0.1, 1.48, D / 2 + 0.11], [-W / 2 + 0.1, 1.72, D / 2 + 0.11], 0.065, M.cromo);
+  r.caixa(W - 0.04, 0.035, 0.02, 0, 1.365, D / 2 + 0.07, M.mentaEscura, 0);
+  r.prisma(8, 0.04, 0.03, 0.12, 1.62, D / 2 + 0.095, M.azulEscuro, 'z');
   o.parte(
     'porta',
     [W / 2, 0.1, D / 2],
     (p) => {
       p.caixa(W, 1.26, 0.08, -W / 2, 0, 0.04, M.menta, 0.05);
-      p.barra([-W + 0.1, 0.84, 0.1], [-W + 0.1, 1.14, 0.1], 0.04, M.cromo);
+      p.barra([-W + 0.1, 0.84, 0.11], [-W + 0.1, 1.14, 0.11], 0.065, M.cromo);
+      // o desenho da criança preso na porta (a folha creme com o solzinho e o ímã): a frente se
+      // reconhece de longe e no ícone
+      p.caixa(0.34, 0.3, 0.012, -W / 2 + 0.06, 0.62, 0.086, M.creme, 0.01);
+      p.prisma(10, 0.07, 0.014, -W / 2 + 0.06, 0.8, 0.094, M.manteiga, 'z');
+      p.caixa(0.22, 0.05, 0.014, -W / 2 + 0.06, 0.66, 0.094, M.menta, 0);
+      p.prisma(8, 0.03, 0.03, -W / 2 + 0.06, 0.91, 0.1, M.coral, 'z');
       for (const y of [0.84, 1.14]) p.caixa(0.04, 0.04, 0.04, -W + 0.1, y - 0.02, 0.085, M.cromo, 0);
       for (const y of [0.28, 0.72]) {
         p.caixa(W - 0.2, 0.12, 0.08, -W / 2, y, -0.04, M.branco, 0.02);

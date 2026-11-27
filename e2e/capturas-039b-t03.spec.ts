@@ -520,6 +520,7 @@ for (const tamanho of ['empe', 'deitado', 'pc'] as const)
 test('prancha: junta as fotos (depois das três telas)', async ({ browser }) => {
   test.skip(!QUAL.includes('prancha'), 'só com FOTOS_039B_T03=prancha');
   const img = (n: string, s = 'empe') => (existsSync(`${PASTA}/${s}/${n}.jpg`) ? `data:image/jpeg;base64,${readFileSync(`${PASTA}/${s}/${n}.jpg`, 'base64')}` : '');
+  const png = (n: string) => (existsSync(`${PASTA}/empe/${n}.png`) ? `data:image/png;base64,${readFileSync(`${PASTA}/empe/${n}.png`, 'base64')}` : '');
   const q = (src: string, legenda: string) => (src ? `<figure><img src="${src}"><figcaption>${legenda}</figcaption></figure>` : '');
   const linha = (xs: string[]) => `<div class="linha">${xs.join('')}</div>`;
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>
@@ -541,6 +542,8 @@ test('prancha: junta as fotos (depois das três telas)', async ({ browser }) => 
     <h2>A geladeira, o fogão e o som</h2>
     ${linha([q(img('geladeira-0-fechada'), 'fechada'), q(img('geladeira-1-abrindo'), 'abrindo'), q(img('geladeira-2-aberta'), 'aberta'), q(img('fogao-0-desligado'), 'o fogão'), q(img('fogao-1-cozinhando'), 'cozinhando')])}
     ${linha([q(img('som-0-parado'), 'o som parado'), q(img('som-1-tocando'), 'tocando'), q(img('mesa-0-sentada'), 'à mesa'), q(img('mesa-1-prato'), 'a comida posta')])}
+    <h2>Duas crianças comendo à mesa (o toque de verdade, numa sala com duas)</h2>
+    ${linha([q(png('mesa-duas-criancas-ana'), 'na tela da Ana: a Bia do outro lado, os pratinhos com a pipoca'), q(png('mesa-duas-criancas-bia'), 'na tela da Bia')])}
     <h2>De fora e de dentro</h2>
     ${linha([q(img('sala-dia'), 'sala'), q(img('cozinha-dia'), 'cozinha'), q(img('sala-noite'), 'sala de noite'), q(img('cozinha-noite'), 'cozinha de noite')])}
     ${linha([q(img('sala-dentro-dia'), 'sala, de dentro'), q(img('cozinha-dentro-dia'), 'cozinha, de dentro'), q(img('sala-dentro-noite'), 'sala de noite'), q(img('cozinha-dentro-noite'), 'cozinha de noite')])}
@@ -548,7 +551,7 @@ test('prancha: junta as fotos (depois das três telas)', async ({ browser }) => 
     ${linha([q(img('vitrine-fogao', 'computador'), 'fogão'), q(img('vitrine-geladeira', 'computador'), 'geladeira'), q(img('vitrine-mesa', 'computador'), 'mesa')])}
     ${linha([q(img('vitrine-tv', 'computador'), 'TV'), q(img('vitrine-som', 'computador'), 'som'), q(img('vitrine-tv-costas', 'computador'), 'TV de costas')])}
     <h2>Os ícones e a mão</h2>
-    ${linha([q(img('barra-e-mao'), 'na barra, a TV na mão'), q(img('barra-e-mao', 'deitado'), 'deitado')])}
+    ${linha([q(img('barra-e-mao', 'deitado'), 'na barra, a TV na mão (deitado)'), q(img('barra-e-mao', 'computador'), 'no computador')])}
     <div style="height:16px"></div>
   </body></html>`;
   const p2 = await browser.newPage({ viewport: { width: 1080, height: 800 } });
