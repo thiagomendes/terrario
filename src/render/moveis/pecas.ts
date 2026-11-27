@@ -472,7 +472,22 @@ function pia(o: Oficina): void {
   for (let i = 0; i < 4; i++)
     for (let k = 0; k < 2; k++)
       if ((i + k) % 2 === 0) r.caixa(0.2, 0.17, 0.012, -0.33 + i * 0.22, 0.95 + k * 0.19, -0.288, M.azul, 0);
-  o.parte('agua', [0, 1.11, -0.04], (p) => p.caixa(0.06, 0.19, 0.06, 0, -0.19, 0, '#5fb8f6', 0.02), { agua: true });
+  // o fio d'água fininho e meio transparente (grosso e cheio parecia um tubo) e os pinguinhos
+  // caindo do lado dele
+  o.parte(
+    'agua',
+    [0, 1.11, -0.04],
+    (p) => {
+      p.caixa(0.04, 0.19, 0.04, 0, -0.19, 0, '#8fd6ff', 0.016);
+      for (const [x, y, z, k] of [
+        [0.035, -0.07, 0.01, 0.022],
+        [-0.03, -0.13, -0.005, 0.018],
+        [0.028, -0.17, -0.012, 0.016],
+      ] as const)
+        p.caixa(k, k * 1.3, k, x, y, z, '#8fd6ff', k * 0.45);
+    },
+    { agua: true },
+  );
   // as bolhinhas na cuba quando a água cai (cubinhos de quina bem redonda)
   o.parte('bolhas', [0, 0.935, 0.04], (p) => {
     for (const [x, z, k] of [

@@ -585,6 +585,8 @@ export interface EstadoDepuracao {
    * `sentou` e `levantou`; as fotos chamam direto.
    */
   meuAssento?: (a: import('./poseMovel').AssentoNaTela | null) => void;
+  /** Spec 039 (portão, fotos de antes e depois): a força da luz mínima de dentro de casa de noite. */
+  luzMinimaDentro?: (k: number) => void;
   /** Spec 039 (T06, testes): as peças soltas na cópia da tela, numa caixa ("x,y,z"). */
   pecasSoltas?: (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number) => string[];
   /** Spec 039 (T06): o fantasma do móvel na mão agora (testes e fotos; null: nenhum). */
@@ -1839,6 +1841,11 @@ export function criarCena(
   const pisoNoite = Math.min(1, Math.max(0, temaAtual.ceu.pisoNoite ?? 1));
   // spec 026: quanto o verde apaga de noite (0 = o de sempre: os outros temas não mudam)
   const verdeNoite = Math.min(1, Math.max(0, temaAtual.ceu.verdeNoite ?? 0));
+  // spec 039: o morno fraquinho de dentro de casa de noite, no tema que apaga o chão
+  let LUZ_MINIMA_DENTRO = 0.2;
+  estado.luzMinimaDentro = (k: number) => {
+    LUZ_MINIMA_DENTRO = k;
+  };
   const matSolido = new StandardMaterial('atlas', scene);
   matSolido.diffuseTexture = textura;
   matSolido.emissiveTexture = texEmissiva;
@@ -2095,6 +2102,8 @@ export function criarCena(
       const piso = 1 + (pisoNoite - 1) * a.noite;
       matSolido.emissiveColor.set(piso, piso, piso);
       matPlanta.emissiveColor.set(piso, piso, piso);
+      // spec 039: dentro de casa, de noite, nunca o escuro total (a luz mínima de debaixo do teto)
+      mundoSolido.noiteDentro = LUZ_MINIMA_DENTRO * (1 - pisoNoite) * a.noite;
     }
     // flores, cogumelos e lanternas brilham de verdade ao entardecer e à noite; sob o sol, quase nada
     const escuroAlvo = jogadorCoberto ? 1 : Math.max(a.noite, a.crepusculo * 0.7);

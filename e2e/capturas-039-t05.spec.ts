@@ -626,6 +626,20 @@ async function telas(p: Palco, sub: string, comVitrine: boolean) {
     await p.page.locator('.catalogo [data-aba-categoria="casa"]').dispatchEvent('click');
     await p.page.waitForTimeout(5000);
     await foto(p, 'catalogo-casa', sub);
+    // e os oito ícones de perto (a grade do catálogo três vezes maior)
+    await p.page.evaluate(() => {
+      const g = document.querySelector<HTMLElement>('.catalogo .grade-slots');
+      if (g) {
+        g.style.zoom = '3';
+        g.scrollIntoView({ block: 'start' });
+      }
+    });
+    await p.page.waitForTimeout(400);
+    await foto(p, 'catalogo-casa-perto', sub);
+    await p.page.evaluate(() => {
+      const g = document.querySelector<HTMLElement>('.catalogo .grade-slots');
+      if (g) g.style.zoom = '';
+    });
     await p.page.locator('[data-botao-mochila]').dispatchEvent('click');
     await p.page.keyboard.press('Escape');
     await p.page.waitForTimeout(800);
@@ -643,8 +657,23 @@ async function telas(p: Palco, sub: string, comVitrine: boolean) {
   await luzes(p, false);
   await hora(p, NOITE);
   await deDentro(p, DENTRO[2][1], DENTRO[2][2], DENTRO[2][3]);
+  // antes (sem a luz mínima de dentro, como era) e depois
+  const minima = (k: number) => p.page.evaluate((v) => window.__brumaluz!.luzMinimaDentro?.(v), k).then(() => p.page.waitForTimeout(400));
+  await minima(0);
+  await foto(p, 'quarto-dentro-noite-apagado-antes', sub);
+  await minima(0.2);
   await foto(p, 'quarto-dentro-noite-apagado', sub);
+  await deDentro(p, DENTRO[0][1], DENTRO[0][2], DENTRO[0][3]);
+  await foto(p, 'sala-dentro-noite-apagado', sub);
+  // e de fora, com o teto, de noite: antes e depois iguais (a luz mínima é só de dentro)
   await p.page.evaluate(() => window.__brumaluz!.primeiraPessoa!.ligar(false));
+  const FORA: Olhar = { ...CASA, pitch: 0.3 };
+  await minima(0);
+  await olhar(p, FORA);
+  await foto(p, 'fora-noite-antes', sub);
+  await minima(0.2);
+  await olhar(p, FORA);
+  await foto(p, 'fora-noite', sub);
   await teto(p.page, p.O, false);
   await hora(p, DIA);
 }
@@ -698,7 +727,9 @@ async function prancha(browser: Browser) {
     ${linha([q(img('sentada-sofa-dia'), 'no sofá, no meio do lugar'), q(img('sentada-cadeira-dia'), 'na cadeira'), ...(pc ? [q(imgPc('sentada-sofa-dia'), 'no sofá, computador')] : [])])}
     <h2>As costas, a água, a lua e os ícones</h2>
     ${linha([q(img('pia-costas'), 'a pia de costas'), q(img('guarda-costas'), 'o guarda-roupa de costas'), q(img('pia-agua-dia'), 'a água da pia'), q(img('criado-dia'), 'a lua apagada'), q(img('criado-noite'), 'a lua acesa')])}
-    ${linha([q(img('barra-e-mao'), 'os ícones na barra e o sofá na mão'), q(img('catalogo-casa'), 'o catálogo na aba casa'), q(img('quarto-dentro-noite'), 'o quarto de noite, a lua acesa'), q(img('quarto-dentro-noite-apagado'), 'o quarto de noite, tudo apagado')])}
+    ${linha([q(img('barra-e-mao'), 'os ícones na barra e o sofá na mão'), q(img('catalogo-casa'), 'o catálogo na aba casa'), q(img('quarto-dentro-noite'), 'o quarto de noite, a lua acesa')])}
+    <h2>De noite, tudo apagado: antes e depois da luz mínima de dentro</h2>
+    ${linha([q(img('quarto-dentro-noite-apagado-antes'), 'quarto, antes'), q(img('quarto-dentro-noite-apagado'), 'quarto, depois'), q(img('sala-dentro-noite-apagado'), 'sala, depois'), q(img('fora-noite-antes'), 'de fora, antes'), q(img('fora-noite'), 'de fora, depois')])}
     <h2>A casa</h2>
     ${linha([q(img('sala-dia'), 'sala'), q(img('meio-dia'), 'a pia e as cadeiras'), q(img('quarto-dia'), 'quarto'), q(img('sala-noite'), 'sala de noite')])}
     <div style="height:16px"></div>

@@ -177,7 +177,8 @@ const VET = [
 export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis {
   const pl = criarPlasticos(scene, 'moveis');
   const matCorpo = pl.corVertice(0.3) ?? pl.cor('#ffffff', 0.3);
-  const matAgua = pl.cor('#5fb8f6', 0.6, 0.8);
+  // (a água meio transparente: cheia, parecia um tubo azul)
+  const matAgua = pl.cor('#8fd6ff', 0.6, 0.5);
   const paleta = criarPaletaLuz(scene, 'moveis-luz');
   const modelos = new Map<string, ModeloMovel>();
   const girados = new Map<string, { corpo: Girado | null; luz: Girado | null }>();
@@ -620,10 +621,14 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
     m.position.set(x + ox, y + (tapete ? 0.01 : 0), z + oz);
     m.material = cabe ? matFantasma : matNaoCabe;
     m.useVertexColors = false;
-    // o contorno vermelho do "não cabe" (lê de relance, também no sofá coral)
-    m.renderOutline = !cabe;
-    m.outlineColor.set(0.86, 0.12, 0.1);
-    m.outlineWidth = 0.035;
+    // o contorno: vermelho no "não cabe" e branco-azulado no "cabe" (2ª rodada do portão: o
+    // neutro sumia contra o céu claro). O fantasma vai no grupo de cima, desenhado depois do
+    // mundo e do boneco: a cabeça da criança não o tapa (é uma prévia, como a caixa de seleção)
+    m.renderOutline = true;
+    if (cabe) m.outlineColor.set(0.9, 0.97, 1);
+    else m.outlineColor.set(0.86, 0.12, 0.1);
+    m.outlineWidth = 0.04;
+    m.renderingGroupId = 1;
     m.setEnabled(true);
   }
 

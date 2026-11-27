@@ -83,8 +83,10 @@ interface Boneco {
   juntas: Record<string, TransformNode>;
   cabecaOriginal: Vector3;
   arrumado: Arrumado | null;
-  /** A cara: os olhos, o brilho deles e a boca (fecham e diminuem dormindo). */
+  /** A cara: os olhos e a boca (fecham e diminuem dormindo) e o brilho dos olhos (some). */
   olhos: TransformNode[];
+  olhosX: number[];
+  brilhos: TransformNode[];
   boca: TransformNode | null;
   bocaX: number;
 }
@@ -118,13 +120,16 @@ export function criarPoseMovel(leitor: LeitorMoveis, moveis: RenderMoveis | null
       if (k) juntas[k[1]] = n;
     }
     const nos: TransformNode[] = [...p.raiz.getChildTransformNodes(false), ...p.raiz.getChildMeshes(false)];
-    const olhos = nos.filter((n) => /-(olhos|olho|brilhos|brilho)(-|$)/.test(n.name));
+    const olhos = nos.filter((n) => /-(olhos|olho)(-|$)/.test(n.name));
+    const brilhos = nos.filter((n) => /-(brilhos|brilho)(-|$)/.test(n.name));
     const boca = nos.find((n) => /-boca$/.test(n.name)) ?? null;
     b = {
       juntas,
       cabecaOriginal: juntas.cabeca?.position.clone() ?? Vector3.Zero(),
       arrumado: null,
       olhos,
+      olhosX: olhos.map((o) => o.scaling.x),
+      brilhos,
       boca,
       bocaX: boca?.scaling.x ?? 1,
     };
@@ -189,8 +194,12 @@ export function criarPoseMovel(leitor: LeitorMoveis, moveis: RenderMoveis | null
   /** A cara de dormir: os olhos fechados e a boca pequena (a pose de sempre refaz a cada quadro). */
   function dormir(b: Boneco, sim: boolean): void {
     if (b.boca) b.boca.scaling.x = b.bocaX * (sim ? 0.55 : 1);
+    // os olhos fechados: um traço escuro bem visível (fino demais, sumia e as bochechas viravam
+    // os "olhos"), um tico mais largo; o brilhinho branco some
+    b.olhos.forEach((o, i) => (o.scaling.x = b.olhosX[i] * (sim ? 1.2 : 1)));
+    for (const o of b.brilhos) o.setEnabled(!sim);
     if (!sim) return;
-    for (const o of b.olhos) o.scaling.y *= 0.08;
+    for (const o of b.olhos) o.scaling.y *= 0.24;
     if (b.boca) b.boca.scaling.y *= 0.3;
   }
 
@@ -288,7 +297,8 @@ export function criarPoseMovel(leitor: LeitorMoveis, moveis: RenderMoveis | null
       const ladoX = -hz;
       const ladoZ = hx;
       const lado = ladoX * -fx + ladoZ * -fz;
-      return fim(r.pos, r.rot, r.esc, r.cabeca, 0.55 * (Math.sign(lado) || 1), { x: anc.x, y: anc.y, z: anc.z });
+      // (bem de três-quartos: com pouco giro a cara ficava de lado e os olhos fechados sumiam)
+      return fim(r.pos, r.rot, r.esc, r.cabeca, 0.9 * (Math.sign(lado) || 1), { x: anc.x, y: anc.y, z: anc.z });
     }
 
     // na cama: a cabeça para a cabeceira (contra a frente da cama: h = -v)
