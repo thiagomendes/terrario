@@ -28,8 +28,9 @@ import {
 } from '../audio/vozesGravadas';
 import { construirMapaEmissivo } from './emissivo';
 import { criarTintaProtecao } from './tintaProtecao';
+import { decidirLote, gruposDoLote } from '../jogo/loteMoveis';
+import type { LeitorMoveis } from '../jogo/moveis';
 import {
-  celulaDoLote,
   ehConteiner,
   outraMetadeDaPorta,
   podeLevarBicho,
@@ -3206,6 +3207,12 @@ export function criarCena(
   function valorEm(x: number, y: number, z: number): number {
     return empacotar(blocoEm(x, y, z), edicoes.obterMeta(x, y, z));
   }
+  /** Spec 039: o que a regra dos móveis lê (a mesma leitura do núcleo: o dono pelo índice). */
+  const leitorMoveis: LeitorMoveis = {
+    bloco: (x, y, z) => blocoEm(x, y, z),
+    meta: (x, y, z) => edicoes.obterMeta(x, y, z),
+    dono: (x, y, z) => edicoes.indiceDono(x, y, z),
+  };
   /** Prevê na hora um bloco que o núcleo ainda vai confirmar. */
   const prever = (id: number, x: number, y: number, z: number, b: number, meta = 0) => {
     const dono = b === Bloco.AR ? undefined : meuIndiceDono();
@@ -3224,32 +3231,20 @@ export function criarCena(
   /** Vários blocos de uma vez (construção, desfazer, espelho, testes): só no criativo. */
   function editarLote(lote: { x: number; y: number; z: number; v: number }[]): void {
     // spec 016: cada célula segue a regra do núcleo (o que sai e o que entra); a recusada
-    // nem vai (o núcleo recusaria e ela piscaria)
-    let primeira: RecusaProtecao | null = null;
-    const vai: { x: number; y: number; z: number; v: number; manterDono: boolean }[] = [];
+    // nem vai (o núcleo recusaria e ela piscaria). Spec 039: a mesma conta dos móveis (só a
+    // âncora vale e vira o móvel inteiro, se couber; cada móvel entra inteiro ou fica de fora)
     // spec 037: o lote não prende amigo nem bicho (o núcleo pula a célula; o corpo de quem
     // manda o lote, não)
     let corpos: ReturnType<typeof corposAgora> | null = null;
-    let prendia = false;
-    for (const e of lote) {
-      // a igual não vai (nem carimba o dono); a lavoura do mundo só se colhe
-      const d = celulaDoLote(regra, voce, e.x, e.y, e.z, e.v, valorEm(e.x, e.y, e.z));
-      if ('pula' in d) continue;
-      if ('recusa' in d) {
-        primeira ??= d.recusa;
-        continue;
-      }
-      if (
-        blocoOcupa(d.v & 255) &&
-        (corpos ??= corposAgora(true)).some((k) => corpoNaCelula(e, k))
-      ) {
-        prendia = true;
-        continue;
-      }
-      vai.push({ x: e.x, y: e.y, z: e.z, v: d.v, manterDono: d.manterDono });
-    }
+    const { vai, primeira, prendia, naoCabia } = decidirLote(
+      gruposDoLote(lote, leitorMoveis),
+      regra,
+      voce,
+      valorEm,
+      () => (corpos ??= corposAgora(true)),
+    );
     if (primeira) avisarProtecao(primeira);
-    else if (prendia) barramento.emitir('recusa', { motivo: 'colocar' });
+    else if (prendia || naoCabia) barramento.emitir('recusa', { motivo: 'colocar' });
     if (!vai.length) return;
     lote = vai.map(({ x, y, z, v }) => ({ x, y, z, v }));
     const id = proximoId();

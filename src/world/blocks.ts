@@ -133,10 +133,26 @@ export const Bloco = {
   JANELA_TORTA_ACESA: 125,
   TOLDINHO: 126,
   CALDEIRAO: 127,
+  // spec 039: os móveis da parte 1 (todos os mundos). Cada um ocupa as células da tabela de
+  // `jogo/moveis.ts`: a âncora (a parte 0) e as outras partes, todas com o mesmo id, a direção
+  // nos bits 0 e 1 do metadado e a parte nos bits 2 a 4. O tapete não fica em célula nenhuma:
+  // ele mora na camada rente ao chão (`jogo/tapetes.ts`), e o id dele só serve ao item. O abajur
+  // e o criado-mudo acesos são outro id (como a fornalha acesa): a luz é a mesma para todos
+  SOFA: 128,
+  CADEIRA: 129,
+  CRIADO_MUDO: 130,
+  ABAJUR: 131,
+  TAPETE: 132,
+  PIA: 133,
+  GUARDA_ROUPA: 134,
+  ABAJUR_ACESO: 135,
+  CRIADO_MUDO_ACESO: 136,
 } as const;
 
 /** Spec 027: o primeiro bloco da Noite das Fantasias (os tiles dele em diante vão na célula 128). */
 export const PRIMEIRO_BLOCO_027 = Bloco.TELHA_ROXA;
+/** Spec 039: o primeiro móvel (os ids de antes não mudam). */
+export const PRIMEIRO_BLOCO_039 = Bloco.SOFA;
 
 export type Ferramenta = 'picareta' | 'machado' | 'pa' | 'espada';
 export type GrupoSom = 'terra' | 'pedra' | 'areia' | 'madeira' | 'folhagem' | 'cristal';
@@ -151,7 +167,12 @@ export type Forma =
   | 'tocha'
   | 'porteira'
   /** Spec 014: placa de parede (uma tábua fina encostada atrás, o desenho na frente). */
-  | 'placa';
+  | 'placa'
+  /**
+   * Spec 039: móvel de várias células. A colisão de cada parte sai da tabela de
+   * `jogo/moveis.ts`; a peça solta (sem a âncora certa) não tem colisão nem item.
+   */
+  | 'movel';
 
 export interface TilesBloco {
   topo: string;
@@ -265,6 +286,8 @@ const folhas = (o: Opcoes = {}): Opcoes => ({
   som: 'folhagem',
   ...o,
 });
+/** Spec 039: o que todo móvel tem (a forma de várias células e o vão que deixa ver em volta). */
+const movel: Opcoes = { opaco: false, forma: 'movel' };
 const la = (id: number, nome: string, t: string) =>
   def(id, `lã ${nome}`, t, { dureza: 0.6, som: 'folhagem' });
 
@@ -721,6 +744,36 @@ export const REGISTRO_BLOCOS: readonly DefinicaoBloco[] = [
     som: 'pedra',
     tiles: { topo: 'caldeirao_topo', lado: 'caldeirao' },
   }),
+  // spec 039: os móveis. Quebram à mão (nenhum pede ferramenta), cada um com o som do material.
+  // Os tiles são os de blocos que já existem: o desenho de verdade é o modelo da T05
+  def(Bloco.SOFA, 'sofá', 'la_vermelha', { ...movel, dureza: 0.6, som: 'folhagem' }),
+  def(Bloco.CADEIRA, 'cadeira', 'tabuas', madeira({ ...movel, dureza: 0.6 })),
+  def(Bloco.CRIADO_MUDO, 'criado-mudo', 'tabuas', madeira({ ...movel, dureza: 0.6 })),
+  def(Bloco.ABAJUR, 'abajur', 'la_amarela', { ...movel, dureza: 0.4, som: 'madeira' }),
+  // o tapete fica na camada rente ao chão: não ocupa célula, não segura nada nem ninguém
+  def(Bloco.TAPETE, 'tapete', 'la_vermelha', {
+    ...movel,
+    solido: false,
+    dureza: 0.3,
+    som: 'folhagem',
+  }),
+  def(Bloco.PIA, 'pia', 'pedra_lisa', { ...movel, dureza: 0.8, som: 'pedra' }),
+  def(Bloco.GUARDA_ROUPA, 'guarda-roupa', 'tabuas', madeira({ ...movel, dureza: 0.9 })),
+  // acesos: brilham e iluminam (a lavoura cresce perto); quebrados, devolvem o móvel apagado
+  def(Bloco.ABAJUR_ACESO, 'abajur aceso', 'la_amarela', {
+    ...movel,
+    dureza: 0.4,
+    som: 'madeira',
+    emissivo: true,
+    luz: 12,
+    semItem: true,
+  }),
+  def(
+    Bloco.CRIADO_MUDO_ACESO,
+    'criado-mudo aceso',
+    'tabuas',
+    madeira({ ...movel, dureza: 0.6, emissivo: true, luz: 7, semItem: true }),
+  ),
 ];
 
 export function obterBloco(id: number): DefinicaoBloco | undefined {

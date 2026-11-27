@@ -24,6 +24,7 @@ import type { EventoVila, VilaVista } from './vila';
 import type { EventoBaile } from './baile';
 import type { BaileVista } from '../jogo/baile';
 import type { BateVista } from '../jogo/bate';
+import type { Tapete, TapeteMudado } from '../jogo/tapetes';
 
 /** Sobe quando uma mensagem muda de formato (cliente e servidor precisam concordar). */
 export const VERSAO_PROTOCOLO = 1;
@@ -94,7 +95,19 @@ export type Comando = ComandoSemSeq & { seq?: number };
 
 type ComandoSemSeq =
   | ({ t: 'jogador' } & Telemetria)
-  | { t: 'quebrar'; id: number; x: number; y: number; z: number; slot: number }
+  | {
+      t: 'quebrar';
+      id: number;
+      x: number;
+      y: number;
+      z: number;
+      slot: number;
+      /**
+       * Spec 039: quebrar o tapete da célula (a camada rente ao chão), e não o bloco dela. Só
+       * vale onde não há nada em cima; sai o tapete inteiro.
+       */
+      tapete?: true;
+    }
   /** Enxada (no slot) na grama ou na terra: vira terra arada (spec 013). */
   | { t: 'arar'; id: number; x: number; y: number; z: number; slot: number }
   | {
@@ -106,7 +119,12 @@ type ComandoSemSeq =
       bloco: number;
       meta: number;
       slot: number;
-      /** Partes extras do mesmo bloco (metade de cima da porta). */
+      /**
+       * Partes extras do mesmo bloco: a metade de cima da porta; spec 039, as outras células
+       * do móvel (até 5, as do tapete). O núcleo calcula a lista dele pela tabela de
+       * `jogo/moveis.ts` e confere: qualquer diferença é recusa. O `meta` do móvel é o da âncora
+       * (só a direção, parte 0).
+       */
       extras?: Pos[];
     }
   /** Vários blocos de uma vez (ferramentas de construção, desfazer, espelho): só no criativo. */
@@ -536,6 +554,16 @@ export interface Quadro {
    * último controle `guiar` deste jogador que o núcleo já usou.
    */
   bate?: BateVista;
+  /**
+   * Spec 039: a camada dos tapetes inteira, no primeiro quadro (sem o campo, nenhum tapete: o
+   * cliente começa a camada do zero a cada primeiro quadro).
+   */
+  tapetes?: Tapete[];
+  /**
+   * Spec 039: o que mudou na camada dos tapetes desde o último quadro, na ordem (o posto, ou a
+   * âncora do que saiu), com as correções deste jogador no fim (o tapete previsto e recusado).
+   */
+  tapetesMudados?: TapeteMudado[];
 }
 
 /** Parte do salvamento que pertence ao núcleo (o cliente junta a câmera, o diário e o mapa). */

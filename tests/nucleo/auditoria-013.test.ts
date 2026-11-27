@@ -114,23 +114,26 @@ describe('colocar com "outra parte": só a metade de cima da porta', () => {
     ).toBe(true);
   });
 
-  it('o saneamento descarta mais de uma parte extra', () => {
-    expect(
-      sanear({
-        t: 'colocar',
-        id: 1,
-        x: 0,
-        y: 70,
-        z: 0,
-        bloco: Bloco.PORTA,
-        meta: 0,
-        slot: 0,
-        extras: [
-          { x: 0, y: 71, z: 0 },
-          { x: 0, y: 72, z: 0 },
-        ],
-      }),
-    ).toBeNull();
+  it('o saneamento descarta mais de 5 partes extras; a porta com duas, o núcleo recusa', () => {
+    // spec 039: o móvel de várias células leva até 5 (o tapete); o núcleo confere cada uma
+    const pedido = (k: number) => ({
+      t: 'colocar',
+      id: 1,
+      x: X + 2,
+      y: Y,
+      z: Z + 2,
+      bloco: Bloco.PORTA,
+      meta: 0,
+      slot: 3,
+      extras: Array.from({ length: k }, (_, i) => ({ x: X + 2, y: Y + 1 + i, z: Z + 2 })),
+    });
+    expect(sanear(pedido(6))).toBeNull();
+    const n = nuvem();
+    inv(n, 'ana').definir(3, { item: idDoBloco(Bloco.PORTA), qtd: 1 });
+    expect(mandar(n, 'ana', pedido(2))).toBe(true);
+    expect(bloco(n, X + 2, Y, Z + 2)).not.toBe(Bloco.PORTA);
+    expect(bloco(n, X + 2, Y + 2, Z + 2)).not.toBe(Bloco.PORTA);
+    expect(inv(n, 'ana').contar(idDoBloco(Bloco.PORTA))).toBe(1);
   });
 
   it('uma tábua não vira dois blocos (a parte extra só vale para a porta)', () => {

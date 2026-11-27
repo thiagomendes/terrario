@@ -112,8 +112,9 @@ const vista = (n: Nucleo, q: string) => n.estado.baile!.vistaDe(q);
 const portas = () => plano().pontos.portas;
 
 describe('spec 027 (T18): as missões n1 a n5 no núcleo', () => {
-  it('a rede é a 18 da parte 1 e os comandos novos passam a limpo', () => {
-    expect(VERSAO_REDE).toBe(18);
+  it('a rede é a 18 da parte 1 (ou depois) e os comandos novos passam a limpo', () => {
+    // a parte 1 saiu na 18; a 039 (os móveis) subiu para a 19
+    expect(VERSAO_REDE).toBeGreaterThanOrEqual(18);
     expect(sanear({ t: 'baile', a: 'campainha', i: 5, x: 1 })).toEqual({ t: 'baile', a: 'campainha', i: 5 });
     expect(sanear({ t: 'baile', a: 'campainha', i: 6 })).toBeNull();
     expect(sanear({ t: 'baile', a: 'lanterna', i: 4 })).toEqual({ t: 'baile', a: 'lanterna', i: 4 });

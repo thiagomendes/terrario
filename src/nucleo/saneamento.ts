@@ -22,12 +22,15 @@ import { ehGesto } from '../personagem/gestos';
 import { normalizarAparencia } from '../personagem/aparencia';
 import { limparApelido } from '../jogo/apelido';
 import { MAX_MOEDAS } from '../jogo/alma';
+import { sanearTapetes } from '../jogo/tapetes';
 
 /** Tamanho do mundo onde alguém pode estar (bem além de onde se joga). */
 export const XZ_MAX = 30_000_000;
 const Y_MIN = -64;
 const Y_MAX = 512;
 const SLOTS = 36;
+/** Spec 039: as partes extras de um `colocar`, no máximo (o tapete: 6 células, a âncora e mais 5). */
+export const MAX_EXTRAS = 5;
 
 /**
  * Aparência que viaja na rede: objeto pequeno, passado a limpo (spec 017: fantasia com id
@@ -112,7 +115,9 @@ export function sanear(c: unknown): Comando | null {
     case 'arar':
       return celula(o as Partial<Pos>) &&
         inteiro(o.id, 0, Number.MAX_SAFE_INTEGER) &&
-        inteiro(o.slot, 0, SLOTS - 1)
+        inteiro(o.slot, 0, SLOTS - 1) &&
+        // spec 039: o tapete da célula (só no quebrar)
+        (o.tapete === undefined || (o.t === 'quebrar' && o.tapete === true))
         ? (o as unknown as Comando)
         : null;
     case 'colocar':
@@ -123,8 +128,9 @@ export function sanear(c: unknown): Comando | null {
         inteiro(o.slot, 0, SLOTS - 1) &&
         (o.extras === undefined ||
           (Array.isArray(o.extras) &&
-            // só a metade de cima da porta (o núcleo confere que é a célula de cima)
-            o.extras.length <= 1 &&
+            // a metade de cima da porta e, da spec 039, as outras células do móvel (o tapete
+            // tem 6): o núcleo confere que são exatamente as da tabela
+            o.extras.length <= MAX_EXTRAS &&
             (o.extras as Pos[]).every((e) => celula(e))))
         ? (o as unknown as Comando)
         : null;
@@ -399,6 +405,14 @@ export function sanearExtras(e: unknown): Record<string, unknown> {
     if (!(objeto(sp) && xz(sp.x) && xz(sp.z))) delete out.spawn;
   }
   if ('donos' in out) out.donos = sanearDonos(out.donos);
+  if ('tapetes' in out) {
+    // spec 039: a camada dos tapetes (o dono fora da tabela fica com o dono do mundo)
+    out.tapetes = sanearTapetes(
+      out.tapetes,
+      XZ_MAX,
+      Array.isArray(out.donos) ? out.donos.length : 0,
+    );
+  }
   if ('alma' in out) {
     // spec 023: { [jogador]: estado } (o núcleo passa cada um a limpo com o mundo dele)
     const a = out.alma;

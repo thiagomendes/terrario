@@ -138,8 +138,9 @@ describe('038: a cópia de antes é fiel (a 038 só pôs a moto no catálogo)', 
 });
 
 describe('038: a VERSAO_REDE fica em 18 (quem é de antes lê e segue)', () => {
-  it('a versão continua 18 (subir abriria a janela em que o site 18 é recusado)', () => {
-    expect(VERSAO_REDE).toBe(18);
+  it('a 038 não subiu a versão (subir abriria a janela em que o site 18 é recusado)', () => {
+    // a 038 saiu na 18; quem subiu depois foi a 039 (os móveis, 19), com comandos e campos novos
+    expect(VERSAO_REDE).toBeGreaterThanOrEqual(18);
   });
 
   it('o servidor de agora passa a moto inteira, com o montado', () => {

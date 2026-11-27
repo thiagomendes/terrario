@@ -216,13 +216,13 @@ A mesma regra da Vila Neon: **menos recurso, mais acabamento**, uma parte de cad
 | Parte | O que entra | Missões | Moedinhas | `VERSAO_REDE` |
 | --- | --- | --- | --- | --- |
 | **1. A vila da festa** | o mundo registrado, o céu, os blocos, o mapa inteiro; a Praça da Abóbora (abóbora gigante, palco, barracas), a Rua das Casinhas Tortas, o Bosque das Lanternas e a Horta; a Casa da Vovó, a Loja e o Castelinho **por fora**, como fachada acabada e de porta fechada; os moradores (com o abraço do Bento), os bichos e as fantasias do tema; comprar e comer; a música e os sons; a banca; a varinha | n1 a n5 | 22 | 18 |
-| **2. Por dentro** | a Casa da Vovó por dentro (caldeirão, vassoura na parede, o Tufinho no sofá), a Loja de Fantasias (cabides e espelho mágico), o Castelinho (escorregador em espiral, órgão, quadros que piscam); a banda da festa no palco | n6 a n8 | 15 | 19 |
-| **3. Os passeios** | a vassoura-patinete, o Trem das Risadas com o túnel, o carrossel de morcegos e o balanço de teia | n9 e n10 | 8 | 20 |
+| **2. Por dentro** | a Casa da Vovó por dentro (caldeirão, vassoura na parede, o Tufinho no sofá), a Loja de Fantasias (cabides e espelho mágico), o Castelinho (escorregador em espiral, órgão, quadros que piscam); a banda da festa no palco | n6 a n8 | 15 | 20 |
+| **3. Os passeios** | a vassoura-patinete, o Trem das Risadas com o túnel, o carrossel de morcegos e o balanço de teia | n9 e n10 | 8 | 21 |
 
 - **Por que as missões vão junto com os lugares:** "Missões" só aparece na roda quando o mundo é reconhecido pela alma, e um mundo publicado sem missões não é um mundo completo. A parte 1 já sai com cinco.
 - **Por que comprar e comer vão na parte 1:** as barracas estão na praça onde a criança nasce, e barraca que não vende é cenário (a lição da Dona Cida, na 032). É quase todo reaproveitamento da 032.
 - **Na parte 1, as portas fechadas** da Casa da Vovó, da Loja e do Castelinho não têm placa, lona nem texto de "em breve" (a regra da Vila): a casa da Vovó tem a varanda com o caldeirão e o Tufinho, a loja tem a vitrine com cabides e chapéus, o castelinho tem a torre e as bandeirinhas. Tocar na porta faz a porta balançar e um brilhinho, sem abrir.
-- **`VERSAO_REDE`:** os números supõem que nada sobe antes (a 035, já na `main`, ficou no 17). Se outra spec subir antes, cada parte pega o próximo livre.
+- **`VERSAO_REDE`:** os números supõem que nada sobe antes (a 035, já na `main`, ficou no 17). Se outra spec subir antes, cada parte pega o próximo livre. A 039 (os móveis, parte 1) veio antes no backlog e ficou com a 19 (27 nov 2026): as partes 2 e 3 passaram para 20 e 21.
 
 ## O que muda
 ### 1. O mundo registrado

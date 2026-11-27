@@ -1,4 +1,5 @@
 import type { TextosTema } from '../tipos';
+import { NOMES_MOVEIS } from '../../jogo/moveis';
 
 /**
  * Ferramentas: colher (picareta), espátula (machado), concha (pá), pirulito (espada) e
@@ -118,6 +119,8 @@ export const TEXTOS_DOCE: TextosTema = {
     81: 'fardo de broto-doce',
     82: 'porteira doce',
     83: 'porteira doce aberta',
+    // spec 039: os móveis (os mesmos nomes em todos os mundos)
+    ...NOMES_MOVEIS,
   },
   itens: {
     // spec 013: plantio

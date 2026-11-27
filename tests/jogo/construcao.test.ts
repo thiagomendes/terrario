@@ -48,6 +48,21 @@ describe('construção assistida', () => {
       { x: 10, y: 5, z: 10 },
       { x: 10, y: 5, z: 11 },
     ]);
-    expect((girado[1].v >> 8) & 3).toBe(2);
+    // spec 039: o bloco que olhava para +x (para o vizinho dele) olha para +z, onde o vizinho
+    // foi parar (a direção gira com as células; antes ela ia para -z, o lado contrário)
+    expect((girado[1].v >> 8) & 3).toBe(0);
+    for (const g of [1, 2, 3]) {
+      const [a, b] = colar(bp, { x: 10, y: 5, z: 10 }, g);
+      const d = (b.v >> 8) & 3;
+      const passo = [b.p.x - a.p.x, b.p.z - a.p.z];
+      expect(passo, `giro ${g}`).toEqual(
+        [
+          [0, 1],
+          [1, 0],
+          [0, -1],
+          [-1, 0],
+        ][d],
+      );
+    }
   });
 });

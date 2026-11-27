@@ -51,8 +51,9 @@ function memoria() {
 }
 
 describe('036: a VERSAO_REDE fica em 18 (quem é de antes lê e segue)', () => {
-  it('a versão continua 18 (subir abriria a janela em que o site 18 é recusado)', () => {
-    expect(VERSAO_REDE).toBe(18);
+  it('a 036 não subiu a versão (subir abriria a janela em que o site 18 é recusado)', () => {
+    // a 036 saiu na 18; quem subiu depois foi a 039 (os móveis, 19), com comandos e campos novos
+    expect(VERSAO_REDE).toBeGreaterThanOrEqual(18);
   });
 
   it('a aparência da 036 passa inteira pelo servidor novo, com o montado', () => {

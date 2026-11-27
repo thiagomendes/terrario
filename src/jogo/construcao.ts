@@ -153,9 +153,13 @@ export function colar(
         if (g === 1) [px, pz] = [bp.d - 1 - z, x];
         else if (g === 2) [px, pz] = [bp.w - 1 - x, bp.d - 1 - z];
         else if (g === 3) [px, pz] = [z, bp.w - 1 - x];
+        // a direção (bits 0 e 1 do metadado: 0 +z, 1 +x, 2 -z, 3 -x) gira junto com as células.
+        // Cada giro leva +z para -x (a direção d vira d - 1); o resto do metadado (a parte do
+        // móvel, spec 039) fica. Antes, a direção girava para o outro lado: no giro de 90 graus
+        // a escada e a porta saíam viradas ao contrário, e o móvel saía da região
         const meta = (v >> 8) & 3;
         const resto = v & ~(3 << 8);
-        const giradoMeta = ((meta + g) & 3) << 8;
+        const giradoMeta = ((meta - g + 4) & 3) << 8;
         out.push({
           p: { x: origem.x + px, y: origem.y + y, z: origem.z + pz },
           v: resto | giradoMeta,
