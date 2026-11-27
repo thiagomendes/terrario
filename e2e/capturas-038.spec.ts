@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { assentar, criarMundo, TAMANHOS, type Tamanho } from './guia-palco';
 
 /**
@@ -762,6 +762,77 @@ test('a nuvem fofa voa junto e a bicicletinha desmonta ao voar (celular em pé)'
     await estudio(page, 0.8, 0.6, 4.4, 0.4);
     await page.waitForTimeout(600);
     await foto(page, PASTA, `${id}-4-desceu`);
+  }
+  await page.context().close();
+});
+
+// ------------------------------------------------------------------ a motoquinha sem rodinhas
+test('a motoquinha sem rodinhas: parada no descansinho e andando reta, de dia e de noite (celular em pé)', async ({ browser }) => {
+  test.skip(!QUAL.includes('moto-sem-rodinhas'));
+  test.setTimeout(900_000);
+  const PASTA = 'capturas-038/moto-sem-rodinhas';
+  const { page, O } = await abrirGramado(browser, 'empe');
+  /** O giro do descanso e a inclinação do boneco (para conferir parada e andando). */
+  const descanso = () =>
+    page.evaluate(() => {
+      const s = window.__brumaluz!.cenaBabylon!();
+      const d = s.transformNodes.find((n) => n.name === 'personagem-junta-andarDescanso');
+      const esc = s.transformNodes.find((n) => n.name === 'personagem-escala');
+      return { giro: +(d?.rotation.x ?? -9).toFixed(3), inclina: +(esc?.rotation.z ?? -9).toFixed(3) };
+    });
+  const medidas: Record<string, unknown> = {};
+  for (const [quando, hora] of [
+    ['dia', DIA],
+    ['noite', NOITE],
+  ] as const) {
+    await page.evaluate((h) => (window.__brumaluz!.hora = h), hora);
+    for (const [quem, base] of [
+      ['menino', MENINO],
+      ['menina', MENINA],
+    ] as const) {
+      if (quem === 'menina' && quando === 'noite') continue;
+      await noMeio(page, O, 0, 5);
+      await montarNo(page, base, MOTO);
+      await page.waitForTimeout(1500);
+      medidas[`${quem}-parada-${quando}`] = await descanso();
+      for (const [vista, giro, alt, dist, y] of [
+        ['tres-quartos', 0.8, 0.7, 4.2, 0.85],
+        ['lado-descanso', -Math.PI / 2, 0.3, 4.2, 0.85],
+        ['frente', 0, 0.4, 4.2, 0.85],
+        ['costas', Math.PI, 0.5, 4.2, 0.85],
+        ['descanso-perto', -Math.PI / 2 - 0.35, 0.15, 1.9, 0.3],
+      ] as const) {
+        if (quando === 'noite' && vista !== 'tres-quartos' && vista !== 'lado-descanso') continue;
+        await estudio(page, y, giro, dist, alt);
+        await page.waitForTimeout(700);
+        await foto(page, PASTA, `${quem}-parada-${vista}-${quando}`);
+      }
+      // andando: a câmera do jogo, de três-quartos e de lado (o descanso recolhido, a moto reta)
+      for (const [vista, frente, lado] of [
+        ['andando-tres-quartos', -0.75, 0.66],
+        ['andando-lado', 0, -1],
+      ] as const) {
+        await noMeio(page, O, 0, 5.2, 0.3);
+        await page.waitForTimeout(600);
+        await page.evaluate(([f, d]) => window.__brumaluz!.controleDireto!.mover(f, d), [frente, lado] as const);
+        await page.waitForTimeout(1500);
+        medidas[`${quem}-${vista}-${quando}`] = await descanso();
+        await foto(page, PASTA, `${quem}-${vista}-${quando}`);
+        await parar(page);
+      }
+    }
+  }
+  console.log('descanso', JSON.stringify(medidas));
+  writeFileSync(`${PASTA}/medidas.json`, JSON.stringify(medidas, null, 1));
+  // parada: o descanso no chão e a moto inclinada; andando: recolhido e reta
+  for (const [k, v] of Object.entries(medidas) as [string, { giro: number; inclina: number }][]) {
+    if (k.includes('parada')) {
+      expect(v.giro, k).toBeLessThan(0.05);
+      expect(v.inclina, k).toBeGreaterThan(0.05);
+    } else {
+      expect(v.giro, k).toBeGreaterThan(1.25);
+      expect(v.inclina, k).toBeLessThan(0.01);
+    }
   }
   await page.context().close();
 });

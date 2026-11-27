@@ -1,0 +1,38 @@
+{
+ "menino-parada-dia": {
+  "giro": 0,
+  "inclina": 0.06
+ },
+ "menino-andando-tres-quartos-dia": {
+  "giro": 1.35,
+  "inclina": 0
+ },
+ "menino-andando-lado-dia": {
+  "giro": 1.35,
+  "inclina": 0
+ },
+ "menina-parada-dia": {
+  "giro": 0.002,
+  "inclina": 0.06
+ },
+ "menina-andando-tres-quartos-dia": {
+  "giro": 1.35,
+  "inclina": 0
+ },
+ "menina-andando-lado-dia": {
+  "giro": 1.35,
+  "inclina": 0
+ },
+ "menino-parada-noite": {
+  "giro": 0.003,
+  "inclina": 0.06
+ },
+ "menino-andando-tres-quartos-noite": {
+  "giro": 1.35,
+  "inclina": 0
+ },
+ "menino-andando-lado-noite": {
+  "giro": 1.35,
+  "inclina": 0
+ }
+}
