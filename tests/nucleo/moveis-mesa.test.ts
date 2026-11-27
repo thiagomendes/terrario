@@ -235,14 +235,15 @@ for (const modo of ['local', 'nuvem'] as const)
       porMovel(n, Bloco.CADEIRA, MESA.x, MESA.z + 1, 2);
       // longe da mesa: fica como veio
       porMovel(n, Bloco.CADEIRA, MESA.x + 4, MESA.z + 3, 3);
-      // o colar: a mesa e a cadeira juntas, com a cadeira de costas, como estavam
+      // o colar: a mesa e a cadeira juntas, com a cadeira de costas para a mesa (a direção 2:
+      // a frente olha para +z, longe da mesa ao norte); o lote não vira, fica como veio
       const v = (b: number, d: number, parte: number) => b | (metaDoMovel(d, parte) << 8);
       mandar(n, 'ana', {
         t: 'editar',
         lote: [
           { x: MESA.x, y: YP, z: MESA.z + 3, v: v(Bloco.MESA, 0, 0) },
           { x: MESA.x + 1, y: YP, z: MESA.z + 3, v: v(Bloco.MESA, 0, 1) },
-          { x: MESA.x, y: YP, z: MESA.z + 4, v: v(Bloco.CADEIRA, 0, 0) },
+          { x: MESA.x, y: YP, z: MESA.z + 4, v: v(Bloco.CADEIRA, 2, 0) },
         ],
       });
       passo(n);
@@ -250,7 +251,7 @@ for (const modo of ['local', 'nuvem'] as const)
       expect(meta(n, MESA.x, MESA.z + 1)).toBe(metaDoMovel(0, 0));
       expect(meta(n, MESA.x + 4, MESA.z + 3)).toBe(metaDoMovel(3, 0));
       expect(bloco(n, MESA.x, MESA.z + 4)).toBe(Bloco.CADEIRA);
-      expect(meta(n, MESA.x, MESA.z + 4)).toBe(metaDoMovel(0, 0));
+      expect(meta(n, MESA.x, MESA.z + 4)).toBe(metaDoMovel(2, 0));
     });
   });
 
