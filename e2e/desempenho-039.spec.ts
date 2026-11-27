@@ -401,6 +401,8 @@ for (let r = 0; r < RODADAS; r++)
   for (const c of CENARIOS)
     test(`${c}, rodada ${r + 1} (celular em pé, CPU ${LENTO}x)`, async ({ page }) => {
       test.setTimeout(600_000);
+      // na main (antes da 039b) os cinco da parte 2 não existem: o cenário fica de fora
+      test.skip(c.startsWith('casa-parte2') && B.FOGAO === undefined, 'sem os móveis da parte 2');
       const { yaw, pitch, amplitude, nota } = await cenario(page, c);
       await desacelerar(page);
       await page.waitForTimeout(1000);

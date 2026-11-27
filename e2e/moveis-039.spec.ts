@@ -19,7 +19,7 @@ import { abrirMundo, criarMundo, TAMANHOS, type Tamanho } from './guia-palco';
  *   0,4 s, e andar levanta.
  * - **Montar na mesa:** na sobrevivência, o sofá pela aba "casa" do livro, posto e quebrado (volta
  *   um sofá só).
- * - **A aba "casa"** do criativo mostra os oito móveis sem rolar.
+ * - **A aba "casa"** do criativo mostra os móveis sem rolar (os oito e, desde a 039b, os treze).
  *
  * Fotos em capturas-039/t06/.
  */
@@ -525,9 +525,12 @@ test('montar na mesa: o sofá pela aba casa do livro, posto e quebrado (volta um
   await expect.poll(() => p.evaluate(() => document.body.dataset.overlay)).toBe('inventario');
   await p.locator('[data-livro]').tap();
   await p.locator('.livro [data-aba-categoria="casa"]').tap();
-  // a aba casa: só os oito móveis, e o sofá e a pia (que dá para fazer) vêm primeiro
+  // a aba casa: só os móveis (os oito da parte 1 e, desde a 039b, os cinco da parte 2), e o sofá
+  // e a pia (que dá para fazer) vêm primeiro
   const receitas = await p.locator('.livro [data-receita]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.receita));
-  expect(new Set(receitas)).toEqual(new Set(['cama', 'sofa', 'cadeira', 'tapete', 'abajur', 'criado_mudo', 'guarda_roupa', 'pia']));
+  expect(new Set(receitas)).toEqual(
+    new Set(['cama', 'sofa', 'cadeira', 'tapete', 'abajur', 'criado_mudo', 'guarda_roupa', 'pia', 'geladeira', 'fogao', 'mesa_casa', 'tv', 'som']),
+  );
   // o que dá para fazer com o que ela tem vem marcado (o abajur pede a tocha: não)
   await expect(p.locator('.livro [data-receita="sofa"].disponivel')).toHaveCount(1);
   await expect(p.locator('.livro [data-receita="pia"].disponivel')).toHaveCount(1);
@@ -775,7 +778,7 @@ test('a troca de roupa pelo guarda-roupa, deitado: as roupas sem rolar, com o fu
 });
 
 for (const tamanho of ['empe', 'deitado'] as const)
-  test(`a aba casa do criativo: os oito móveis sem rolar (${tamanho})`, async ({ browser }) => {
+  test(`a aba casa do criativo: os treze móveis sem rolar (${tamanho})`, async ({ browser }) => {
     test.setTimeout(300_000);
     const p = await mundo(browser, `moveis-t06-aba-${tamanho}`, tamanho);
     const erros: string[] = [];
@@ -788,7 +791,13 @@ for (const tamanho of ['empe', 'deitado'] as const)
     await p.locator('.catalogo [data-aba-categoria="casa"]').tap();
     const itens = await p.locator('.catalogo [data-catalogo]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.catalogo));
     expect(new Set(itens)).toEqual(
-      new Set([Bloco.CAMA, Bloco.SOFA, Bloco.CADEIRA, Bloco.CRIADO_MUDO, Bloco.ABAJUR, Bloco.TAPETE, Bloco.PIA, Bloco.GUARDA_ROUPA].map((b) => `bloco:${b}`)),
+      new Set(
+        [
+          Bloco.CAMA, Bloco.SOFA, Bloco.CADEIRA, Bloco.CRIADO_MUDO, Bloco.ABAJUR, Bloco.TAPETE, Bloco.PIA, Bloco.GUARDA_ROUPA,
+          // spec 039b: os cinco da parte 2
+          Bloco.FOGAO, Bloco.GELADEIRA, Bloco.MESA, Bloco.TV, Bloco.SOM,
+        ].map((b) => `bloco:${b}`),
+      ),
     );
     // sem rolar: a grade da aba não rola, e todos os móveis estão dentro da tela
     const medida = await p.evaluate(() => {
