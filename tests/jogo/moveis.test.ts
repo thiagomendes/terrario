@@ -285,7 +285,8 @@ describe('o lote do criativo com os móveis', () => {
     expect(g[0].naoCabe).toBe(true);
     // a âncora em cima do mundo (a cúpula do abajur passaria do teto)
     expect(gruposDoLote([{ x: 0, y: 127, z: 0, v: Bloco.ABAJUR }], l)[0].naoCabe).toBe(true);
-    // dois sofás do lote no mesmo lugar: o segundo fica de fora, o primeiro entra
+    // dois sofás do lote no mesmo lugar: o primeiro que chega ganha (x = 0 e 1); o segundo fica
+    // de fora, e nada vai para x = 2
     const dois = gruposDoLote(
       [
         { x: 0, y: 2, z: 0, v: Bloco.SOFA },
@@ -293,7 +294,71 @@ describe('o lote do criativo com os móveis', () => {
       ],
       l,
     );
-    expect(dois.filter((x) => !x.naoCabe).flatMap((x) => x.celulas)).toHaveLength(2);
+    const entram = dois.filter((x) => !x.naoCabe).flatMap((x) => x.celulas);
+    expect(entram.map((e) => [e.x, e.v])).toEqual([
+      [0, Bloco.SOFA | (metaDoMovel(0, 0) << 8)],
+      [1, Bloco.SOFA | (metaDoMovel(0, 1) << 8)],
+    ]);
+  });
+
+  it('preencher uma fileira de 4 com o sofá dá dois sofás, dentro da fileira', () => {
+    const l = mundo();
+    const fileira = [0, 1, 2, 3].map((x) => ({ x, y: 1, z: 0, v: Bloco.SOFA as number }));
+    aplicar(l, fileira);
+    expect([0, 1, 2, 3, 4].map((x) => [l.bloco(x, 1, 0), parteDoMeta(l.meta(x, 1, 0))])).toEqual([
+      [Bloco.SOFA, 0],
+      [Bloco.SOFA, 1],
+      [Bloco.SOFA, 0],
+      [Bloco.SOFA, 1],
+      [Bloco.AR, 0],
+    ]);
+    semPecaSolta(l);
+  });
+
+  it('o quarto mobiliado colado num morro: as partes entram por cima da pedra, e o móvel que estava ali sai inteiro', () => {
+    // o quarto copiado: o guarda-roupa olhando para +z e o sofá na frente dele
+    const quarto = mundo();
+    porMovel(quarto, Bloco.GUARDA_ROUPA, 0, 1, 1, 0);
+    porMovel(quarto, Bloco.SOFA, 0, 1, 0, 0);
+    const bp = copiar(
+      'quarto',
+      { x: 0, y: 1, z: 0 },
+      { x: 1, y: 2, z: 1 },
+      (x, y, z) => quarto.bloco(x, y, z) | (quarto.meta(x, y, z) << 8),
+    )!;
+    // o morro: pedra embaixo da direita do sofá, da âncora e da direita do guarda-roupa, e
+    // dois blocos de pedra no alto, onde o quarto não pede nada; e um abajur de antes com o pé
+    // onde vai a parte de cima do guarda-roupa (a cúpula fica acima da região)
+    const l = mundo();
+    const o = { x: 10, y: 1, z: 10 };
+    for (const [dx, dy, dz] of [
+      [1, 0, 0],
+      [0, 0, 1],
+      [1, 0, 1],
+      [0, 1, 0],
+      [1, 1, 0],
+    ])
+      l.por(o.x + dx, o.y + dy, o.z + dz, Bloco.PEDRA_LISA);
+    porMovel(l, Bloco.ABAJUR, o.x, o.y + 1, o.z + 1, 0);
+    expect(l.bloco(o.x, o.y + 2, o.z + 1)).toBe(Bloco.ABAJUR);
+    aplicar(
+      l,
+      colar(bp, o, 0).map((e) => ({ ...e.p, v: e.v })),
+    );
+    for (const c of celulasDoMovel(Bloco.GUARDA_ROUPA, o.x, o.y, o.z + 1, 0))
+      expect(l.bloco(c.x, c.y, c.z), `guarda-roupa ${c.x},${c.y},${c.z}`).toBe(Bloco.GUARDA_ROUPA);
+    for (const c of celulasDoMovel(Bloco.SOFA, o.x, o.y, o.z, 0))
+      expect(l.bloco(c.x, c.y, c.z), `sofá ${c.x}`).toBe(Bloco.SOFA);
+    // o abajur que estava onde entrou a parte de cima do guarda-roupa saiu inteiro
+    expect(l.bloco(o.x, o.y + 2, o.z + 1)).toBe(Bloco.AR);
+    // a pedra que o quarto não pedia continua
+    expect(l.bloco(o.x, o.y + 1, o.z)).toBe(Bloco.PEDRA_LISA);
+    expect(l.bloco(o.x + 1, o.y + 1, o.z)).toBe(Bloco.PEDRA_LISA);
+    semPecaSolta(l);
+    // sem o colar pedir a parte, a pedra segura: a âncora sozinha não cabe
+    const m = mundo();
+    m.por(1, 1, 0, Bloco.PEDRA_LISA);
+    expect(gruposDoLote([{ x: 0, y: 1, z: 0, v: Bloco.SOFA }], m)[0].naoCabe).toBe(true);
   });
 
   it('a âncora que o próprio lote troca depois (a última vale) não deixa a parte sozinha', () => {

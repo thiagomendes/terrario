@@ -73,34 +73,43 @@ export function gruposDoLote(lote: readonly EntradaLote[], l: LeitorMoveis): Gru
   const comMovel = new Set<string>();
   const semLugar = new Set<string>();
 
-  // 1. só as âncoras
+  // 1. só as âncoras (as partes pedidas ficam anotadas: o colar que traz o móvel inteiro pode
+  // pôr a parte em cima do terreno, como poria um bloco comum)
   const ancoras: EntradaLote[] = [];
+  const partesPedidas = new Map<string, number>();
   for (const e of lote) {
     const b = e.v & 255;
     const meta = (e.v >> 8) & 255;
     if (b === Bloco.TAPETE) continue;
-    if (ehMovel(b) && !ehMetaDeAncora(meta)) continue;
+    if (ehMovel(b) && !ehMetaDeAncora(meta)) {
+      partesPedidas.set(chave(e.x, e.y, e.z), e.v & 0xffff);
+      continue;
+    }
     pedir(e.x, e.y, e.z, e.v);
     if (ehMovel(b)) ancoras.push({ x: e.x, y: e.y, z: e.z, v: e.v & 0xffff });
   }
-  // 2. o móvel que muda sai inteiro
-  for (const k of [...ordem]) {
+  // 2. o móvel que muda sai inteiro (também onde a parte de um móvel novo vai entrar, depois)
+  const tirarOQueMuda = (k: string) => {
     const e = pedido.get(k)!;
     const b0 = l.bloco(e.x, e.y, e.z);
-    if (!ehMovel(b0) || e.v === valor(b0, l.meta(e.x, e.y, e.z))) continue;
+    if (!ehMovel(b0) || e.v === valor(b0, l.meta(e.x, e.y, e.z))) return;
     const m = movelEm(l, e.x, e.y, e.z);
-    if (!m) continue;
+    if (!m) return;
     comMovel.add(k);
     for (const c of m.celulas) {
       const ck = chave(c.x, c.y, c.z);
       if (!pedido.has(ck)) pedir(c.x, c.y, c.z, Bloco.AR);
       unir(k, ck);
     }
-  }
-  // 3. cada âncora vira o móvel inteiro, se couber
+  };
+  for (const k of [...ordem]) tirarOQueMuda(k);
+  // 3. cada âncora vira o móvel inteiro, se couber; a primeira que chega ganha a célula
   const tomadas = new Set<string>();
+  const aEsperar = new Set(ancoras.map((a) => chave(a.x, a.y, a.z)));
+  const novasPartes: string[] = [];
   for (const a of ancoras) {
     const k = chave(a.x, a.y, a.z);
+    aEsperar.delete(k);
     // a célula já é parte de um móvel que veio antes no lote, ou o lote pediu outra coisa nela
     // depois (a última vale): esta âncora fica de fora
     if (tomadas.has(k) || pedido.get(k)?.v !== a.v) continue;
@@ -114,8 +123,13 @@ export function gruposDoLote(lote: readonly EntradaLote[], l: LeitorMoveis): Gru
       const parte = valor(b, metaDoMovel(d, c.parte));
       const ja = pedido.get(ck);
       if (c.y < 0 || c.y >= ALTURA || tomadas.has(ck)) cabe = false;
+      // outra âncora do lote que ainda não veio: esta chegou antes e fica com a célula
+      else if (ja && aEsperar.has(ck)) cabe = true;
       // o lote pede outro bloco ali: não cabe (o ar pedido, ou o do móvel que sai, cabe)
       else if (ja) cabe = (ja.v & 255) === Bloco.AR || ja.v === parte;
+      // o lote pediu exatamente esta parte ali: entra por cima do que houver (a proteção e o
+      // móvel que estava ali seguem a regra de sempre)
+      else if (partesPedidas.get(ck) === parte) cabe = true;
       else {
         const atual = valor(l.bloco(c.x, c.y, c.z), l.meta(c.x, c.y, c.z));
         cabe = substituivel(atual & 255) || atual === parte;
@@ -129,11 +143,13 @@ export function gruposDoLote(lote: readonly EntradaLote[], l: LeitorMoveis): Gru
     tomadas.add(k);
     for (const c of celulas.slice(1)) {
       const ck = chave(c.x, c.y, c.z);
+      if (!pedido.has(ck)) novasPartes.push(ck);
       pedir(c.x, c.y, c.z, valor(b, metaDoMovel(d, c.parte)));
       tomadas.add(ck);
       unir(k, ck);
     }
   }
+  for (const k of novasPartes) tirarOQueMuda(k);
   // 4. os grupos, na ordem em que a primeira célula de cada um apareceu
   const grupos = new Map<string, GrupoLote>();
   for (const k of ordem) {

@@ -1402,6 +1402,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (r || !tapetes.por(t)) {
       recusarTapete(j, c.id, 'colocar', r && 'protecao' in r ? r.protecao : undefined);
       corrigirTapetes(j, cs, c);
+      // as células também voltam (o aparelho de antes da camada podia ter previsto o bloco)
+      for (const q of cs) corrigir(j, q.x, q.y, q.z);
       return;
     }
     tapetesMudados.push({ ...t });

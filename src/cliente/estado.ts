@@ -148,7 +148,11 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     }
     // spec 039: a camada dos tapetes (inteira no primeiro quadro; depois, o que mudou)
     for (const [k, id] of pendentesTapete) if (id <= q.ack) pendentesTapete.delete(k);
-    if (q.primeiro) tapetes.trocar(q.tapetes ?? []);
+    if (q.primeiro) {
+      // a sequência recomeçou: o que estava previsto ficou para trás (a camada vem inteira)
+      pendentesTapete.clear();
+      tapetes.trocar(q.tapetes ?? []);
+    }
     for (const t of q.tapetesMudados ?? []) {
       if (pendentesTapete.has(celula(t.x, t.y, t.z))) continue;
       if ('fora' in t) tapetes.tirar(t.x, t.y, t.z);

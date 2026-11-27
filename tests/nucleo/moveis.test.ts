@@ -8,6 +8,7 @@ import { MAX_EXTRAS, sanear, sanearExtras } from '../../src/nucleo/saneamento';
 import { celulasDoMovel, metaDoMovel } from '../../src/jogo/moveis';
 import { celulasDoTapete } from '../../src/jogo/tapetes';
 import type { DadosMundo } from '../../src/jogo/mundos';
+import { VERSAO_REDE } from '../../src/rede/protocolo';
 import type { Comando, EventoNucleo, Quadro, Telemetria } from '../../src/nucleo/protocolo';
 
 /**
@@ -255,6 +256,10 @@ for (const modo of ['local', 'nuvem'] as const)
   });
 
 describe('o saneamento dos extras', () => {
+  it('a rede é a 19 (os móveis mudaram o colocar, o quebrar e o quadro)', () => {
+    expect(VERSAO_REDE).toBe(19);
+  });
+
   it('aceita até 5 (o tapete) e recusa 6', () => {
     expect(MAX_EXTRAS).toBe(5);
     const c = (k: number) => ({
@@ -530,6 +535,92 @@ for (const modo of ['local', 'nuvem'] as const)
       expect(ana.inventario.contar(idDoBloco(Bloco.TAPETE))).toBe(1);
       expect(bloco(n, T.x, YP, T.z)).toBe(Bloco.SOFA);
     });
+
+    it('os extras que faltam, sobram, erram ou se repetem, e a parte no metadado: recusa', () => {
+      const certas = celulasDoTapete(T.x, YP, T.z, 0)
+        .slice(1)
+        .map(({ x, y, z }) => ({ x, y, z }));
+      const girada = celulasDoTapete(T.x, YP, T.z, 1)
+        .slice(1)
+        .map(({ x, y, z }) => ({ x, y, z }));
+      const pedidos: [string, Record<string, unknown>][] = [
+        ['sem extras', {}],
+        ['faltando uma', { extras: certas.slice(0, 4) }],
+        ['uma errada', { extras: [...certas.slice(0, 4), { x: T.x + 3, y: YP, z: T.z }] }],
+        ['repetida', { extras: [...certas.slice(0, 4), certas[0]] }],
+        ['girada', { extras: girada }],
+        ['parte 1 no metadado', { extras: certas, meta: metaDoMovel(0, 1) }],
+      ];
+      for (const [nome, extra] of pedidos) {
+        const n = abrir(modo);
+        const id = mandar(n, 'ana', {
+          t: 'colocar',
+          x: T.x,
+          y: YP,
+          z: T.z,
+          bloco: Bloco.TAPETE,
+          meta: 0,
+          slot: 0,
+          ...extra,
+        });
+        const q = passo(n).get('ana')!;
+        expect(
+          recusasDe(q).map((r) => r.comando),
+          nome,
+        ).toEqual([id]);
+        expect(n.estado.tapetes.tamanho, nome).toBe(0);
+        // a tela volta: o tapete previsto sai e as seis células vêm como são
+        expect(q.tapetesMudados, nome).toEqual([{ x: T.x, y: YP, z: T.z, fora: true }]);
+        const voltam = new Set((q.blocos ?? []).map((b) => `${b.x},${b.y},${b.z}`));
+        for (const c of celulasDoTapete(T.x, YP, T.z, 0))
+          expect(voltam.has(`${c.x},${c.y},${c.z}`), nome).toBe(true);
+      }
+      // e o pedido certo entra (a prova de que o de cima recusa pelo motivo certo)
+      const n = abrir(modo);
+      porTapete(n, 'ana', T.x, T.z, 0);
+      expect(recusasDe(passo(n).get('ana'))).toEqual([]);
+      expect(n.estado.tapetes.tamanho).toBe(1);
+    });
+
+    if (modo === 'nuvem')
+      it('a florzinha da amiga embaixo: o tapete não entra (a proteção de colocar)', () => {
+        const n = abrir(modo);
+        // a flor da Ana (dona do mundo) no meio de onde a Bia quer o tapete
+        mandar(n, 'ana', {
+          t: 'colocar',
+          x: T.x,
+          y: YP,
+          z: T.z + 3,
+          bloco: Bloco.FLOR,
+          meta: 0,
+          slot: 0,
+        });
+        // a flor da própria Bia
+        mandar(n, 'bia', {
+          t: 'colocar',
+          x: T.x + 2,
+          y: YP,
+          z: T.z + 1,
+          bloco: Bloco.FLOR,
+          meta: 0,
+          slot: 0,
+        });
+        passo(n);
+        expect(bloco(n, T.x, YP, T.z + 3)).toBe(Bloco.FLOR);
+        expect(bloco(n, T.x + 2, YP, T.z + 1)).toBe(Bloco.FLOR);
+        const id = porTapete(n, 'bia', T.x, T.z + 2);
+        const q = passo(n).get('bia')!;
+        expect(recusasDe(q).find((r) => r.comando === id)?.protecao).toMatchObject({
+          motivo: 'amigo',
+          dono: 'Ana',
+        });
+        expect(n.estado.tapetes.tamanho).toBe(0);
+        // em cima da flor dela mesma, entra (a flor fica)
+        porTapete(n, 'bia', T.x, T.z);
+        expect(recusasDe(passo(n).get('bia'))).toEqual([]);
+        expect(n.estado.tapetes.em(T.x + 2, YP, T.z + 1)).toMatchObject({ x: T.x, z: T.z });
+        expect(bloco(n, T.x + 2, YP, T.z + 1)).toBe(Bloco.FLOR);
+      });
 
     it('não entra sem chão, em cima de outro tapete ou na água; ninguém fica preso', () => {
       let n = abrir(modo);
