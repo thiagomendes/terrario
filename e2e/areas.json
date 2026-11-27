@@ -49,6 +49,8 @@
       "gatilhos": [
         "src/jogo/construir.ts",
         "src/jogo/moveis.ts",
+        "src/jogo/mesa.ts",
+        "src/jogo/ligados.ts",
         "src/jogo/loteMoveis.ts",
         "src/jogo/tapetes.ts",
         "src/player/alvo.ts",

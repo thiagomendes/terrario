@@ -132,7 +132,15 @@ type ComandoSemSeq =
   /** Vários blocos de uma vez (ferramentas de construção, desfazer, espelho): só no criativo. */
   | { t: 'editar'; id: number; lote: BlocoMudado[] }
   /** Usar um bloco: porta, baú, fornalha, cama (id: a porta é prevista na tela). */
-  | { t: 'usar'; id?: number; x: number; y: number; z: number }
+  | {
+      t: 'usar';
+      id?: number;
+      x: number;
+      y: number;
+      z: number;
+      /** Spec 039b: o lugar da mochila com a comida que vai para a mesa (saneado). */
+      slot?: number;
+    }
   | { t: 'fecharConteiner' }
   | {
       t: 'transacao';
@@ -453,6 +461,11 @@ export type EventoNucleo =
   /** A criatura da noite mansa fugiu deste jogador (o diário conta como espantar). */
   | { e: 'espantou'; id: number; tipo: TipoSer }
   | { e: 'comeu'; item: string }
+  /**
+   * Spec 039b: a comida posta na mesa (a âncora dela), para quem está perto ver o prato; sem
+   * estado e sem salvar. `quantos`: os que comem juntos.
+   */
+  | { e: 'prato'; x: number; y: number; z: number; item: string; quantos: number }
   | { e: 'dano'; causa: CausaDano; qtd: number }
   | { e: 'morte'; causa: CausaDano }
   /** Levar o jogador a (x, z); y indefinido = topo livre do terreno. */
@@ -597,7 +610,24 @@ export interface Quadro {
    * âncora do que saiu), com as correções deste jogador no fim (o tapete previsto e recusado).
    */
   tapetesMudados?: TapeteMudado[];
+  /**
+   * Spec 039b: os móveis ligados perto (a TV, o som, o fogão cozinhando e a geladeira aberta), a
+   * lista inteira de cada vez: vai no primeiro quadro, em toda mudança e a cada 20 passos, para
+   * quem está até 32 blocos (as 16 mais perto). Uma lista vazia apaga as de antes; sem o campo,
+   * nada mudou.
+   */
+  moveisLigados?: MovelLigado[];
 }
+
+/**
+ * Spec 039b: um móvel ligado, pela âncora. `programa`: o desenho da TV (0 a 3) ou a música do
+ * som (0); `desde`: quando começou (s do núcleo). O fogão leva a receita (o que sai) e o
+ * progresso 0..1; a geladeira, só que está aberta.
+ */
+export type MovelLigado =
+  | { tipo: 'tv' | 'som'; x: number; y: number; z: number; programa: number; desde: number }
+  | { tipo: 'fogao'; x: number; y: number; z: number; receita: string; progresso: number }
+  | { tipo: 'geladeira'; x: number; y: number; z: number };
 
 /** Parte do salvamento que pertence ao núcleo (o cliente junta a câmera, o diário e o mapa). */
 export interface SalvoNucleo {

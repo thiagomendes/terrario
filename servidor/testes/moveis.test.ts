@@ -374,8 +374,26 @@ describe('a geladeira e o fogão na sala da nuvem (spec 039b, T01a)', () => {
       id: 6,
       mudancas: [{ onde: 'fog', i: 0, antes: null, depois: { item: 'carne_crua', qtd: 64 } }],
     });
+    // spec 039b (T01b): a TV ligada no primeiro desenho
+    const TV = { x: X + 1, y: Y, z: Z + 4 };
+    await mandar({
+      t: 'colocar',
+      id: 7,
+      ...TV,
+      bloco: Bloco.TV,
+      meta: 0,
+      slot: 0,
+      extras: celulasDoMovel(Bloco.TV, TV.x, TV.y, TV.z, 0)
+        .slice(1)
+        .map(({ x, y, z }) => ({ x, y, z })),
+    });
+    await mandar({ t: 'usar', id: 8, ...TV });
     await avancar(20_000);
     const fogao = () => nucleo().estado.conteineres.fogao(FOG.x, FOG.y, FOG.z);
+    const tvNoPrimeiro = (c: ReturnType<typeof canal>) =>
+      quadros(c)
+        .find((q) => q.primeiro)
+        ?.moveisLigados?.find((e) => e.tipo === 'tv');
     expect(fogao().saida?.item).toBe('carne_assada');
     expect(nucleo().estado.conteineres.geladeira(GEL.x, GEL.y, GEL.z)).toEqual(cheia);
 
@@ -388,6 +406,13 @@ describe('a geladeira e o fogão na sala da nuvem (spec 039b, T01a)', () => {
     await avancar(200);
     const bv = b.recebidas.find((m) => m.t === 'bemvindo') as Extract<RespostaServidor, { t: 'bemvindo' }>;
     expect(JSON.stringify(bv.edicoes)).toContain(String(Bloco.GELADEIRA));
+    // e o primeiro quadro dela já traz a TV ligada e o fogão cozinhando
+    expect(tvNoPrimeiro(b)).toMatchObject({ ...TV, programa: 0 });
+    expect(
+      quadros(b)
+        .find((q) => q.primeiro)
+        ?.moveisLigados?.some((e) => e.tipo === 'fogao'),
+    ).toBe(true);
 
     // a Ana cai e volta: o painel volta fechado e o fogão continua
     g.caiu(a);
@@ -400,6 +425,7 @@ describe('a geladeira e o fogão na sala da nuvem (spec 039b, T01a)', () => {
     await avancar(200);
     expect(nucleo().estado.jogadores.get('ana')!.conteiner).toBeNull();
     expect(quadros(a2).find((q) => q.primeiro)!.conteiner ?? null).toBeNull();
+    expect(tvNoPrimeiro(a2)).toMatchObject({ ...TV, programa: 0 });
 
     // todos saem; a sala dorme no meio do fogão e acorda com o mesmo
     g.caiu(a2);
@@ -414,6 +440,9 @@ describe('a geladeira e o fogão na sala da nuvem (spec 039b, T01a)', () => {
     await avancar(200);
     expect(nucleo().estado.mundo.bloco(GEL.x, Y + 1, GEL.z)).toBe(Bloco.GELADEIRA);
     expect(nucleo().estado.conteineres.geladeira(GEL.x, GEL.y, GEL.z)).toEqual(cheia);
+    // a TV não vai salva: a sala acorda com ela desligada
+    expect(tvNoPrimeiro(a3)).toBeUndefined();
+    expect(nucleo().estado.mundo.bloco(TV.x, Y + 1, TV.z)).toBe(Bloco.TV);
     const f = fogao();
     expect(f.entrada?.item).toBe('carne_crua');
     expect(f.saida?.item).toBe('carne_assada');

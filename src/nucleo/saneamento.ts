@@ -143,6 +143,8 @@ export function sanear(c: unknown): Comando | null {
         ? (o as unknown as Comando)
         : null;
     case 'usar':
+      // spec 039b: o `slot` (a comida da mesa) é opcional, mas quando vem é um lugar da mochila
+      if ('slot' in o && !inteiro(o.slot, 0, SLOTS - 1)) return null;
       return celula(o as Partial<Pos>) ? (o as unknown as Comando) : null;
     case 'conferir':
       return inteiro(o.id, 0, Number.MAX_SAFE_INTEGER) &&

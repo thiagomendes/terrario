@@ -77,7 +77,18 @@ import { povoadosPerto } from '../jogo/povoados';
 import { LIMITE_CRIADOS } from '../jogo/criacao';
 import { abreEFecha, alternado, ehPorta } from '../world/portas';
 import { criarConteineres, ehLugarDeConteiner, TAMANHO_BAU } from '../jogo/conteineres';
-import { TAMANHO_GELADEIRA, mudancaAceita } from '../jogo/fogao';
+import { TAMANHO_GELADEIRA, mudancaAceita, noFogao } from '../jogo/fogao';
+import { aoLadoDaMesa, direcaoParaAMesa, lugaresDaMesa, quemComeNaMesa } from '../jogo/mesa';
+import {
+  ALCANCE_LIGADOS,
+  MAX_LIGADOS,
+  PERTO_DA_TV,
+  TV_SOZINHA,
+  musicaAcabou,
+  tocarSom,
+  tocarTv,
+  type Ligado,
+} from '../jogo/ligados';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
 import { criarPopulacao } from '../jogo/populacao';
 import { corpoNaRua, criarTransito, type PessoaNaRua } from '../jogo/transito';
@@ -189,6 +200,7 @@ import {
   type BlocoMudado,
   type Comando,
   type ConteinerVisto,
+  type MovelLigado,
   type DadosJogador,
   type JogadorVisto,
   type PerfilJogador,
@@ -317,6 +329,8 @@ interface Jogador {
   acoes: [number, number, number];
   /** Spec 032: o que está comendo e até quando (o relógio do núcleo); null sem refeição. */
   comendo: { item: string; ate: number } | null;
+  /** Spec 039b: quantos móveis ligados o último `moveisLigados` deste jogador levou. */
+  ligadosVistos: number;
   /** Passo da última telemetria aceita (para conferir se a posição nova é possível). */
   passoTelemetria: number;
   /** O núcleo mandou o jogador para longe (renascer): a próxima posição pode saltar. */
@@ -1191,6 +1205,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       sentado: null,
       acoes: [0, 0, 0],
       comendo: null,
+      ligadosVistos: 0,
       passoTelemetria: n,
       saltoPermitido: true,
       passoGesto: -Infinity,
@@ -1763,6 +1778,10 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
     const { x, y, z, bloco } = c;
     let { meta } = c;
+    // spec 039b: a cadeira posta colada à mesa vira de frente para ela (a tela prevê pela mesma
+    // conta); no lote, no colar e no espelho do criativo a direção fica como veio
+    const paraAMesa = bloco === Bloco.CADEIRA ? direcaoParaAMesa(leitorMoveis, x, y, z) : null;
+    if (paraAMesa !== null && ehMetaDeAncora(meta)) meta = paraAMesa;
     // spec 039: o móvel ocupa as células da tabela (a âncora é a do toque, com a parte 0); a
     // tela volta inteira se não entrar
     const movel = ehMovel(bloco) ? celulasDoMovel(bloco, x, y, z, meta & 3) : null;
@@ -2415,7 +2434,154 @@ export function criarNucleo(op: OpcoesNucleo) {
       else if (deitaNoSofa) {
         if (deitarNoSofa(j, m)) depoisDeDeitar(j);
       } else sentarNoMovel(j, m, c);
+    } else if (b === Bloco.MESA) {
+      // spec 039b: a comida posta na mesa alimenta os sentados em volta (até 4)
+      const m = movelEm(leitorMoveis, x, y, z);
+      if (m) porNaMesa(j, m, c);
+    } else if (b === Bloco.TV || b === Bloco.SOM) {
+      // spec 039b: a TV passa os desenhos (o quinto toque desliga) e o som toca a musiquinha
+      const m = movelEm(leitorMoveis, x, y, z);
+      if (m) tocarLigado(m);
     }
+  }
+
+  // ------------------------------------------------------------ a mesa (spec 039b, T01b)
+
+  /**
+   * Quem está sentado em volta da mesa, ou em pé ao lado dela, com comida na mão, põe o prato:
+   * os sentados em volta comem juntos (até 4), cada um uma refeição inteira, como no `comer`.
+   * Sem ninguém para comer, nada sai da mochila e a criança ouve o "não". Vale para o visitante
+   * e no criativo; não dá moedinha nem missão além do que comer já dá.
+   */
+  function porNaMesa(j: Jogador, mesa: MovelAchado, c: Extract<Comando, { t: 'usar' }>): void {
+    const slot = c.slot ?? j.tel.slot;
+    const p = j.inventario.obter(slot);
+    const comida = p ? obterItem(p.item)?.comida : undefined;
+    const nao = (): void => {
+      j.eventos.push({ e: 'recusa', comando: c.id ?? 0, motivo: 'mesa' });
+    };
+    if (!p || !comida) return nao();
+    const lugares = lugaresDaMesa(leitorMoveis, mesa);
+    const naCadeira = (o: Jogador) => {
+      const s = o.sentado;
+      return !!s && s.chegou && !s.deitado ? { x: s.x, y: s.y, z: s.z } : null;
+    };
+    const meu = naCadeira(j);
+    const emVolta = !!meu && lugares.some((l) => l.x === meu.x && l.y === meu.y && l.z === meu.z);
+    // sentado longe (ou deitado) não alcança; em pé, só ao lado da mesa
+    if (!emVolta && (j.sentado || !aoLadoDaMesa(mesa, j.tel.x, j.tel.y, j.tel.z))) return nao();
+    const t = n * PASSO;
+    const sentados: { id: string; lugar: Cel; o: Jogador }[] = [];
+    for (const o of jogadores.values()) {
+      const lugar = naCadeira(o);
+      // quem já está comendo termina a sua refeição e fica fora da conta
+      if (!lugar || o.sobrevivencia.estado.morto || (o.comendo && t < o.comendo.ate)) continue;
+      sentados.push({ id: o.id, lugar, o });
+    }
+    const comem = quemComeNaMesa(lugares, sentados, j.id);
+    if (!comem.length) return nao();
+    j.inventario.remover(slot, 1);
+    for (const { o } of comem) {
+      if (modo === 'sobrevivencia') o.sobrevivencia.comer(comida.fome, comida.saturacao);
+      o.comendo = { item: p.item, ate: t + DURACAO_REFEICAO };
+      o.eventos.push({ e: 'comeu', item: p.item });
+      o.acoes[2]++;
+    }
+    const a = mesa.ancora;
+    for (const o of jogadores.values())
+      if (Math.hypot(o.tel.x - a.x - 0.5, o.tel.z - a.z - 0.5) <= ALCANCE_LIGADOS)
+        o.eventos.push({ e: 'prato', x: a.x, y: a.y, z: a.z, item: p.item, quantos: comem.length });
+  }
+
+  // ------------------------------------------- os móveis ligados (spec 039b, T01b)
+
+  /** A TV e o som ligados, pela chave da âncora (não vai salvo: ao abrir, tudo desligado). */
+  const ligados = new Map<
+    string,
+    Ligado & { tipo: 'tv' | 'som'; bloco: number; d: number; ancora: Cel; perto: number }
+  >();
+  /** Algo ligou, desligou ou trocou: o próximo quadro leva a lista de novo. */
+  let ligadosSujo = false;
+
+  function tocarLigado(m: MovelAchado): void {
+    const k = chaveDoMovel(m.ancora);
+    const tipo = m.bloco === Bloco.TV ? 'tv' : 'som';
+    const atual = ligados.get(k) ?? null;
+    const t = n * PASSO;
+    const novo = tipo === 'tv' ? tocarTv(atual, t) : tocarSom(atual, t);
+    if (novo === undefined) return;
+    if (novo === null) ligados.delete(k);
+    else {
+      const e = { ...novo, tipo, bloco: m.bloco, d: m.d, ancora: { ...m.ancora }, perto: t } as const;
+      ligados.set(k, e);
+    }
+    ligadosSujo = true;
+  }
+
+  /**
+   * Uma vez por segundo: sai o que não é mais o mesmo móvel na âncora (a regra do
+   * `cuidarDosAssentos`), a musiquinha que acabou e a TV sem ninguém perto há 3 minutos.
+   */
+  function cuidarDosLigados(): void {
+    const t = n * PASSO;
+    for (const [k, e] of ligados) {
+      const m = movelEm(leitorMoveis, e.ancora.x, e.ancora.y, e.ancora.z);
+      const mesmo =
+        !!m &&
+        m.bloco === e.bloco &&
+        m.d === e.d &&
+        m.ancora.x === e.ancora.x &&
+        m.ancora.y === e.ancora.y &&
+        m.ancora.z === e.ancora.z;
+      if (e.tipo === 'tv')
+        for (const o of jogadores.values())
+          if (Math.hypot(o.tel.x - e.ancora.x - 0.5, o.tel.z - e.ancora.z - 0.5) <= PERTO_DA_TV)
+            e.perto = t;
+      const acabou = e.tipo === 'som' ? musicaAcabou(e, t) : t - e.perto >= TV_SOZINHA;
+      if (!mesmo || acabou) {
+        ligados.delete(k);
+        ligadosSujo = true;
+      }
+    }
+  }
+
+  /** O que muda a lista sem tirar nem pôr (o fogão que começa ou para; a geladeira aberta). */
+  let chaveDosLigados = '';
+  function chaveDosLigadosAgora(): string {
+    const partes: string[] = [];
+    for (const [k, f] of conteineres.fogoesCozinhando()) partes.push(`f${k}:${f.entrada?.item}`);
+    for (const o of jogadores.values())
+      if (o.conteiner?.tipo === 'geladeira')
+        partes.push(`g${o.conteiner.x},${o.conteiner.y},${o.conteiner.z}`);
+    return partes.sort().join('|');
+  }
+
+  /** Os móveis ligados perto de `j` (as 16 mais perto, até 32 blocos). */
+  function ligadosPerto(j: Jogador): MovelLigado[] {
+    const todos: MovelLigado[] = [];
+    for (const e of ligados.values()) {
+      const desde = Math.round(e.desde * 1000) / 1000;
+      todos.push({ tipo: e.tipo, ...e.ancora, programa: e.programa, desde });
+    }
+    for (const [k, f] of conteineres.fogoesCozinhando()) {
+      const [x, y, z] = k.split(',').map(Number);
+      const receita = f.entrada ? noFogao(f.entrada.item) : undefined;
+      const progresso = Math.round(f.progresso * 1000) / 1000;
+      if (receita) todos.push({ tipo: 'fogao', x, y, z, receita, progresso });
+    }
+    const abertas = new Set<string>();
+    for (const o of jogadores.values())
+      if (o.conteiner?.tipo === 'geladeira') {
+        const { x, y, z } = o.conteiner;
+        const k = `${x},${y},${z}`;
+        if (!abertas.has(k)) todos.push({ tipo: 'geladeira', x, y, z });
+        abertas.add(k);
+      }
+    const dist = (e: MovelLigado) => Math.hypot(e.x + 0.5 - j.tel.x, e.z + 0.5 - j.tel.z);
+    return todos
+      .filter((e) => dist(e) <= ALCANCE_LIGADOS)
+      .sort((a, b) => dist(a) - dist(b) || a.x - b.x || a.z - b.z || a.y - b.y)
+      .slice(0, MAX_LIGADOS);
   }
 
   /**
@@ -3552,6 +3718,14 @@ export function criarNucleo(op: OpcoesNucleo) {
     // todos deitados (alguém saiu da sala, ou levantou e deitou de novo), a noite passa
     cuidarDosAssentos();
     conferirSono();
+    // spec 039b: a TV e o som que saem (uma vez por segundo); o fogão que começa ou para e a
+    // geladeira que abre ou fecha mandam a lista de novo
+    if (n % 20 === 0) cuidarDosLigados();
+    const chave = chaveDosLigadosAgora();
+    if (chave !== chaveDosLigados) {
+      chaveDosLigados = chave;
+      ligadosSujo = true;
+    }
     // spec 039b: na nuvem, o contêiner aberto fecha quando a criança sai do alcance (uma vez por
     // segundo; a transação de longe já era recusada)
     if (!confiar && n % 20 === 0)
@@ -3777,6 +3951,13 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (!j.iniciado && tapetes.tamanho) q.tapetes = tapetes.todos();
       if (mudados.length) q.tapetesMudados = mudados;
       j.correcoesTapete = [];
+      // spec 039b: os móveis ligados perto, a lista inteira (no primeiro quadro, em toda mudança
+      // e a cada 20 passos); a lista vazia só vai para apagar a que a tela tinha
+      if (!j.iniciado || ligadosSujo || n % 20 === 0) {
+        const perto = ligadosPerto(j);
+        if (perto.length || j.ligadosVistos) q.moveisLigados = perto;
+        j.ligadosVistos = perto.length;
+      }
       if (!j.iniciado) {
         q.primeiro = true;
         j.iniciado = true;
@@ -3836,6 +4017,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     almaPendente.clear();
     vilaSuja = false;
     baileSujo = false;
+    ligadosSujo = false;
     return out;
   }
 
@@ -3989,8 +4171,10 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (!j) return;
       // spec 039 (T04): quem volta de uma queda volta de pé (a tela nova não sabe do assento)
       levantar(j);
-      // spec 039b: e com o contêiner fechado (a tela nova não tem o painel aberto)
+      // spec 039b: e com o contêiner fechado (a tela nova não tem o painel aberto); os móveis
+      // ligados vão de novo no primeiro quadro
       j.conteiner = null;
+      j.ligadosVistos = 0;
       j.iniciado = false;
       j.inventarioSujo = true;
       j.transitoSujo = true;

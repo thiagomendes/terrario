@@ -38,6 +38,7 @@ import {
   pecaSolta,
   type LeitorMoveis,
 } from '../jogo/moveis';
+import { direcaoParaAMesa } from '../jogo/mesa';
 import { celulasDoTapete, recusaPorTapete } from '../jogo/tapetes';
 import {
   ehConteiner,
@@ -3877,15 +3878,19 @@ export function criarCena(
         // spec 039: o móvel ocupa as células da tabela; se alguma não estiver livre, o "não"
         // curtinho da 037 (o núcleo confere as mesmas)
         if (ehMovel(b)) {
-          const { celulas, livres } = celulasLivresDoMovel(b, x, y, z, meta & 3);
+          // spec 039b: a cadeira posta colada à mesa vira de frente para ela (a mesma conta do
+          // núcleo, para nada virar depois)
+          const paraAMesa = b === Bloco.CADEIRA ? direcaoParaAMesa(leitorMoveis, x, y, z) : null;
+          const dm = paraAMesa ?? meta & 3;
+          const { celulas, livres } = celulasLivresDoMovel(b, x, y, z, dm);
           if (!livres) {
             barramento.emitir('recusa', { motivo: 'colocar' });
             return false;
           }
           const partes = celulas
             .slice(1)
-            .map((c) => ({ x: c.x, y: c.y, z: c.z, meta: metaDoMovel(meta, c.parte) }));
-          return editarRegistrando(x, y, z, b, meta, partes);
+            .map((c) => ({ x: c.x, y: c.y, z: c.z, meta: metaDoMovel(dm, c.parte) }));
+          return editarRegistrando(x, y, z, b, dm, partes);
         }
         return editarRegistrando(x, y, z, b, meta);
       },
