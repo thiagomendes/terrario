@@ -564,9 +564,9 @@ test('prancha: junta as fotos (depois das três telas)', async ({ browser }) => 
     ${linha([q(img('tv-longe'), 'de longe, o desenho continua'), q(img('tv-longe', 'computador'), 'de longe, no computador')])}
     <h2>A geladeira, o fogão e o som</h2>
     ${linha([q(img('geladeira-0-fechada'), 'fechada'), q(img('geladeira-1-abrindo'), 'abrindo'), q(img('geladeira-2-aberta'), 'aberta'), q(img('fogao-0-desligado'), 'o fogão'), q(img('fogao-1-cozinhando'), 'cozinhando')])}
-    ${linha([q(img('som-0-parado'), 'o som parado'), q(img('som-1-tocando'), 'tocando'), q(img('mesa-0-sentada'), 'à mesa'), q(img('mesa-1-prato'), 'a comida posta')])}
-    <h2>Duas crianças comendo à mesa (o toque de verdade, numa sala com duas)</h2>
-    ${linha([q(png('mesa-duas-criancas-ana'), 'na tela da Ana: a Bia do outro lado, os pratinhos com a pipoca'), q(png('mesa-duas-criancas-bia'), 'na tela da Bia')])}
+    ${linha([q(img('som-0-parado'), 'o som parado'), q(img('som-1-tocando'), 'tocando'), q(img('som-2-tocando'), 'tocando'), q(img('fogao-2-cozinhando'), 'cozinhando, outro momento')])}
+    <h2>À mesa: sozinha e com duas crianças (o toque de verdade, numa sala com duas)</h2>
+    ${linha([q(img('mesa-0-sentada'), 'à mesa'), q(img('mesa-1-prato'), 'a comida posta'), q(png('mesa-duas-criancas-ana'), 'na tela da Ana: a Bia do outro lado'), q(png('mesa-duas-criancas-bia'), 'na tela da Bia')])}
     <h2>De fora e de dentro</h2>
     ${linha([q(img('sala-dia'), 'sala'), q(img('cozinha-dia'), 'cozinha'), q(img('sala-noite'), 'sala de noite'), q(img('cozinha-noite'), 'cozinha de noite')])}
     ${linha([q(img('sala-dentro-dia'), 'sala, de dentro'), q(img('cozinha-dentro-dia'), 'cozinha, de dentro'), q(img('sala-dentro-noite'), 'sala de noite'), q(img('cozinha-dentro-noite'), 'cozinha de noite')])}
