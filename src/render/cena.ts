@@ -1220,6 +1220,8 @@ export interface EstadoDepuracao {
   };
   /** Testes: o bloco que o destaque (contorno) marca agora, ou null. */
   destaque?: () => { x: number; y: number; z: number } | null;
+  /** Spec 039b (testes): a caixa do contorno da mira (x0, y0, z0, x1, y1, z1, da célula mirada). */
+  caixaDoDestaque?: () => number[] | null;
   /** Testes: onde um ponto do mundo aparece na tela (coordenadas CSS), ou null atrás da câmera. */
   telaDoPonto?: (x: number, y: number, z: number) => { x: number; y: number } | null;
   /** Testes: vira o olhar para o centro da tela mirar este ponto do mundo. */
@@ -4420,14 +4422,14 @@ export function criarCena(
     // deitada na cama, a câmera vem do pé e olha para a cabeceira (-vetor(d))
     const base = ((deitadaNaCama || aMesa ? a.d + 2 : a.d) & 3) * (Math.PI / 2);
     const deYaw = camera.rotation.y;
-    let dYaw = (base + (aMesa ? 1.15 : 0.62) - deYaw) % (Math.PI * 2);
+    let dYaw = (base + (aMesa ? 0.95 : 0.62) - deYaw) % (Math.PI * 2);
     if (dYaw > Math.PI) dYaw -= Math.PI * 2;
     if (dYaw < -Math.PI) dYaw += Math.PI * 2;
     giroAoSentar = {
       deYaw,
       dYaw,
       dePitch: camera.rotation.x,
-      atePitch: deitadaNaCama ? 0.75 : aMesa ? 0.2 : 0.42,
+      atePitch: deitadaNaCama ? 0.75 : aMesa ? 0.5 : 0.42,
       t0: performance.now() / 1000,
     };
   }
@@ -6107,6 +6109,11 @@ export function criarCena(
   const d0 = (a: { x: number; y: number; z: number } | null) =>
     a ? { x: a.x, y: a.y, z: a.z } : null;
   estado.destaque = () => alvoDestacado;
+  /** Spec 039b (testes): a caixa do contorno da mira agora, a partir da célula mirada. */
+  estado.caixaDoDestaque = () => {
+    const a = alvoDestacado;
+    return a ? [...caixaVisual(a.x, a.y, a.z)] : null;
+  };
   function atualizarDestaque(): void {
     // no modo foto a mira não marca bloco (a foto sai limpa); no toque só o dedo marca: sem
     // dedo na tela, nada de contorno no bloco do centro (a criança toca onde quer, e o

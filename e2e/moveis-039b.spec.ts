@@ -301,6 +301,19 @@ test('pôr e tocar no aparelho: a geladeira guarda (só comida), o fogão cozinh
   await ir(p, M.tv.x + 1, M.tv.z - 3.5, y);
   await mirarAte(p, M.tv);
   await p.waitForTimeout(600);
+  // a caixa do contorno cobre as duas células de largura e as duas de altura (a TV olha para +z:
+  // cresce para +x e para cima)
+  const { caixa, mirada } = await p.evaluate(() => ({
+    caixa: window.__brumaluz!.caixaDoDestaque!()!,
+    mirada: window.__brumaluz!.destaque!()!,
+  }));
+  expect(caixa[3] - caixa[0]).toBeGreaterThan(1.5);
+  expect(caixa[4] - caixa[1]).toBeGreaterThan(1.2);
+  // as duas colunas da TV (x e x + 1) ficam dentro da caixa, de qualquer célula mirada
+  const x0 = mirada.x + caixa[0];
+  const x1 = mirada.x + caixa[3];
+  expect(x0).toBeLessThanOrEqual(M.tv.x + 0.2);
+  expect(x1).toBeGreaterThanOrEqual(M.tv.x + 1.8);
   await p.screenshot({ path: `${PASTA}/tv-contorno-da-mira-pc.png` });
   passo('tv e som');
 
@@ -446,10 +459,13 @@ test('com amigas: quem chega vê o desenho da TV, e a mesa com duas sentadas com
   }
   // a Ana põe a pipoca da mão na mesa: as duas comem (o prato e os coraçõezinhos para as duas)
   await naMao(ana, 'pipoca', 2, 0);
+  // (o toque na mesa, como o dedo faz: a mira vai à mesa e a câmera volta para onde estava)
   await ana.evaluate((m) => {
     const e = window.__brumaluz!;
+    const [pitch, yaw] = e.rotacao!;
     e.mirarBloco!(m.x, m.y, m.z);
     e.usarOuColocar!();
+    e.apontar!(yaw, pitch);
   }, MESA);
   await expect.poll(() => ana.evaluate(() => window.__brumaluz!.pratosVistos!()), { timeout: 5000 }).toBe(1);
   await expect.poll(() => bia.evaluate(() => window.__brumaluz!.pratosVistos!()), { timeout: 5000 }).toBe(1);
