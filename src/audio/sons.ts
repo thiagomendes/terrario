@@ -92,7 +92,15 @@ export type EventoSom =
   | 'deitar'
   | 'portas'
   | 'torneira'
-  | 'clique';
+  | 'clique'
+  /**
+   * Spec 039b (T04): a porta da geladeira, o fogão cozinhando, a TV ligando e o comer junto na
+   * mesa (a musiquinha do som é `somMoveis.ts`).
+   */
+  | 'geladeira'
+  | 'fogao'
+  | 'tvLiga'
+  | 'comerJunto';
 
 export const EVENTOS_SOM: readonly EventoSom[] = [
   'golpe',
@@ -153,6 +161,10 @@ export const EVENTOS_SOM: readonly EventoSom[] = [
   'portas',
   'torneira',
   'clique',
+  'geladeira',
+  'fogao',
+  'tvLiga',
+  'comerJunto',
 ];
 
 export const VARIACOES_POR_EVENTO = 4;
@@ -268,6 +280,11 @@ const BASE_EVENTO: Record<EventoSom, BaseEvento> = {
   portas: { ganho: 0.16, duracao: 0.4, ruido: 0.3, escalaTom: 1, grupoAudio: 'efeitos' },
   torneira: { ganho: 0.12, duracao: 0.9, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
   clique: { ganho: 0.14, duracao: 0.3, ruido: 0.1, escalaTom: 1, grupoAudio: 'efeitos' },
+  // spec 039b (T04): curtos e macios, abaixo do golpe de bloco
+  geladeira: { ganho: 0.15, duracao: 0.45, ruido: 0.6, escalaTom: 1, grupoAudio: 'efeitos' },
+  fogao: { ganho: 0.1, duracao: 0.7, ruido: 0.7, escalaTom: 1, grupoAudio: 'efeitos' },
+  tvLiga: { ganho: 0.13, duracao: 0.55, ruido: 0.1, escalaTom: 1, grupoAudio: 'efeitos' },
+  comerJunto: { ganho: 0.16, duracao: 0.5, ruido: 0.2, escalaTom: 1, grupoAudio: 'efeitos' },
 };
 
 const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
@@ -323,6 +340,10 @@ const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
   portas: { frequencia: 330, filtroHz: 1400 },
   torneira: { frequencia: 900, filtroHz: 1600 },
   clique: { frequencia: 1046.5, filtroHz: 3200 },
+  geladeira: { frequencia: 523.25, filtroHz: 500 },
+  fogao: { frequencia: 700, filtroHz: 1100 },
+  tvLiga: { frequencia: 587.33, filtroHz: 3000 },
+  comerJunto: { frequencia: 659.25, filtroHz: 4000 },
 };
 
 export const AMPLITUDE_TOM = 0.12;
@@ -1144,6 +1165,37 @@ function desenharNovo(
       pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 3, 0.2, 0.02, 0.001));
       pecas.push(tom(ctx, out, t0 + 0.05, 'sine', f, f, 0.12, 0.2, 0.01));
       break;
+    // spec 039b (T04): a parte 2 dos móveis
+    case 'geladeira':
+      // a porta que desgruda macia ("fump" da borracha) e um "tlim" frio de vidrinho
+      pecas.push(ruido(ctx, out, t0, 'lowpass', par.filtroHz, 0.8, 0.55, 0.14, 0.01));
+      pecas.push(tom(ctx, out, t0, 'sine', f * 0.5, f * 0.35, 0.3, 0.12, 0.004));
+      pecas.push(tom(ctx, out, t0 + 0.12, 'sine', f * 2, f * 2, 0.12, 0.3, 0.004));
+      break;
+    case 'fogao':
+      // a panelinha cozinhando: umas bolhinhas que estouram miúdas, por cima de um chiado manso
+      pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 0.9, 0.18, 0.6, 0.15));
+      for (let i = 0; i < 5; i++) {
+        const b = f * (0.9 + sorte() * 0.5);
+        pecas.push(tom(ctx, out, t0 + 0.05 + i * 0.11, 'sine', b, b * 1.5, 0.16, 0.05, 0.002));
+      }
+      break;
+    case 'tvLiga':
+      // a TV ligando: o "tic" do botão e um brilho que sobe devagar (nada de chiado alto)
+      pecas.push(tom(ctx, out, t0, 'sine', f * 1.2, f, 0.35, 0.04, 0.001));
+      pecas.push(tom(ctx, out, t0 + 0.06, 'triangle', f * 0.5, f * 1.5, 0.16, 0.35, 0.05));
+      pecas.push(tom(ctx, out, t0 + 0.3, 'sine', f * 2, f * 2, 0.08, 0.2, 0.01));
+      break;
+    case 'comerJunto':
+      // todos comem juntos na mesa: três notinhas que sobem (Dó, Mi, Sol) e uma mordidinha
+      for (const [k, at] of [
+        [1, 0],
+        [1.26, 0.11],
+        [1.5, 0.22],
+      ] as const)
+        pecas.push(tom(ctx, out, t0 + at, 'sine', f * k, f * k, 0.3, 0.25, 0.005));
+      pecas.push(ruido(ctx, out, t0 + 0.34, 'bandpass', 2200, 1.6, 0.25, 0.05, 0.002));
+      break;
     default:
       pecas.push(tom(ctx, out, t0, 'sine', f, f, 0.3, 0.05));
   }
@@ -1221,6 +1273,11 @@ export const SONS_NOVOS_019: readonly EventoSom[] = [
   'portas',
   'torneira',
   'clique',
+  // (spec 039b, T04: a parte 2)
+  'geladeira',
+  'fogao',
+  'tvLiga',
+  'comerJunto',
 ];
 
 let observador: ((evento: EventoSom) => void) | null = null;

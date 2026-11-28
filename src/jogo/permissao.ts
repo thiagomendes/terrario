@@ -32,6 +32,9 @@ export type MotivoProtecao =
   | 'passagem'
   | 'bau'
   | 'fornalha'
+  /** Spec 039b: a geladeira e o fogão de outra pessoa (como o baú e a fornalha). */
+  | 'geladeira'
+  | 'fogao'
   | 'bicho'
   /** Spec 014: célula de obra do canteiro (só o bloco da planta entra; o posto não sai). */
   | 'obra';
@@ -105,14 +108,22 @@ function camaDaGeracaoTrocada(m: MundoDaRegra, x: number, y: number, z: number):
   return m.gerado(x, y, z) === Bloco.CAMA && m.bloco(x, y, z) !== Bloco.CAMA;
 }
 
-/** Baú e fornalha são contêineres (abrir segue a mesma regra); o resto, null. */
+/**
+ * Baú e fornalha são contêineres (abrir segue a mesma regra); spec 039b: a geladeira e o fogão
+ * também (qualquer parte deles); o resto, null.
+ */
 export function ehConteiner(b: number): boolean {
   return motivoDoBloco(b) !== null;
 }
 
-function motivoDoBloco(b: number): 'bau' | 'fornalha' | null {
+/** O tipo de contêiner do bloco (o motivo da recusa), ou null. */
+export type TipoConteiner = 'bau' | 'fornalha' | 'geladeira' | 'fogao';
+
+export function motivoDoBloco(b: number): TipoConteiner | null {
   if (b === Bloco.BAU) return 'bau';
   if (b === Bloco.FORNALHA || b === Bloco.FORNALHA_ACESA) return 'fornalha';
+  if (b === Bloco.GELADEIRA) return 'geladeira';
+  if (b === Bloco.FOGAO) return 'fogao';
   return null;
 }
 
@@ -224,7 +235,7 @@ export function recusaConteiner(
   x: number,
   y: number,
   z: number,
-  tipo?: 'bau' | 'fornalha',
+  tipo?: TipoConteiner,
 ): RecusaProtecao | null {
   const motivo = tipo ?? motivoDoBloco(m.bloco(x, y, z));
   if (!motivo || m.protecao.em(x, y, z) === Protecao.USAVEL) return null;
@@ -271,6 +282,10 @@ export function avisoDaRecusa(r: RecusaProtecao): string {
       return r.dono ? `Esse baú é${de}.` : 'Esse baú é de um amigo.';
     case 'fornalha':
       return r.dono ? `Essa fornalha é${de}.` : 'Essa fornalha é de um amigo.';
+    case 'geladeira':
+      return r.dono ? `Essa geladeira é${de}.` : 'Essa geladeira é de um amigo.';
+    case 'fogao':
+      return r.dono ? `Esse fogão é${de}.` : 'Esse fogão é de um amigo.';
     case 'bicho':
       return r.dono ? `Esse bichinho é${de}.` : 'Esse bichinho é de um amigo.';
     case 'amigo':

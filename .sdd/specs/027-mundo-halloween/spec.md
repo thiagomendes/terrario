@@ -216,13 +216,13 @@ A mesma regra da Vila Neon: **menos recurso, mais acabamento**, uma parte de cad
 | Parte | O que entra | Missões | Moedinhas | `VERSAO_REDE` |
 | --- | --- | --- | --- | --- |
 | **1. A vila da festa** | o mundo registrado, o céu, os blocos, o mapa inteiro; a Praça da Abóbora (abóbora gigante, palco, barracas), a Rua das Casinhas Tortas, o Bosque das Lanternas e a Horta; a Casa da Vovó, a Loja e o Castelinho **por fora**, como fachada acabada e de porta fechada; os moradores (com o abraço do Bento), os bichos e as fantasias do tema; comprar e comer; a música e os sons; a banca; a varinha | n1 a n5 | 22 | 18 |
-| **2. Por dentro** | a Casa da Vovó por dentro (caldeirão, vassoura na parede, o Tufinho no sofá), a Loja de Fantasias (cabides e espelho mágico), o Castelinho (escorregador em espiral, órgão, quadros que piscam); a banda da festa no palco | n6 a n8 | 15 | 20 |
-| **3. Os passeios** | a vassoura-patinete, o Trem das Risadas com o túnel, o carrossel de morcegos e o balanço de teia | n9 e n10 | 8 | 21 |
+| **2. Por dentro** | a Casa da Vovó por dentro (caldeirão, vassoura na parede, o Tufinho no sofá), a Loja de Fantasias (cabides e espelho mágico), o Castelinho (escorregador em espiral, órgão, quadros que piscam); a banda da festa no palco | n6 a n8 | 15 | 21 |
+| **3. Os passeios** | a vassoura-patinete, o Trem das Risadas com o túnel, o carrossel de morcegos e o balanço de teia | n9 e n10 | 8 | 22 |
 
 - **Por que as missões vão junto com os lugares:** "Missões" só aparece na roda quando o mundo é reconhecido pela alma, e um mundo publicado sem missões não é um mundo completo. A parte 1 já sai com cinco.
 - **Por que comprar e comer vão na parte 1:** as barracas estão na praça onde a criança nasce, e barraca que não vende é cenário (a lição da Dona Cida, na 032). É quase todo reaproveitamento da 032.
 - **Na parte 1, as portas fechadas** da Casa da Vovó, da Loja e do Castelinho não têm placa, lona nem texto de "em breve" (a regra da Vila): a casa da Vovó tem a varanda com o caldeirão e o Tufinho, a loja tem a vitrine com cabides e chapéus, o castelinho tem a torre e as bandeirinhas. Tocar na porta faz a porta balançar e um brilhinho, sem abrir.
-- **`VERSAO_REDE`:** os números supõem que nada sobe antes (a 035, já na `main`, ficou no 17). Se outra spec subir antes, cada parte pega o próximo livre. A 039 (os móveis, parte 1) veio antes no backlog e ficou com a 19 (27 nov 2026): as partes 2 e 3 passaram para 20 e 21.
+- **`VERSAO_REDE`:** os números supõem que nada sobe antes (a 035, já na `main`, ficou no 17). Se outra spec subir antes, cada parte pega o próximo livre. A 039 (os móveis, parte 1) veio antes no backlog e ficou com a 19 (27 nov 2026), e a 039b (os móveis, parte 2) com a 20: as partes 2 e 3 passaram para 21 e 22.
 
 ## O que muda
 ### 1. O mundo registrado
@@ -475,7 +475,7 @@ De graça, como todas as fantasias dos temas, só na aba deste mundo (`NOMES_TEM
   - parte 3: as cadeiras do trem, do carrossel e do balanço, e onde estão.
 - **Comando `baile`** com saneamento em `saneamento.ts`, limite de toques por segundo e teste no modo nuvem (`confiar: false`), no caminho do comando `vila`. O que é generalizado (comprar, sentar no brinquedo) não muda o comando `vila` da Vila Neon.
 - **A previsão no cliente** usa a mesma função do núcleo, para nada piscar.
-- **`VERSAO_REDE` sobe uma vez por parte** (18, 19 e 20 se nada subir antes), porque cada parte traz comandos, eventos ou estado novos:
+- **`VERSAO_REDE` sobe uma vez por parte** (a parte 1 saiu na 18; a 19 ficou com a 039 e a 20 com a 039b, então as partes 2 e 3 vão na 21 e na 22), porque cada parte traz comandos, eventos ou estado novos:
   - parte 1: o tema novo em `IDS_TEMAS` (um servidor antigo recusaria criar o mundo), a planta `'baile'`, os blocos 117+, `MundoAlma`, as missões n1 a n5, o comando `baile`, o abraço, a varinha, as comidas e as fantasias na aparência;
   - parte 2: a casa, a loja, o castelinho, a banda e n6 a n8;
   - parte 3: as cadeiras dos passeios, a `vassoura` na aparência e n9 e n10.

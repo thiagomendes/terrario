@@ -49,6 +49,8 @@
       "gatilhos": [
         "src/jogo/construir.ts",
         "src/jogo/moveis.ts",
+        "src/jogo/mesa.ts",
+        "src/jogo/ligados.ts",
         "src/jogo/loteMoveis.ts",
         "src/jogo/tapetes.ts",
         "src/player/alvo.ts",
@@ -87,6 +89,7 @@
         "src/jogo/catalogo.ts",
         "src/jogo/receitas.ts",
         "src/jogo/fornalha.ts",
+        "src/jogo/fogao.ts",
         "src/jogo/conteineres.ts",
         "src/jogo/drops.ts",
         "src/jogo/ferramentas.ts",
@@ -100,19 +103,22 @@
         "src/ui/status.ts",
         "src/ui/abasCategoria.ts",
         "src/render/moveis/",
-        "src/render/poseMovel.ts"
+        "src/render/poseMovel.ts",
+        "src/audio/somMoveis.ts"
       ],
       "suites": [
         "ajustes-filho.spec.ts",
         "bloco-some.spec.ts",
         "capturas-039-t05.spec.ts",
+        "capturas-039b-t03.spec.ts",
         "construir-037.spec.ts",
         "cristal.spec.ts",
         "dar-item.spec.ts",
         "interacao.spec.ts",
         "inventario.spec.ts",
         "mineracao.spec.ts",
-        "moveis-039.spec.ts"
+        "moveis-039.spec.ts",
+        "moveis-039b.spec.ts"
       ]
     },
     "temas-e-mundos": {

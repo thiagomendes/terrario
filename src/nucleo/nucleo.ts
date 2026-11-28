@@ -22,6 +22,7 @@ import {
   recusaQuebrar,
   type MundoDaRegra,
   type RecusaProtecao,
+  type TipoConteiner,
 } from '../jogo/permissao';
 import { CANTEIRO_BOLO, Protecao, criarProtecaoMundo, replantioDaLavoura } from '../world/protecao';
 import {
@@ -75,7 +76,19 @@ import { TAM_LOTE, definirRegioesSemPovoado, regiaoDoChunk } from '../world/povo
 import { povoadosPerto } from '../jogo/povoados';
 import { LIMITE_CRIADOS } from '../jogo/criacao';
 import { abreEFecha, alternado, ehPorta } from '../world/portas';
-import { criarConteineres, TAMANHO_BAU } from '../jogo/conteineres';
+import { criarConteineres, ehLugarDeConteiner, TAMANHO_BAU } from '../jogo/conteineres';
+import { TAMANHO_GELADEIRA, mudancaAceita, noFogao } from '../jogo/fogao';
+import { aoLadoDaMesa, direcaoParaAMesa, lugaresDaMesa, quemComeNaMesa } from '../jogo/mesa';
+import {
+  ALCANCE_LIGADOS,
+  MAX_LIGADOS,
+  PERTO_DA_TV,
+  TV_SOZINHA,
+  musicaAcabou,
+  tocarSom,
+  tocarTv,
+  type Ligado,
+} from '../jogo/ligados';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
 import { criarPopulacao } from '../jogo/populacao';
 import { corpoNaRua, criarTransito, type PessoaNaRua } from '../jogo/transito';
@@ -189,6 +202,7 @@ import {
   type BlocoMudado,
   type Comando,
   type ConteinerVisto,
+  type MovelLigado,
   type DadosJogador,
   type JogadorVisto,
   type PerfilJogador,
@@ -289,7 +303,8 @@ interface Jogador {
   spawn: { x: number; z: number };
   /** Itens nas mãos durante a tela de inventário (cursor e grade de criação). */
   transito: Slot[];
-  conteiner: { tipo: 'bau' | 'fornalha'; abertura: number; x: number; y: number; z: number } | null;
+  /** O contêiner aberto (spec 039b: a geladeira e o fogão, na âncora do móvel). */
+  conteiner: { tipo: TipoConteiner; abertura: number; x: number; y: number; z: number } | null;
   ack: number;
   ackTransacao: number;
   inventarioSujo: boolean;
@@ -316,6 +331,8 @@ interface Jogador {
   acoes: [number, number, number];
   /** Spec 032: o que está comendo e até quando (o relógio do núcleo); null sem refeição. */
   comendo: { item: string; ate: number } | null;
+  /** Spec 039b: quantos móveis ligados o último `moveisLigados` deste jogador levou. */
+  ligadosVistos: number;
   /** Passo da última telemetria aceita (para conferir se a posição nova é possível). */
   passoTelemetria: number;
   /** O núcleo mandou o jogador para longe (renascer): a próxima posição pode saltar. */
@@ -1190,6 +1207,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       sentado: null,
       acoes: [0, 0, 0],
       comendo: null,
+      ligadosVistos: 0,
       passoTelemetria: n,
       saltoPermitido: true,
       passoGesto: -Infinity,
@@ -1589,18 +1607,19 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (b === Bloco.GRAMA_ALTA && rngPlantio() < CHANCE_SEMENTE_GRAMA)
         mundoItens.soltar('semente_trigo', 1, x + 0.5, y + 0.4, z + 0.5, rngPlantio);
     }
-    // quebrar baú ou fornalha espalha o conteúdo (o de ruína nunca aberto também)
-    if (b === Bloco.BAU || b === Bloco.FORNALHA || b === Bloco.FORNALHA_ACESA) {
+    // quebrar baú ou fornalha espalha o conteúdo (o de ruína nunca aberto também); spec 039b: a
+    // geladeira e o fogão espalham o deles (guardado na âncora, de qualquer parte quebrada)
+    if (ehConteiner(b) && !solta) {
+      const a = movel?.ancora ?? { x, y, z };
       const gerado = b === Bloco.BAU && intocado && mundo.gerado(x, y, z) === Bloco.BAU;
-      for (const p of conteineres.remover(x, y, z, gerado)) {
-        if (p) mundoItens.soltar(p.item, p.qtd, x + 0.5, y + 0.5, z + 0.5, rngDrops, p.dur);
+      for (const p of conteineres.remover(a.x, a.y, a.z, gerado)) {
+        if (p) mundoItens.soltar(p.item, p.qtd, a.x + 0.5, a.y + 0.5, a.z + 0.5, rngDrops, p.dur);
       }
-      for (const o of jogadores.values())
-        if (o.conteiner && o.conteiner.x === x && o.conteiner.y === y && o.conteiner.z === z) {
-          o.conteiner = null;
-          o.conteinerSujo = true;
-        }
+      fecharConteinerEm(a);
     }
+    // spec 039b: a TV e o som quebrados saem da lista na hora
+    if ((b === Bloco.TV || b === Bloco.SOM) && movel && ligados.delete(chaveDoMovel(movel.ancora)))
+      ligadosSujo = true;
     for (const o of jogadores.values()) {
       o.eventos.push({ e: 'quebra', x, y, z, bloco: b, meu: o === j });
       if (ehLavoura(b))
@@ -1788,6 +1807,10 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
     const { x, y, z, bloco } = c;
     let { meta } = c;
+    // spec 039b: a cadeira posta colada à mesa vira de frente para ela (a tela prevê pela mesma
+    // conta); no lote, no colar e no espelho do criativo a direção fica como veio
+    const paraAMesa = bloco === Bloco.CADEIRA ? direcaoParaAMesa(leitorMoveis, x, y, z) : null;
+    if (paraAMesa !== null && ehMetaDeAncora(meta)) meta = paraAMesa;
     // spec 039: o móvel ocupa as células da tabela (a âncora é a do toque, com a parte 0); a
     // tela volta inteira se não entrar
     const movel = ehMovel(bloco) ? celulasDoMovel(bloco, x, y, z, meta & 3) : null;
@@ -1889,6 +1912,30 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (lav) almaEvento(j.id, 'plantou');
   }
 
+  /**
+   * Spec 039b: (x, y, z) ainda é a âncora da geladeira ou do fogão inteiro? A mesma conta serve
+   * ao abrir o mundo, ao lote do criativo e ao `moveisLigados`.
+   */
+  function ancoraDoConteiner(
+    x: number,
+    y: number,
+    z: number,
+    tipo: 'geladeira' | 'fogao',
+  ): boolean {
+    const m = movelEm(leitorMoveis, x, y, z);
+    const bloco = tipo === 'geladeira' ? Bloco.GELADEIRA : Bloco.FOGAO;
+    return !!m && m.bloco === bloco && m.ancora.x === x && m.ancora.y === y && m.ancora.z === z;
+  }
+
+  /** O contêiner de (x, y, z) saiu: fecha para quem estava com ele aberto. */
+  function fecharConteinerEm(a: Cel): void {
+    for (const o of jogadores.values())
+      if (o.conteiner && o.conteiner.x === a.x && o.conteiner.y === a.y && o.conteiner.z === a.z) {
+        o.conteiner = null;
+        o.conteinerSujo = true;
+      }
+  }
+
   function editarLote(j: Jogador, c: Extract<Comando, { t: 'editar' }>): void {
     if ((modo !== 'criativo' && !confiar) || !constroiAgora(j) || c.lote.length > 20000) {
       recusar(j, c.id, 'editar', c.lote.slice(0, 20000));
@@ -1946,6 +1993,18 @@ export function criarNucleo(op: OpcoesNucleo) {
     const r = decidirLote(gruposLivres, regra, j.id, atual, corposDoLote);
     r.primeira ??= recusaTapete;
     for (const e of r.voltam) corrigir(j, e.x, e.y, e.z);
+    // spec 039b: a geladeira e o fogão que o lote cobre (a âncora de cada um, antes)
+    const cobertos = new Map<string, Cel & { tipo: 'geladeira' | 'fogao' }>();
+    for (const e of r.vai) {
+      const b0 = mundo.bloco(e.x, e.y, e.z);
+      if (b0 !== Bloco.GELADEIRA && b0 !== Bloco.FOGAO) continue;
+      const m = movelEm(leitorMoveis, e.x, e.y, e.z);
+      if (m)
+        cobertos.set(`${m.ancora.x},${m.ancora.y},${m.ancora.z}`, {
+          ...m.ancora,
+          tipo: b0 === Bloco.GELADEIRA ? 'geladeira' : 'fogao',
+        });
+    }
     for (const e of r.vai) {
       const b = e.v & 255;
       const meta = (e.v >> 8) & 255;
@@ -1965,6 +2024,14 @@ export function criarNucleo(op: OpcoesNucleo) {
         editar(e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255, j.id);
       else corrigir(j, e.x, e.y, e.z);
     }
+    // a que não é mais o móvel inteiro naquela âncora some com o que tinha (o lote é do
+    // criativo, onde o catálogo dá de tudo), e o painel de quem estava com ela fecha; a nova
+    // que o lote põe na mesma âncora começa vazia
+    for (const a of cobertos.values())
+      if (!ancoraDoConteiner(a.x, a.y, a.z, a.tipo)) {
+        conteineres.remover(a.x, a.y, a.z);
+        fecharConteinerEm(a);
+      }
   }
 
   // ------------------------------------------------------------ canteiro (spec 014, T05)
@@ -2389,20 +2456,32 @@ export function criarNucleo(op: OpcoesNucleo) {
       const m = movelEm(leitorMoveis, x, y, z);
       const novo = acesoOuApagado(b)!;
       if (m) for (const q of m.celulas) editar(q.x, q.y, q.z, novo, metaDoMovel(m.d, q.parte));
-    } else if (
-      (b === Bloco.BAU || b === Bloco.FORNALHA || b === Bloco.FORNALHA_ACESA) &&
-      !j.constroi
-    ) {
-      // quem só passeia não mexe nos baús e fornalhas dos outros
+    } else if (ehConteiner(b) && !j.constroi) {
+      // quem só passeia não mexe nos baús, fornalhas, geladeiras e fogões dos outros
       j.eventos.push({ e: 'recusa', comando: c.id ?? 0, motivo: 'visitante' });
     } else if (ehConteiner(b) && recusaConteiner(regra, j.id, x, y, z)) {
       // spec 016: o baú e a fornalha que alguém pôs abrem só para ele e para o dono do mundo
+      // (spec 039b: a geladeira e o fogão também)
       j.eventos.push({
         e: 'recusa',
         comando: c.id ?? 0,
         motivo: 'usar',
         protecao: recusaConteiner(regra, j.id, x, y, z)!,
       });
+    } else if (b === Bloco.GELADEIRA || b === Bloco.FOGAO) {
+      // spec 039b: o contêiner do móvel mora na âncora (o toque em qualquer parte abre o mesmo);
+      // a peça solta não abre nada
+      const m = movelEm(leitorMoveis, x, y, z);
+      if (!m) return;
+      const { x: ax, y: ay, z: az } = m.ancora;
+      if (b === Bloco.GELADEIRA) {
+        conteineres.geladeira(ax, ay, az);
+        j.conteiner = { tipo: 'geladeira', abertura, x: ax, y: ay, z: az };
+      } else {
+        conteineres.fogao(ax, ay, az);
+        j.conteiner = { tipo: 'fogao', abertura, x: ax, y: ay, z: az };
+      }
+      j.conteinerSujo = true;
     } else if (b === Bloco.BAU) {
       // baú sem edição no lugar foi gerado pelo mundo (ruína): vem com tesouro
       conteineres.bau(x, y, z, edicoes.obter(x, y, z) === undefined);
@@ -2442,7 +2521,165 @@ export function criarNucleo(op: OpcoesNucleo) {
       else if (deitaNoSofa) {
         if (deitarNoSofa(j, m)) depoisDeDeitar(j);
       } else sentarNoMovel(j, m, c);
+    } else if (b === Bloco.MESA) {
+      // spec 039b: a comida posta na mesa alimenta os sentados em volta (até 4)
+      const m = movelEm(leitorMoveis, x, y, z);
+      if (m) porNaMesa(j, m, c);
+    } else if (b === Bloco.TV || b === Bloco.SOM) {
+      // spec 039b: a TV passa os desenhos (o quinto toque desliga) e o som toca a musiquinha
+      const m = movelEm(leitorMoveis, x, y, z);
+      if (m) tocarLigado(m);
     }
+  }
+
+  // ------------------------------------------------------------ a mesa (spec 039b, T01b)
+
+  /**
+   * Quem está sentado em volta da mesa, ou em pé ao lado dela, com comida na mão, põe o prato:
+   * os sentados em volta comem juntos (até 4), cada um uma refeição inteira, como no `comer`.
+   * Sem ninguém para comer, nada sai da mochila e a criança ouve o "não". Vale para o visitante
+   * e no criativo; não dá moedinha nem missão além do que comer já dá.
+   */
+  function porNaMesa(j: Jogador, mesa: MovelAchado, c: Extract<Comando, { t: 'usar' }>): void {
+    const slot = c.slot ?? j.tel.slot;
+    const p = j.inventario.obter(slot);
+    const comida = p ? obterItem(p.item)?.comida : undefined;
+    const nao = (): void => {
+      j.eventos.push({ e: 'recusa', comando: c.id ?? 0, motivo: 'mesa' });
+    };
+    if (!p || !comida) return nao();
+    const lugares = lugaresDaMesa(leitorMoveis, mesa);
+    const naCadeira = (o: Jogador) => {
+      const s = o.sentado;
+      return !!s && s.chegou && !s.deitado ? { x: s.x, y: s.y, z: s.z } : null;
+    };
+    const meu = naCadeira(j);
+    const emVolta = !!meu && lugares.some((l) => l.x === meu.x && l.y === meu.y && l.z === meu.z);
+    // sentado longe (ou deitado) não alcança; em pé, só ao lado da mesa
+    if (!emVolta && (j.sentado || !aoLadoDaMesa(mesa, j.tel.x, j.tel.y, j.tel.z))) return nao();
+    const t = n * PASSO;
+    const sentados: { id: string; lugar: Cel; o: Jogador }[] = [];
+    for (const o of jogadores.values()) {
+      const lugar = naCadeira(o);
+      // quem já está comendo termina a sua refeição e fica fora da conta
+      if (!lugar || o.sobrevivencia.estado.morto || (o.comendo && t < o.comendo.ate)) continue;
+      sentados.push({ id: o.id, lugar, o });
+    }
+    const comem = quemComeNaMesa(lugares, sentados, j.id);
+    if (!comem.length) return nao();
+    j.inventario.remover(slot, 1);
+    for (const { o } of comem) {
+      if (modo === 'sobrevivencia') o.sobrevivencia.comer(comida.fome, comida.saturacao);
+      o.comendo = { item: p.item, ate: t + DURACAO_REFEICAO };
+      o.eventos.push({ e: 'comeu', item: p.item });
+      o.acoes[2]++;
+    }
+    const a = mesa.ancora;
+    for (const o of jogadores.values())
+      if (Math.hypot(o.tel.x - a.x - 0.5, o.tel.z - a.z - 0.5) <= ALCANCE_LIGADOS)
+        o.eventos.push({ e: 'prato', x: a.x, y: a.y, z: a.z, item: p.item, quantos: comem.length });
+  }
+
+  // ------------------------------------------- os móveis ligados (spec 039b, T01b)
+
+  /** A TV e o som ligados, pela chave da âncora (não vai salvo: ao abrir, tudo desligado). */
+  const ligados = new Map<
+    string,
+    Ligado & { tipo: 'tv' | 'som'; bloco: number; d: number; ancora: Cel; perto: number }
+  >();
+  /** Algo ligou, desligou ou trocou: o próximo quadro leva a lista de novo. */
+  let ligadosSujo = false;
+
+  function tocarLigado(m: MovelAchado): void {
+    const k = chaveDoMovel(m.ancora);
+    const tipo = m.bloco === Bloco.TV ? 'tv' : 'som';
+    // o que estava ligado nesta âncora com outro móvel (ou virado) conta como desligado
+    const antes = ligados.get(k);
+    const atual = antes && antes.bloco === m.bloco && antes.d === m.d ? antes : null;
+    const t = n * PASSO;
+    const novo = tipo === 'tv' ? tocarTv(atual, t) : tocarSom(atual, t);
+    if (novo === undefined) return;
+    if (novo === null) ligados.delete(k);
+    else {
+      const e = { ...novo, tipo, bloco: m.bloco, d: m.d, ancora: { ...m.ancora }, perto: t } as const;
+      ligados.set(k, e);
+    }
+    ligadosSujo = true;
+  }
+
+  /**
+   * Uma vez por segundo: sai o que não é mais o mesmo móvel na âncora (a regra do
+   * `cuidarDosAssentos`), a musiquinha que acabou e a TV sem ninguém perto há 3 minutos.
+   */
+  function cuidarDosLigados(): void {
+    const t = n * PASSO;
+    for (const [k, e] of ligados) {
+      const m = movelEm(leitorMoveis, e.ancora.x, e.ancora.y, e.ancora.z);
+      const mesmo =
+        !!m &&
+        m.bloco === e.bloco &&
+        m.d === e.d &&
+        m.ancora.x === e.ancora.x &&
+        m.ancora.y === e.ancora.y &&
+        m.ancora.z === e.ancora.z;
+      if (e.tipo === 'tv')
+        for (const o of jogadores.values())
+          if (Math.hypot(o.tel.x - e.ancora.x - 0.5, o.tel.z - e.ancora.z - 0.5) <= PERTO_DA_TV)
+            e.perto = t;
+      const acabou = e.tipo === 'som' ? musicaAcabou(e, t) : t - e.perto >= TV_SOZINHA;
+      if (!mesmo || acabou) {
+        ligados.delete(k);
+        ligadosSujo = true;
+      }
+    }
+  }
+
+  /** O que muda a lista sem tirar nem pôr (o fogão que começa ou para; a geladeira aberta). */
+  let chaveDosLigados = '';
+  /**
+   * O fogão cozinhando e a geladeira aberta, só onde a âncora ainda é o móvel inteiro certo (a
+   * conta do abrir o mundo): um contêiner sem o móvel não aparece ligado.
+   */
+  function conteineresLigados(): MovelLigado[] {
+    const out: MovelLigado[] = [];
+    for (const [k, f] of conteineres.fogoesCozinhando()) {
+      const [x, y, z] = k.split(',').map(Number);
+      const receita = f.entrada ? noFogao(f.entrada.item) : undefined;
+      const progresso = Math.round(f.progresso * 1000) / 1000;
+      if (receita && ancoraDoConteiner(x, y, z, 'fogao'))
+        out.push({ tipo: 'fogao', x, y, z, receita, progresso });
+    }
+    const abertas = new Set<string>();
+    for (const o of jogadores.values())
+      if (o.conteiner?.tipo === 'geladeira') {
+        const { x, y, z } = o.conteiner;
+        const k = `${x},${y},${z}`;
+        if (!abertas.has(k) && ancoraDoConteiner(x, y, z, 'geladeira'))
+          out.push({ tipo: 'geladeira', x, y, z });
+        abertas.add(k);
+      }
+    return out;
+  }
+
+  function chaveDosLigadosAgora(): string {
+    return conteineresLigados()
+      .map((e) => `${e.tipo}${e.x},${e.y},${e.z}:${e.tipo === 'fogao' ? e.receita : ''}`)
+      .sort()
+      .join('|');
+  }
+
+  /** Os móveis ligados perto de `j` (as 16 mais perto, até 32 blocos). */
+  function ligadosPerto(j: Jogador): MovelLigado[] {
+    const todos: MovelLigado[] = conteineresLigados();
+    for (const e of ligados.values()) {
+      const desde = Math.round(e.desde * 1000) / 1000;
+      todos.push({ tipo: e.tipo, ...e.ancora, programa: e.programa, desde });
+    }
+    const dist = (e: MovelLigado) => Math.hypot(e.x + 0.5 - j.tel.x, e.z + 0.5 - j.tel.z);
+    return todos
+      .filter((e) => dist(e) <= ALCANCE_LIGADOS)
+      .sort((a, b) => dist(a) - dist(b) || a.x - b.x || a.z - b.z || a.y - b.y)
+      .slice(0, MAX_LIGADOS);
   }
 
   /**
@@ -2675,6 +2912,28 @@ export function criarNucleo(op: OpcoesNucleo) {
         tamanho: 3,
       };
     }
+    // spec 039b: a geladeira (9 lugares) e o fogão (a entrada e a saída), na âncora
+    if (onde === 'gel' && ct?.tipo === 'geladeira') {
+      const s = conteineres.geladeira(ct.x, ct.y, ct.z);
+      return {
+        ler: (i) => s[i] ?? null,
+        gravar: (i, p) => {
+          s[i] = p;
+        },
+        tamanho: TAMANHO_GELADEIRA,
+      };
+    }
+    if (onde === 'fog' && ct?.tipo === 'fogao') {
+      const f = conteineres.fogao(ct.x, ct.y, ct.z);
+      const campos = ['entrada', 'saida'] as const;
+      return {
+        ler: (i) => f[campos[i]] ?? null,
+        gravar: (i, p) => {
+          f[campos[i]] = p;
+        },
+        tamanho: 2,
+      };
+    }
     return null;
   }
 
@@ -2687,11 +2946,20 @@ export function criarNucleo(op: OpcoesNucleo) {
     // confere tudo antes de mexer: ou a transação inteira vale, ou nada muda
     const alvos = c.mudancas.map((m) => ({ m, s: slotsDe(j, m.onde) }));
     const valida = alvos.every(
-      ({ m, s }) => !!s && m.i >= 0 && m.i < s.tamanho && igual(s.ler(m.i), m.antes),
+      ({ m, s }) =>
+        !!s &&
+        m.i >= 0 &&
+        m.i < s.tamanho &&
+        igual(s.ler(m.i), m.antes) &&
+        // spec 039b: a geladeira só guarda comida; o fogão só cozinha comida e a saída dele
+        // não aceita item posto
+        (m.onde !== 'gel' && m.onde !== 'fog'
+          ? true
+          : mudancaAceita(m.onde, m.i, m.antes, m.depois)),
     );
     // na nuvem a conta dos itens tem que fechar (no criativo o catálogo dá de tudo)
     const contaOk = confiar || modo === 'criativo' || contaFecha(c.mudancas, c.fabricou ?? []);
-    const noConteiner = c.mudancas.some((m) => m.onde === 'bau' || m.onde === 'forn');
+    const noConteiner = c.mudancas.some((m) => ehLugarDeConteiner(m.onde));
     const ct = j.conteiner;
     const alcanca = !ct || confiar || perto(j, ct.x, ct.y, ct.z, ALCANCE_REGRAS + 2);
     // foi embora com o baú aberto: fecha
@@ -2709,7 +2977,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     for (const { m, s } of alvos) s!.gravar(m.i, m.depois ? { ...m.depois } : null);
     j.inventarioSujo = true;
     almaDaTransacao(j, c);
-    if (c.mudancas.some((m) => m.onde === 'bau' || m.onde === 'forn')) {
+    if (noConteiner) {
       // outros jogadores com o mesmo contêiner aberto veem a mudança
       for (const o of jogadores.values())
         if (
@@ -2737,12 +3005,20 @@ export function criarNucleo(op: OpcoesNucleo) {
         almaEvento(j.id, `fabricou:${f.receita}`, f.vezes, comida ? 'cozinhou' : 'fabricou');
       }
     for (const m of c.mudancas) {
-      if (m.onde !== 'forn' || m.i !== 2) continue;
-      // comida que sai da fornalha (pipoca, carne e peixe assados, ovo cozido)
+      // spec 039b: a saída do fogão dá o mesmo XP de cozinheiro (decisão do dono, 27 nov)
+      const saida = (m.onde === 'forn' && m.i === 2) || (m.onde === 'fog' && m.i === 1);
+      if (!saida) continue;
+      // comida que sai da fornalha ou do fogão (pipoca, carne e peixe assados, ovo cozido)
       const item = m.antes?.item ?? m.depois?.item;
       if (!item || !obterItem(item)?.comida) continue;
       const antes = m.antes?.item === item ? m.antes.qtd : 0;
       const depois = m.depois?.item === item ? m.depois.qtd : 0;
+      // o fogão: a saída não recebe item (o filtro da transação), então todo o tirado foi
+      // cozido ali; sem o desconto do mundo, que passaria o XP de uma criança para outra
+      if (m.onde === 'fog') {
+        if (antes > depois) almaEvento(j.id, `fundiu:${item}`, antes - depois);
+        continue;
+      }
       // pôr comida na saída não é cozinhar: a que foi posta não conta ao sair
       const posta = postoNaSaida.get(item) ?? 0;
       if (depois > antes) postoNaSaida.set(item, posta + depois - antes);
@@ -3546,6 +3822,24 @@ export function criarNucleo(op: OpcoesNucleo) {
     // todos deitados (alguém saiu da sala, ou levantou e deitou de novo), a noite passa
     cuidarDosAssentos();
     conferirSono();
+    // spec 039b: a TV e o som que saem (uma vez por segundo); o fogão que começa ou para e a
+    // geladeira que abre ou fecha mandam a lista de novo
+    if (n % 20 === 0) cuidarDosLigados();
+    const chave = chaveDosLigadosAgora();
+    if (chave !== chaveDosLigados) {
+      chaveDosLigados = chave;
+      ligadosSujo = true;
+    }
+    // spec 039b: na nuvem, o contêiner aberto fecha quando a criança sai do alcance (uma vez por
+    // segundo; a transação de longe já era recusada)
+    if (!confiar && n % 20 === 0)
+      for (const j of jogadores.values()) {
+        const ct = j.conteiner;
+        if (ct && !perto(j, ct.x, ct.y, ct.z, ALCANCE_REGRAS + 2)) {
+          j.conteiner = null;
+          j.conteinerSujo = true;
+        }
+      }
     for (const j of jogadores.values()) {
       if (j.sono > 0) {
         j.sono -= dt;
@@ -3681,6 +3975,19 @@ export function criarNucleo(op: OpcoesNucleo) {
         tipo: 'bau',
         slots: conteineres.bau(c.x, c.y, c.z, false).map((p) => (p ? { ...p } : null)),
       };
+    // spec 039b: a geladeira e o fogão
+    if (c.tipo === 'geladeira')
+      return {
+        ...c,
+        tipo: 'geladeira',
+        slots: conteineres.geladeira(c.x, c.y, c.z).map((p) => (p ? { ...p } : null)),
+      };
+    if (c.tipo === 'fogao')
+      return {
+        ...c,
+        tipo: 'fogao',
+        fogao: JSON.parse(JSON.stringify(conteineres.fogao(c.x, c.y, c.z))),
+      };
     const f = conteineres.fornalha(c.x, c.y, c.z);
     return { ...c, tipo: 'fornalha', fornalha: JSON.parse(JSON.stringify(f)) };
   }
@@ -3748,6 +4055,13 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (!j.iniciado && tapetes.tamanho) q.tapetes = tapetes.todos();
       if (mudados.length) q.tapetesMudados = mudados;
       j.correcoesTapete = [];
+      // spec 039b: os móveis ligados perto, a lista inteira (no primeiro quadro, em toda mudança
+      // e a cada 20 passos); a lista vazia só vai para apagar a que a tela tinha
+      if (!j.iniciado || ligadosSujo || n % 20 === 0) {
+        const perto = ligadosPerto(j);
+        if (perto.length || j.ligadosVistos) q.moveisLigados = perto;
+        j.ligadosVistos = perto.length;
+      }
       if (!j.iniciado) {
         q.primeiro = true;
         j.iniciado = true;
@@ -3773,7 +4087,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         j.transitoSujo = false;
       }
       // a fornalha aberta anda sozinha: vai em todo quadro
-      if (j.conteinerSujo || j.conteiner?.tipo === 'fornalha') {
+      // (spec 039b: o fogão também cozinha sozinho)
+      if (j.conteinerSujo || j.conteiner?.tipo === 'fornalha' || j.conteiner?.tipo === 'fogao') {
         q.conteiner = vistaConteiner(j);
         j.conteinerSujo = false;
       }
@@ -3806,6 +4121,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     almaPendente.clear();
     vilaSuja = false;
     baileSujo = false;
+    ligadosSujo = false;
     return out;
   }
 
@@ -3915,6 +4231,12 @@ export function criarNucleo(op: OpcoesNucleo) {
       } else editar(x, y, z, Bloco.AR);
     }
   }
+  // spec 039b: a geladeira e o fogão cuja âncora não é mais o móvel certo saem (a peça solta já
+  // saiu; um salvamento mexido por fora não deixa um contêiner sem móvel)
+  conteineres.limparMoveis((k, tipo) => {
+    const [x, y, z] = k.split(',').map(Number);
+    return ancoraDoConteiner(x, y, z, tipo);
+  });
   // spec 039 (o tapete que não saía, no ar em 27 nov): um mundo salvo pode ter tapete boiando
   // sobre um buraco (o chão de baixo foi quebrado no lugar dele). Ao abrir, depois da peça
   // solta, o tapete com alguma célula sem chão sai inteiro. Ninguém está na sala ainda: ele cai
@@ -3948,7 +4270,13 @@ export function criarNucleo(op: OpcoesNucleo) {
     /** Visitantes podem construir? (o dono decide) */
     definirConstrucao(id: string, pode: boolean) {
       const j = jogadores.get(id);
-      if (j) j.constroi = pode;
+      if (!j) return;
+      j.constroi = pode;
+      // spec 039b: quem passa a só passear não fica com o contêiner aberto
+      if (!pode && j.conteiner) {
+        j.conteiner = null;
+        j.conteinerSujo = true;
+      }
     },
     /** Voltou da queda: o próximo quadro recomeça a sequência e leva tudo de novo. */
     reiniciarQuadros(id: string) {
@@ -3956,6 +4284,10 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (!j) return;
       // spec 039 (T04): quem volta de uma queda volta de pé (a tela nova não sabe do assento)
       levantar(j);
+      // spec 039b: e com o contêiner fechado (a tela nova não tem o painel aberto); os móveis
+      // ligados vão de novo no primeiro quadro
+      j.conteiner = null;
+      j.ligadosVistos = 0;
       j.iniciado = false;
       j.inventarioSujo = true;
       j.transitoSujo = true;

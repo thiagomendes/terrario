@@ -318,7 +318,7 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     desenharCursor();
   }
 
-  function mostrarDica(def: DefItem | undefined, x: number, y: number, extra = ''): void {
+  function mostrarDica(def: DefItem | undefined, casa: DOMRect, extra = ''): void {
     if (!def || cursor) {
       dica.hidden = true;
       return;
@@ -335,8 +335,19 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     const s = document.createElement('small');
     s.textContent = tipo[def.tipo] + extra;
     dica.appendChild(s);
-    dica.style.left = `${x + 14}px`;
-    dica.style.top = `${y + 14}px`;
+    // spec 039b (portão visual): a dica fica embaixo da casa apontada, centrada nela, e sempre
+    // inteira na tela (sem espaço embaixo, vai para cima da casa; nas beiradas, encosta)
+    const w = dica.offsetWidth;
+    const h = dica.offsetHeight;
+    const margem = 6;
+    let top = casa.bottom + margem;
+    if (top + h > innerHeight - margem) top = Math.max(margem, casa.top - h - margem);
+    const left = Math.min(
+      Math.max(margem, casa.left + casa.width / 2 - w / 2),
+      innerWidth - w - margem,
+    );
+    dica.style.left = `${left}px`;
+    dica.style.top = `${top}px`;
   }
 
   const posicionarCursor = (x: number, y: number) => {
@@ -356,7 +367,7 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     const def = obterItem(id);
     const extra =
       p?.dur !== undefined && def?.durabilidade ? ` · ${p.dur}/${def.durabilidade}` : '';
-    mostrarDica(def, e.clientX, e.clientY, extra);
+    mostrarDica(def, alvo.getBoundingClientRect(), extra);
   });
 
   const destinosRapidos: ((p: NonNullable<Slot>) => Slot | undefined)[] = [];
@@ -443,6 +454,8 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     if (!el) return;
     if (e.pointerType === 'mouse') {
       e.preventDefault();
+      // (o item saiu ou mudou de casa: a dica de antes não fica em cima da casa errada)
+      dica.hidden = true;
       acionar(el, e.button === 2 ? 'direito' : 'esquerdo', e.shiftKey);
       arrasteMouse = e.button === 0 ? el : null;
       return;

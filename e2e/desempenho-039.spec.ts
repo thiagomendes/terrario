@@ -65,10 +65,28 @@ const DISPOSICAO: Record<Exclude<(typeof NOMES_MOVEIS)[number], 'TAPETE'>, [numb
 };
 /** O tapete (3 x 2): a âncora no meio do quarto, na frente da criança. */
 const TAPETE_EM: [number, number] = [-1, -1];
+/**
+ * Spec 039b (T03): os cinco da parte 2 na mesma casa (`casa-parte2`, todos desligados; e
+ * `casa-parte2-ligada`, com a TV, o som, o fogão e a geladeira ligados pelo `forcarLigados` do
+ * desenho). A meta, contra a `casa-mobiliada`: até +2 chamadas paradas desligados e até +4 ligados.
+ */
+const DISPOSICAO_PARTE2: Record<string, [number, number]> = {
+  FOGAO: [-5, -2],
+  GELADEIRA: [-4, -2],
+  SOM: [-3, 0],
+  MESA: [2, 0],
+  TV: [4, -1],
+};
 
-type Cenario = 'casa-vazia' | 'casa-mobiliada' | 'cidade' | 'povoado';
-const CENARIOS: Cenario[] = (['casa-vazia', 'casa-mobiliada', 'cidade', 'povoado'] as Cenario[]).filter(
-  (c) => !SO || SO.includes(c) || (c.startsWith('casa') && SO.includes('casa')),
+type Cenario = 'casa-vazia' | 'casa-mobiliada' | 'casa-parte2' | 'casa-parte2-ligada' | 'cidade' | 'povoado';
+const CENARIOS: Cenario[] = (
+  ['casa-vazia', 'casa-mobiliada', 'casa-parte2', 'casa-parte2-ligada', 'cidade', 'povoado'] as Cenario[]
+).filter(
+  (c) =>
+    !SO ||
+    SO.includes(c) ||
+    (c.startsWith('casa') && !c.startsWith('casa-parte2') && SO.includes('casa')) ||
+    ((c === 'casa-mobiliada' || c.startsWith('casa-parte2')) && SO.includes('casa2')),
 );
 
 async function abrir(page: Page, url: string) {
@@ -317,6 +335,30 @@ async function cenario(page: Page, c: Cenario): Promise<{ yaw: number; pitch: nu
     const moveis = c === 'casa-mobiliada' && TEM_MOVEIS ? await mobiliar(page, casa) : [];
     return { yaw: 0, pitch: 0.1, amplitude: 0.35, nota: { moveis } };
   }
+  if (c === 'casa-parte2' || c === 'casa-parte2-ligada') {
+    await abrir(page, '/?tema=vila-neon');
+    const casa = await montarCasa(page);
+    const moveis = await mobiliar(page, casa);
+    const lote = Object.entries(DISPOSICAO_PARTE2).map(([nome, [dx, dz]]) => ({ nome, x: casa.cx + dx, y: casa.Y + 1, z: casa.cz + dz, v: B[nome]! }));
+    await page.evaluate((l) => window.__brumaluz!.editarLote!(l.map(({ x, y, z, v }) => ({ x, y, z, v }))), lote);
+    for (const m of lote)
+      await expect
+        .poll(() => page.evaluate((m) => window.__brumaluz!.bloco!(m.x, m.y, m.z), m), { timeout: 15_000, message: `o ${m.nome} entrou` })
+        .toBe(m.v);
+    if (c === 'casa-parte2-ligada')
+      await page.evaluate((l) => {
+        const at = (n: string) => l.find((m) => m.nome === n)!;
+        const p = (n: string) => ({ x: at(n).x, y: at(n).y, z: at(n).z });
+        (window.__brumaluz!.moveis! as unknown as { forcarLigados(l: unknown[]): void }).forcarLigados([
+          { tipo: 'tv', ...p('TV'), programa: 1, desde: 0 },
+          { tipo: 'som', ...p('SOM'), programa: 0, desde: 0 },
+          { tipo: 'fogao', ...p('FOGAO'), receita: 'carne_assada', progresso: 0.5 },
+          { tipo: 'geladeira', ...p('GELADEIRA') },
+        ]);
+      }, lote);
+    await page.waitForTimeout(2000);
+    return { yaw: 0, pitch: 0.1, amplitude: 0.35, nota: { moveis: [...moveis, ...lote.map((m) => m.nome)], ligados: c === 'casa-parte2-ligada' } };
+  }
   if (c === 'cidade') {
     await abrir(page, '/?tema=cidade-grande');
     const p = await page.evaluate(() => {
@@ -359,6 +401,8 @@ for (let r = 0; r < RODADAS; r++)
   for (const c of CENARIOS)
     test(`${c}, rodada ${r + 1} (celular em pé, CPU ${LENTO}x)`, async ({ page }) => {
       test.setTimeout(600_000);
+      // na main (antes da 039b) os cinco da parte 2 não existem: o cenário fica de fora
+      test.skip(c.startsWith('casa-parte2') && B.FOGAO === undefined, 'sem os móveis da parte 2');
       const { yaw, pitch, amplitude, nota } = await cenario(page, c);
       await desacelerar(page);
       await page.waitForTimeout(1000);

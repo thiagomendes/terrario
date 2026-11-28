@@ -1,0 +1,25 @@
+Spec 039b, T05: desempenho (27 nov 2026, 18h25 a 18h32 de Brasília)
+main 768bdacc (worktree ../mb-039b-main) contra o ramo 20872f1d (worktree limpo ../mb-039b-ramo)
+Suíte e2e/desempenho-039.spec.ts com DESEMPENHO_039=casa2, RODADAS=1, a resolução fixa (?escala=0.75)
+Placa, 1 trabalhador, sem vsync, celular em pé 390x844, toque, CPU 4x; cada medida numa página nova
+main e ramo alternados (main, ramo, main, ramo, main, ramo); nenhuma rodada com outro contêiner
+(na main os cinco da parte 2 não existem: só a casa mobiliada)
+
+Por rodada (quadros/s, maior ms, chamadas girando / paradas, malhas / ativas)
+cenário              lado  r1                      r2                      r3
+casa-mobiliada       main  58,3 31 110/120 842/61  60,9 27 110/119         62,4 26 110/119
+casa-mobiliada       ramo  55,1 32 110/120 842/61  62,0 27 110/119         59,3 30 110/120
+casa-parte2          ramo  60,6 42 110/119 842/61  60,9 30 110/119         50,0 49 110/119
+casa-parte2-ligada   ramo  52,0 35 113/122 846/64  51,6 34 113/121         53,3 33 113/122
+
+As metas (contra a casa mobiliada, no mesmo lado):
+- desligados: +0 chamadas paradas (119 contra 119 e 120), +0 girando, +0 malhas. DENTRO (até +2).
+- ligados (a TV, o som, o fogão cozinhando e a geladeira aberta, pelo forcarLigados): +2 a +3
+  paradas (121 e 122 contra 119 e 120), +3 girando (113 contra 110), +4 malhas, +3 ativas. DENTRO
+  (até +4). Confirma a medida do artista na T03 (+0 e +3).
+- A casa mobiliada é a mesma na main e no ramo (110/119-120, 842/61): a parte 2 não mexeu na 1.
+- Quadros: ligados, 52,0, 51,6 e 53,3 nas três rodadas, contra 50 a 62 desligados e na casa
+  mobiliada. Desta vez o ruído foi baixo e a queda foi igual nas três (uns 13%): conferir no
+  aparelho, com a TV, o som e o fogão ligados.
+
+Tempo: 7 min (as seis rodadas).

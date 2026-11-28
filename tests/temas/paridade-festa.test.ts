@@ -67,7 +67,7 @@ export const MUDA_NA_PARTE_2: readonly { o_que: string; motivo: string }[] = [
     motivo: 'um bloco novo de dentro das casas ganharia tile depois dos 14 de hoje; as 142 de hoje continuam no hash',
   },
   {
-    o_que: 'a alma (as missões n6 a n8, as moedinhas e as contas) e a `VERSAO_REDE` 20',
+    o_que: 'a alma (as missões n6 a n8, as moedinhas e as contas) e a `VERSAO_REDE` 21',
     motivo: 'T29: as missões novas e o protocolo da parte 2 (não entram em nenhum hash do tema)',
   },
 ];

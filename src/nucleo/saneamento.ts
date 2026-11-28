@@ -74,7 +74,8 @@ function mudancasValidas(ms: unknown): ms is MudancaSlot[] {
   if (!Array.isArray(ms) || ms.length > 80) return false;
   const vistos = new Set<string>();
   for (const m of ms as Partial<MudancaSlot>[]) {
-    if (!m || !['inv', 'bau', 'forn', 'tr'].includes(String(m.onde))) return false;
+    // spec 039b: `gel` (a geladeira) e `fog` (o fogão)
+    if (!m || !['inv', 'bau', 'forn', 'gel', 'fog', 'tr'].includes(String(m.onde))) return false;
     if (!inteiro(m.i, 0, 63)) return false;
     // o mesmo slot duas vezes na mesma transação é truque (cada antes confere o estado velho)
     const k = `${m.onde}:${m.i}`;
@@ -142,6 +143,8 @@ export function sanear(c: unknown): Comando | null {
         ? (o as unknown as Comando)
         : null;
     case 'usar':
+      // spec 039b: o `slot` (a comida da mesa) é opcional, mas quando vem é um lugar da mochila
+      if ('slot' in o && !inteiro(o.slot, 0, SLOTS - 1)) return null;
       return celula(o as Partial<Pos>) ? (o as unknown as Comando) : null;
     case 'conferir':
       return inteiro(o.id, 0, Number.MAX_SAFE_INTEGER) &&
@@ -393,6 +396,9 @@ export function sanearExtras(e: unknown): Record<string, unknown> {
       ...c,
       baus: porCelula(c.baus, MAX_CONTEINERES),
       fornalhas: porCelula(c.fornalhas, MAX_CONTEINERES),
+      // spec 039b: a geladeira e o fogão (só quando vieram: o mundo sem eles fica igual)
+      ...('geladeiras' in c ? { geladeiras: porCelula(c.geladeiras, MAX_CONTEINERES) } : {}),
+      ...('fogoes' in c ? { fogoes: porCelula(c.fogoes, MAX_CONTEINERES) } : {}),
     };
   }
   if ('lavoura' in out) {

@@ -46,6 +46,11 @@ export const COR_MOVEL = {
   luaAcesa: '#fff1b0',
   manta: '#fcedcf',
   mantaSombra: '#f0d9ae',
+  // spec 039b: a parte 2
+  preto: '#24232a',
+  vidro: '#26313b',
+  chama: '#ffa64a',
+  luzFria: '#eef8ff',
 } as const;
 const M = COR_MOVEL;
 
@@ -64,7 +69,20 @@ export const ESCALA_MOVEL: Readonly<Record<number, V3>> = {
   [Bloco.PIA]: [1.05, 1.15, 1.05],
   [Bloco.GUARDA_ROUPA]: [1.05, 1, 1.1],
   [Bloco.CAMA]: [1, 1.25, 1],
+  // spec 039b: a parte 2 (a do esboço; o fogão e a mesa um tico mais baixos, para caber na célula
+  // e no tampo da colisão, a 0,875)
+  [Bloco.FOGAO]: [1.1, 0.92, 1.1],
+  [Bloco.GELADEIRA]: [1.08, 1.07, 1.05],
+  [Bloco.MESA]: [1.05, 1.12, 1.1],
+  [Bloco.TV]: [1.05, 1.25, 1.1],
+  [Bloco.SOM]: [1, 1, 1],
 };
+
+/**
+ * Spec 039b: a tela da TV no modelo (o meio, já na escala, e o tamanho): o desenho que passa vai
+ * num retângulo aqui, um tico na frente do vidro.
+ */
+export const TELA_TV = { meio: [0, 1.07 * 1.25, 0.072 * 1.1] as V3, w: 1.08 * 1.05, h: 0.6 * 1.25 };
 
 /** As medidas que a pose de deitar lê (já na escala): o colchão, o travesseiro e a cabeceira. */
 export const MEDIDA_CAMA = {
@@ -237,7 +255,251 @@ function desenhar(o: Oficina, bloco: number, curtinha: boolean): void {
       return guardaRoupa(o);
     case Bloco.CAMA:
       return curtinha ? camaCurtinha(o) : cama(o);
+    case Bloco.FOGAO:
+      return fogao(o);
+    case Bloco.GELADEIRA:
+      return geladeira(o);
+    case Bloco.MESA:
+      return mesa(o.r);
+    case Bloco.TV:
+      return tv(o.r);
+    case Bloco.SOM:
+      return som(o);
   }
+}
+
+// ================================================================== a parte 2 (spec 039b)
+
+/**
+ * O fogão creme: o forno de janelinha, os quatro botões, as quatro bocas e a panela coral. Ligado
+ * (cozinhando), o anel laranja manso nas bocas e o vapor de cubinhos (as partes `anel` e `vapor`,
+ * que só aparecem cozinhando; de brinquedo, sem fogo de verdade nem fumaça escura).
+ */
+function fogao(o: Oficina): void {
+  const r = o.r;
+  r.caixa(0.84, 0.05, 0.56, 0, 0, 0, M.grafite, 0.02);
+  r.caixa(0.9, 0.84, 0.62, 0, 0.05, 0, M.creme, 0.06);
+  r.caixa(0.72, 0.46, 0.03, 0, 0.12, 0.31, M.branco, 0.03);
+  r.caixa(0.5, 0.24, 0.02, 0, 0.22, 0.33, M.vidro, 0.03);
+  r.barra([-0.26, 0.62, 0.36], [0.26, 0.62, 0.36], 0.035, M.cromo);
+  for (const x of [-0.3, -0.1, 0.1, 0.3]) r.prisma(10, 0.04, 0.04, x, 0.76, 0.33, M.coral, 'z');
+  r.caixa(0.9, 0.2, 0.06, 0, 0.89, -0.28, M.creme, 0.03);
+  // as costas: o painel com as duas frisas e o rodapé
+  r.caixa(0.78, 0.6, 0.012, 0, 0.15, -0.316, M.branco, 0.01);
+  for (const y of [0.32, 0.56]) r.caixa(0.7, 0.03, 0.014, 0, y, -0.322, M.cromo, 0);
+  r.caixa(0.9, 0.08, 0.02, 0, 0.05, -0.318, M.grafite, 0.01);
+  for (const [x, z] of BOCAS) {
+    r.prisma(12, 0.11, 0.02, x, 0.9, z, M.grafite, 'y');
+    r.prisma(12, 0.06, 0.024, x, 0.9, z, M.preto, 'y');
+  }
+  // a panela na boca da frente, com a tampa e o puxador
+  r.prisma(12, 0.15, 0.14, 0.2, 0.98, 0.14, M.coral, 'y');
+  r.caixa(0.08, 0.03, 0.04, 0.39, 1.0, 0.14, M.coralEscuro, 0.01);
+  r.prisma(12, 0.16, 0.025, 0.2, 1.062, 0.14, M.coralEscuro, 'y');
+  r.prisma(8, 0.035, 0.04, 0.2, 1.09, 0.14, M.creme, 'y');
+  // cozinhando: o anel laranja manso, liso, na boca da panela (aparece em volta do fundo dela) e
+  // os três cubinhos de vapor saindo da tampa
+  o.parte('anel', [0.2, 0.905, 0.14], (p) => p.prisma(18, 0.2, 0.016, 0, 0, 0, M.chama, 'y'));
+  // (cinco bolinhas de vapor, uma atrás da outra: com três, ele quase sumia entre uma e outra)
+  for (let i = 0; i < VAPORES; i++) o.parte(`vapor${i}`, [0.2, 1.1, 0.14], (p) => p.caixa(0.12, 0.12, 0.12, 0, 0, 0, M.branco, 0.055));
+}
+/** Quantas bolinhas de vapor o fogão solta cozinhando. */
+export const VAPORES = 5;
+const BOCAS: Array<[number, number]> = [
+  [-0.2, -0.12],
+  [0.2, -0.12],
+  [-0.2, 0.14],
+  [0.2, 0.14],
+];
+
+/**
+ * A geladeira menta de duas portas (2 de altura): a de baixo abre na dobradiça da direita e mostra
+ * a luz de dentro, as prateleiras e a comidinha (a `porta` fica fechada no corpo; a `luzDentro` e
+ * a `comidinha` só aparecem com ela aberta).
+ */
+function geladeira(o: Oficina): void {
+  const r = o.r;
+  const W = 0.9;
+  const D = 0.68;
+  const A = 1.86;
+  r.caixa(W, 0.1, D, 0, 0, 0, M.mentaEscura, 0.03);
+  for (const s of [-1, 1]) r.caixa(0.06, A - 0.1, D, s * (W / 2 - 0.03), 0.1, 0, M.menta, 0.03);
+  r.caixa(W, 0.06, D, 0, A - 0.06, 0, M.menta, 0.04);
+  r.caixa(W - 0.12, A - 0.16, 0.05, 0, 0.1, -D / 2 + 0.025, M.menta, 0.01);
+  // as costas: a grade da serpentina (as barrinhas) e as duas hastes
+  for (let i = 0; i < 6; i++) r.caixa(W - 0.24, 0.025, 0.012, 0, 0.36 + i * 0.2, -D / 2 - 0.004, M.mentaEscura, 0);
+  for (const x of [-0.3, 0.3]) r.caixa(0.025, 1.04, 0.012, x, 0.35, -D / 2 - 0.006, M.mentaEscura, 0);
+  r.caixa(W - 0.12, 0.05, D - 0.06, 0, 1.36, 0.0, M.menta, 0.01);
+  r.caixa(W - 0.13, 1.24, 0.02, 0, 0.11, -D / 2 + 0.06, M.branco, 0);
+  for (const y of [0.52, 0.94]) r.caixa(W - 0.13, 0.025, D - 0.14, 0, y, -0.02, M.branco, 0.005);
+  // a luz de dentro (o forro claro aceso) e a comidinha, só com a porta aberta
+  o.parte('luzDentro', [0, 0.11, -D / 2 + 0.072], (p) => p.caixa(W - 0.16, 1.22, 0.006, 0, 0, 0, M.luzFria, 0));
+  o.parte('comidinha', [0, 0, 0], (p) => {
+    p.prisma(8, 0.07, 0.26, -0.22, 0.27, -0.05, M.branco, 'y');
+    p.prisma(8, 0.05, 0.06, -0.22, 0.42, -0.05, M.azulEscuro, 'y');
+    p.caixa(0.14, 0.22, 0.1, 0.0, 0.14, -0.06, '#f29a3a', 0.02);
+    p.caixa(0.14, 0.05, 0.101, 0.0, 0.24, -0.06, M.branco, 0);
+    p.prisma(8, 0.05, 0.16, 0.22, 0.22, -0.04, M.coral, 'y');
+    p.caixa(0.2, 0.12, 0.16, -0.18, 0.545, -0.04, M.creme, 0.02);
+    p.caixa(0.2, 0.035, 0.16, -0.18, 0.665, -0.04, '#f2a6b8', 0.015);
+    p.caixa(0.04, 0.04, 0.04, -0.18, 0.7, -0.04, M.coralEscuro, 0.015);
+    for (const [x, z] of [
+      [0.12, -0.02],
+      [0.2, -0.08],
+      [0.24, 0.02],
+      [0.16, 0.06],
+    ] as const)
+      p.prisma(8, 0.045, 0.07, x, 0.58, z, '#d8343a', 'y');
+    p.caixa(0.22, 0.04, 0.14, 0.12, 0.965, -0.04, M.branco, 0.015);
+    for (const x of [0.06, 0.12, 0.18]) p.prisma(8, 0.03, 0.07, x, 1.03, -0.04, M.creme, 'y');
+    p.caixa(0.16, 0.08, 0.1, -0.18, 0.965, -0.04, M.manteiga, 0.02);
+  });
+  // a porta do congelador (fica fechada) e a grande, com o pivô na dobradiça da direita
+  r.caixa(W, 0.46, 0.08, 0, 1.4, D / 2 + 0.04, M.menta, 0.05);
+  // (os puxadores gordinhos e a fresta escura entre as portas: no ícone pequeno, a frente se lê)
+  r.barra([-W / 2 + 0.1, 1.48, D / 2 + 0.11], [-W / 2 + 0.1, 1.72, D / 2 + 0.11], 0.065, M.cromo);
+  r.caixa(W - 0.04, 0.035, 0.02, 0, 1.365, D / 2 + 0.07, M.mentaEscura, 0);
+  r.prisma(8, 0.04, 0.03, 0.12, 1.62, D / 2 + 0.095, M.azulEscuro, 'z');
+  o.parte(
+    'porta',
+    [W / 2, 0.1, D / 2],
+    (p) => {
+      p.caixa(W, 1.26, 0.08, -W / 2, 0, 0.04, M.menta, 0.05);
+      p.barra([-W + 0.1, 0.84, 0.11], [-W + 0.1, 1.14, 0.11], 0.065, M.cromo);
+      // o desenho da criança preso na porta (a folha creme com o solzinho e o ímã): a frente se
+      // reconhece de longe e no ícone
+      p.caixa(0.34, 0.3, 0.012, -W / 2 + 0.06, 0.62, 0.086, M.creme, 0.01);
+      p.prisma(10, 0.07, 0.014, -W / 2 + 0.06, 0.8, 0.094, M.manteiga, 'z');
+      p.caixa(0.22, 0.05, 0.014, -W / 2 + 0.06, 0.66, 0.094, M.menta, 0);
+      p.prisma(8, 0.03, 0.03, -W / 2 + 0.06, 0.91, 0.1, M.coral, 'z');
+      for (const y of [0.84, 1.14]) p.caixa(0.04, 0.04, 0.04, -W + 0.1, y - 0.02, 0.085, M.cromo, 0);
+      for (const y of [0.28, 0.72]) {
+        p.caixa(W - 0.2, 0.12, 0.08, -W / 2, y, -0.04, M.branco, 0.02);
+        p.prisma(8, 0.035, 0.14, -W / 2 - 0.15 + (y > 0.5 ? 0.2 : 0), y + 0.16, -0.04, y > 0.5 ? M.manteiga : M.coral, 'y');
+      }
+    },
+    { repouso: true },
+  );
+}
+
+/**
+ * Spec 039b: o pratinho que aparece na mesa quando alguém põe a comida (na origem: o meio dele no
+ * tampo), branco com a borda creme e o copinho azul do lado. Já na escala do mundo.
+ */
+export function pratinho(): VertexData {
+  const dd = desenho();
+  const r = new RefEscala(dd, NA_ORIGEM, [1, 1, 1]);
+  r.prisma(12, 0.15, 0.02, 0, 0.01, 0, M.branco, 'y');
+  r.prisma(12, 0.1, 0.022, 0, 0.012, 0, M.creme, 'y');
+  r.prisma(8, 0.04, 0.12, 0.2, 0.06, -0.1, M.azul, 'y');
+  return dd.corpo.juntar();
+}
+
+/**
+ * A mesa de duas células: mel, com a toalha xadrez coral e creme por cima. A toalha fica por
+ * dentro do tampo, com a beirada de madeira à mostra em volta (sem barra caindo): da câmera de
+ * cima, a toalha encostava no assento da cadeira de trás e parecia entrar nela. O tampo é um tico
+ * mais raso que a célula (0,76), com folga para a cadeira encostada.
+ */
+function mesa(r: Ref): void {
+  for (const x of [-0.8, 0.8])
+    for (const z of [-0.28, 0.28]) r.caixa(0.1, 0.7, 0.1, x, 0, z, M.melEscuro, 0.02);
+  // as travessas de baixo (a mesa de costas também tem cara)
+  for (const z of [-0.28, 0.28]) r.caixa(1.5, 0.05, 0.05, 0, 0.18, z, M.mel, 0.015);
+  r.caixa(1.84, 0.08, 0.76, 0, 0.7, 0, M.mel, 0.04);
+  const n = 8;
+  const m = 4;
+  const lx = 1.36 / n;
+  const lz = 0.6 / m;
+  for (let i = 0; i < n; i++)
+    for (let k = 0; k < m; k++)
+      r.caixa(lx, 0.012, lz, -0.68 + (i + 0.5) * lx, 0.78, -0.3 + (k + 0.5) * lz, (i + k) % 2 ? M.coral : M.creme, 0);
+}
+
+/**
+ * A TV de rack: a tela larga de moldura azul gordinha no rack de madeira de duas portas, os dois
+ * alto-falantes redondos do lado e o botão coral. Ligada, o desenho passa num retângulo na frente
+ * do vidro (`TELA_TV`, desenhado pelo `index.ts`).
+ */
+function tv(r: Ref): void {
+  for (const x of [-0.82, 0.82])
+    for (const z of [-0.18, 0.18]) r.caixa(0.08, 0.08, 0.08, x, 0, z, M.melEscuro, 0.02);
+  r.caixa(1.84, 0.46, 0.5, 0, 0.08, 0, M.mel, 0.05);
+  for (const s of [-1, 1]) {
+    r.caixa(0.86, 0.36, 0.03, s * 0.45, 0.13, 0.255, M.melClaro, 0.02);
+    r.prisma(8, 0.03, 0.03, s * 0.09, 0.31, 0.28, M.melEscuro, 'z');
+  }
+  // as costas do rack (as tábuas) e as da tela: a tampa gordinha de brinquedo (uma caixa azul
+  // funda e redonda, com as frestas e os quatro parafusinhos), não uma folha
+  for (let i = 0; i < 4; i++) r.caixa(0.42, 0.34, 0.012, -0.66 + i * 0.44, 0.14, -0.254, M.melClaro, 0.01);
+  r.caixa(1.08, 0.66, 0.16, 0, 0.76, -0.16, M.azulEscuro, 0.08);
+  for (let i = 0; i < 4; i++) r.caixa(0.6, 0.03, 0.014, 0, 0.9 + i * 0.1, -0.243, M.azul, 0.01);
+  for (const [x, y] of [
+    [-0.42, 0.84],
+    [0.42, 0.84],
+    [-0.42, 1.34],
+    [0.42, 1.34],
+  ] as const)
+    r.prisma(8, 0.035, 0.02, x, y, -0.245, M.cromo, 'z');
+  r.caixa(0.4, 0.04, 0.24, 0, 0.54, -0.02, M.grafite, 0.015);
+  r.caixa(0.12, 0.1, 0.06, 0, 0.58, -0.04, M.grafite, 0.01);
+  r.caixa(1.36, 0.86, 0.14, 0, 0.66, -0.02, M.azul, 0.09);
+  r.caixa(1.12, 0.64, 0.02, 0, 0.75, 0.055, M.vidro, 0.02);
+  // as caixinhas de som em pé no rack, encostadas na moldura (soltas no ar pareciam voar)
+  for (const s of [-1, 1]) {
+    r.caixa(0.2, 0.3, 0.2, s * 0.8, 0.54, -0.02, M.azulEscuro, 0.05);
+    r.prisma(10, 0.07, 0.03, s * 0.8, 0.72, 0.085, M.grafite, 'z');
+    r.prisma(8, 0.03, 0.035, s * 0.8, 0.72, 0.09, M.cromo, 'z');
+  }
+  r.prisma(10, 0.035, 0.03, 0.5, 0.7, 0.06, M.coral, 'z');
+  r.caixa(0.1, 0.03, 0.26, 0.62, 0.54, 0.12, M.grafite, 0.015);
+  r.caixa(0.04, 0.012, 0.04, 0.62, 0.57, 0.04, M.coral, 0.01);
+}
+
+/**
+ * O aparelho de som: a caixinha manteiga larga e baixa (a de levar pela alça), os dois alto-falantes
+ * lado a lado (os cones pulam com a música), o botão de tocar em cima, a luzinha e as três notinhas
+ * que sobem quando toca. Cabe na caixa da colisão (0,75 × 0,62 × 0,69).
+ */
+function som(o: Oficina): void {
+  const r = o.r;
+  r.caixa(0.7, 0.04, 0.36, 0, 0, 0, M.grafite, 0.015);
+  r.caixa(0.76, 0.5, 0.42, 0, 0.04, 0, M.manteiga, 0.08);
+  for (const x of [-0.2, 0.2]) {
+    r.prisma(14, 0.15, 0.04, x, 0.27, 0.2, M.grafite, 'z');
+    o.parte(
+      `cone${x > 0 ? 1 : 0}`,
+      [x, 0.27, 0.22],
+      (p) => {
+        p.prisma(14, 0.11, 0.03, 0, 0, 0, M.preto, 'z');
+        p.prisma(10, 0.045, 0.05, 0, 0, 0.01, M.cromo, 'z');
+      },
+      { repouso: true },
+    );
+  }
+  // a faixa do meio com a luzinha; os botões de tocar em cima
+  r.caixa(0.12, 0.1, 0.02, 0, 0.32, 0.205, M.grafite, 0.01);
+  r.prisma(12, 0.07, 0.04, 0.18, 0.555, 0.0, M.coral, 'y');
+  r.prisma(12, 0.05, 0.04, -0.06, 0.555, 0.0, M.azulEscuro, 'y');
+  // as costas: a tampinha da pilha e as frestas
+  r.caixa(0.4, 0.22, 0.012, 0, 0.12, -0.214, M.melClaro, 0.01);
+  for (let i = 0; i < 3; i++) r.caixa(0.5, 0.02, 0.012, 0, 0.4 + i * 0.035, -0.214, M.grafite, 0);
+  // a alça
+  for (const x of [-0.26, 0.26]) r.barra([x, 0.52, -0.06], [x, 0.66, -0.06], 0.045, M.grafite);
+  r.caixa(0.58, 0.045, 0.06, 0, 0.64, -0.06, M.grafite, 0.02);
+  // tocando: a luzinha acesa e as notinhas (a colcheia de blocos: a cabeça, a haste e a bandeirinha)
+  o.parte('luzSom', [0, 0.32, 0.217], (p) => p.caixa(0.08, 0.06, 0.006, 0, 0.02, 0, M.menta, 0));
+  for (let i = 0; i < 3; i++)
+    o.parte(`nota${i}`, [0, 0.72, 0.05], (p) => {
+      const cor = i === 1 ? M.coral : M.azulEscuro;
+      // a colcheia, como se escreve: a bolinha embaixo, à esquerda da haste, e a bandeirinha que
+      // sai do alto da haste para a direita, curvinha, em dois gomos (o +x do modelo fica à
+      // esquerda de quem olha a frente: por isso a haste e a bandeirinha vão para -x)
+      p.prisma(14, 0.085, 0.06, 0, 0.06, 0, cor, 'z');
+      p.caixa(0.04, 0.32, 0.045, -0.07, 0.06, 0, cor, 0);
+      p.barra([-0.07, 0.375, 0], [-0.15, 0.32, 0], 0.045, cor);
+      p.barra([-0.15, 0.32, 0], [-0.18, 0.22, 0], 0.04, cor);
+    });
 }
 
 // ================================================================== a sala

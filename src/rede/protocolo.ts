@@ -90,9 +90,18 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * os eventos `sentou` e `levantou`, e a noite que só passa com todos deitados: a 039 sai inteira
  * nesta versão). Não há volta: um servidor 18 leria cada parte do móvel como um bloco inteiro, e
  * um navegador 18 não veria os tapetes nem teria os blocos novos. O servidor publica antes do
- * site. A 027 (partes 2 e 3) fica com a 20 e a 21.
+ * site.
+ *
+ * 20: spec 039b, os móveis da parte 2 (os blocos 137 a 141: o fogão, a geladeira, a mesa, a TV e
+ * o som). As uniões que crescem: o `ConteinerVisto` ganhou `'geladeira'` (com `slots`) e `'fogao'`
+ * (com `fogao`); o `LocalSlot` da transação ganhou `'gel'` e `'fog'`; o `MotivoProtecao` da recusa
+ * ganhou `'geladeira'` e `'fogao'`. A T01b acrescenta nesta mesma versão o `slot` do `usar` (a
+ * mesa) e o `moveisLigados` do quadro: a 039b sai inteira na 20. Não há volta para a 19 depois da
+ * publicação: um navegador 19 não conhece os ids novos nem o contêiner novo, e um servidor 19
+ * recusaria a transação da geladeira. O servidor publica antes do site. A 027 (partes 2 e 3)
+ * fica com a 21 e a 22.
  */
-export const VERSAO_REDE = 19;
+export const VERSAO_REDE = 20;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 

@@ -38,6 +38,7 @@ import {
   pecaSolta,
   type LeitorMoveis,
 } from '../jogo/moveis';
+import { direcaoParaAMesa } from '../jogo/mesa';
 import {
   celulasDoTapete,
   recusaChaoDoTapete,
@@ -133,6 +134,7 @@ import { PIPOQUEIRO, VENDEDORA_DE_BALOES } from '../nucleo/vila';
 import { criarSomParque, type SomParque } from '../audio/somParque';
 import { criarSomRua, type SomRua } from '../audio/somRua';
 import { criarSomCasa, type SomCasa } from '../audio/somCasa';
+import { criarSomMoveis, maisPertos, type SomLigado } from '../audio/somMoveis';
 import { ligarCasaNaCena, JUNTAS_SOFA } from './vila/casaNaCena';
 import { criarMissoesParque } from './vila/missoesParque';
 import { criarMissoesCasa } from './vila/missoesCasa';
@@ -471,6 +473,13 @@ const INTERATIVOS = new Set<number>([
   // spec 039 (T06): os toques só da tela (as portas e a troca de roupa; a água da pia)
   Bloco.GUARDA_ROUPA,
   Bloco.PIA,
+  // spec 039b (T04): o fogão e a geladeira abrem o painel; a mesa recebe a comida da mão; a TV
+  // passa o desenho; o som toca a musiquinha (o núcleo decide todos)
+  Bloco.FOGAO,
+  Bloco.GELADEIRA,
+  Bloco.MESA,
+  Bloco.TV,
+  Bloco.SOM,
 ]);
 let raioChunks = RAIO_INICIAL;
 /**
@@ -662,6 +671,12 @@ export interface EstadoDepuracao {
     };
   };
   somCasa?: () => ReturnType<SomCasa['info']> | null;
+  /** Spec 039b (T04): a musiquinha do som tocando agora (testes). */
+  somMoveis?: () => { tocando: string[]; pronto: boolean };
+  /** Spec 039b (T04): quantos pratos postos na mesa esta tela viu (testes). */
+  pratosVistos?: () => number;
+  /** Spec 039b (T04): os móveis ligados perto, como o núcleo mandou (testes). */
+  ligados?: () => readonly import('../nucleo/protocolo').MovelLigado[];
   /** Spec 026: toca um brinquedo do bairro (a tela da máquina mexe, o rádio liga, a fita rebobina). */
   vilaBrinquedo?: (qual: import('./vila/brinquedos').ToqueVila, i?: number) => void;
   /** Spec 026 (testes): o que os brinquedos do bairro mostram agora. */
@@ -1205,6 +1220,8 @@ export interface EstadoDepuracao {
   };
   /** Testes: o bloco que o destaque (contorno) marca agora, ou null. */
   destaque?: () => { x: number; y: number; z: number } | null;
+  /** Spec 039b (testes): a caixa do contorno da mira (x0, y0, z0, x1, y1, z1, da célula mirada). */
+  caixaDoDestaque?: () => number[] | null;
   /** Testes: onde um ponto do mundo aparece na tela (coordenadas CSS), ou null atrás da câmera. */
   telaDoPonto?: (x: number, y: number, z: number) => { x: number; y: number } | null;
   /** Testes: vira o olhar para o centro da tela mirar este ponto do mundo. */
@@ -1599,7 +1616,9 @@ export function criarCena(
   function pedirUso(x: number, y: number, z: number, id = proximoId()): void {
     ultimaAbertura = id;
     enviarTelemetria(true);
-    enviar({ t: 'usar', id, x, y, z });
+    // spec 039b (T04): a mesa leva o lugar da mochila com a comida que vai para o prato
+    const mesa = blocoEm(x, y, z) === Bloco.MESA;
+    enviar({ t: 'usar', id, x, y, z, ...(mesa ? { slot: hotbar.ativo } : {}) });
   }
   const proximoId = () => cliente.proximoId();
 
@@ -2263,6 +2282,8 @@ export function criarCena(
     leitor: leitorDoDesenho,
     tapetes: () => cliente.tapetes,
     aoCriar: (m) => glow.addExcludedMesh(m),
+    // spec 039b (T03): o que mexe nos móveis ligados (a TV, o som, o fogão e a geladeira)
+    ligados: () => cliente.ligados,
   });
   estado.moveis = moveis;
   // spec 039 (T05): sentada e deitada (a criança e os amigos); o assento da criança chega pelo
@@ -3884,15 +3905,19 @@ export function criarCena(
         // spec 039: o móvel ocupa as células da tabela; se alguma não estiver livre, o "não"
         // curtinho da 037 (o núcleo confere as mesmas)
         if (ehMovel(b)) {
-          const { celulas, livres } = celulasLivresDoMovel(b, x, y, z, meta & 3);
+          // spec 039b: a cadeira posta colada à mesa vira de frente para ela (a mesma conta do
+          // núcleo, para nada virar depois)
+          const paraAMesa = b === Bloco.CADEIRA ? direcaoParaAMesa(leitorMoveis, x, y, z) : null;
+          const dm = paraAMesa ?? meta & 3;
+          const { celulas, livres } = celulasLivresDoMovel(b, x, y, z, dm);
           if (!livres) {
             barramento.emitir('recusa', { motivo: 'colocar' });
             return false;
           }
           const partes = celulas
             .slice(1)
-            .map((c) => ({ x: c.x, y: c.y, z: c.z, meta: metaDoMovel(meta, c.parte) }));
-          return editarRegistrando(x, y, z, b, meta, partes);
+            .map((c) => ({ x: c.x, y: c.y, z: c.z, meta: metaDoMovel(dm, c.parte) }));
+          return editarRegistrando(x, y, z, b, dm, partes);
         }
         return editarRegistrando(x, y, z, b, meta);
       },
@@ -4382,18 +4407,29 @@ export function criarCena(
   function olharParaQuemSentou(a: AssentoNaTela): void {
     if (primeiraPessoa.ligada()) return;
     const deitadaNaCama = !!a.deitado && blocoEm(a.x, a.y, a.z) === Bloco.CAMA;
+    // spec 039b (portão visual): sentada à mesa (a mesa na frente dela), a câmera vem de lado e
+    // baixa, quase na altura dos olhos, olhando para onde ela olha: o rosto da amiga do outro lado,
+    // a mesa com os pratinhos e um pedaço dela de três-quartos (de frente, a cabeça tapava a mesa;
+    // do alto, as duas viravam só o alto do cabelo: "o rosto alegre é o que faz a cena funcionar")
+    const [vx, vz] = [
+      [0, 1],
+      [1, 0],
+      [0, -1],
+      [-1, 0],
+    ][a.d & 3];
+    const aMesa = !a.deitado && blocoEm(a.x - vx, a.y, a.z - vz) === Bloco.MESA;
     // sentada, ela olha para -vetor(d): a câmera olha para +vetor(d), de frente para ela;
     // deitada na cama, a câmera vem do pé e olha para a cabeceira (-vetor(d))
-    const base = ((deitadaNaCama ? a.d + 2 : a.d) & 3) * (Math.PI / 2);
+    const base = ((deitadaNaCama || aMesa ? a.d + 2 : a.d) & 3) * (Math.PI / 2);
     const deYaw = camera.rotation.y;
-    let dYaw = (base + 0.62 - deYaw) % (Math.PI * 2);
+    let dYaw = (base + (aMesa ? 0.95 : 0.62) - deYaw) % (Math.PI * 2);
     if (dYaw > Math.PI) dYaw -= Math.PI * 2;
     if (dYaw < -Math.PI) dYaw += Math.PI * 2;
     giroAoSentar = {
       deYaw,
       dYaw,
       dePitch: camera.rotation.x,
-      atePitch: deitadaNaCama ? 0.75 : 0.42,
+      atePitch: deitadaNaCama ? 0.75 : aMesa ? 0.5 : 0.42,
       t0: performance.now() / 1000,
     };
   }
@@ -5968,6 +6004,23 @@ export function criarCena(
     const def = obterBlocoDef(b);
     if (!def) return CUBO;
     if (def.planta) return [0.18, 0, 0.18, 0.82, 0.85, 0.82];
+    // spec 039b (portão visual): o móvel ganha o contorno inteiro (todas as células, a partir da
+    // célula mirada), e não só a parte tocada (na TV de 2 × 2, o cubo pegava metade do rack)
+    const m = ehMovel(b) ? movelEm(leitorMoveis, x, y, z) : null;
+    if (m) {
+      const u = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
+      for (const q of m.celulas) {
+        const cs = caixasDoBloco(b, edicoes.obterMeta(q.x, q.y, q.z), () => false);
+        const lista = cs && cs.length ? cs : [CUBO];
+        const o = [q.x - x, q.y - y, q.z - z];
+        for (const c of lista)
+          for (let i = 0; i < 3; i++) {
+            u[i] = Math.min(u[i], c[i] + o[i]);
+            u[i + 3] = Math.max(u[i + 3], c[i + 3] + o[i]);
+          }
+      }
+      return u as unknown as CaixaLocal;
+    }
     const caixas = caixasDoBloco(b, edicoes.obterMeta(x, y, z), (dd) => {
       const [dx, dz] = vetorDirecao(dd);
       return cercaConecta(blocoEm(x + dx, y, z + dz));
@@ -6056,6 +6109,11 @@ export function criarCena(
   const d0 = (a: { x: number; y: number; z: number } | null) =>
     a ? { x: a.x, y: a.y, z: a.z } : null;
   estado.destaque = () => alvoDestacado;
+  /** Spec 039b (testes): a caixa do contorno da mira agora, a partir da célula mirada. */
+  estado.caixaDoDestaque = () => {
+    const a = alvoDestacado;
+    return a ? [...caixaVisual(a.x, a.y, a.z)] : null;
+  };
   function atualizarDestaque(): void {
     // no modo foto a mira não marca bloco (a foto sai limpa); no toque só o dedo marca: sem
     // dedo na tela, nada de contorno no bloco do centro (a criança toca onde quer, e o
@@ -6233,8 +6291,62 @@ export function criarCena(
   let calarDaVila = 0;
   let calarDoParque = 0;
   let calarDaCasa = 0;
+  let calarDosMoveis = 0;
   const calarTrilha = () =>
-    ambiente?.definirCalar(Math.max(calarDaVila, calarDoParque, calarDaCasa));
+    ambiente?.definirCalar(Math.max(calarDaVila, calarDoParque, calarDaCasa, calarDosMoveis));
+  // ------------------------------------------------------------ spec 039b (T04): os sons dos móveis
+  // a musiquinha do som (só os dois mais perto tocam, do ponto em que o núcleo diz); a TV que liga,
+  // o fogão cozinhando, a porta da geladeira e o comer junto (um som de móvel por vez, perto)
+  const somMoveis = criarSomMoveis({
+    motor: motorAudio,
+    musica: () => configAtual?.volumeMusica ?? 0.6,
+    aoCalarTrilha: (f) => {
+      calarDosMoveis = f;
+      calarTrilha();
+    },
+  });
+  window.addEventListener('pagehide', () => somMoveis.liberar());
+  estado.somMoveis = () => somMoveis.info();
+  let versaoLigadosVista = -1;
+  /** Testes: quantos pratos esta tela viu na mesa. */
+  let pratosVistos = 0;
+  estado.pratosVistos = () => pratosVistos;
+  estado.ligados = () => cliente.ligados.lista;
+  /** A TV de cada âncora e o desenho que passava (para o som de ligar só na troca). */
+  let tvsVistas = new Map<string, number>();
+  let proximaPanela = 0;
+  function quadroSomMoveis(): void {
+    const l = cliente.ligados;
+    const eu = controle.jogador;
+    somMoveis.quadro(eu, l.relogio, l.lista as SomLigado[]);
+    if (l.versao !== versaoLigadosVista) {
+      versaoLigadosVista = l.versao;
+      const agora = new Map<string, number>();
+      for (const e of l.lista) {
+        if (e.tipo !== 'tv') continue;
+        const k = `${e.x},${e.y},${e.z}`;
+        agora.set(k, e.desde);
+        // ligou, ou passou para o próximo desenho: o "tic" e o brilho (perto)
+        if (tvsVistas.get(k) !== e.desde && maisPertos(l.lista, 'tv', eu).includes(e))
+          somMovel('tvLiga', e.x, e.z);
+      }
+      tvsVistas = agora;
+    }
+    // a panelinha cozinhando perto: umas bolhinhas de tempos em tempos
+    const t = performance.now();
+    if (t >= proximaPanela) {
+      proximaPanela = t + 2600;
+      const fogao = l.lista.find(
+        (e) => e.tipo === 'fogao' && Math.hypot(e.x + 0.5 - eu.x, e.z + 0.5 - eu.z) < 6,
+      );
+      if (fogao) somMovel('fogao', fogao.x, fogao.z);
+    }
+  }
+  window.addEventListener('brumaluz:somMovel', (ev) => {
+    const d = (ev as CustomEvent<{ som?: unknown; x?: unknown; z?: unknown }>).detail;
+    if (d?.som === 'geladeira' && typeof d.x === 'number' && typeof d.z === 'number')
+      somMovel('geladeira', d.x, d.z);
+  });
   // spec 026 (parte 2): os sons do parque, feitos na hora (nada no pacote): o realejo que cresce
   // perto do carrossel, o "tum", as risadas, o sininho da pipoca e o zumbido das lâmpadas
   if (planoVila) {
@@ -6682,6 +6794,7 @@ export function criarCena(
       cam: { x: cameraVisao.position.x, z: cameraVisao.position.z },
     });
     somRua?.quadro(controle.jogador);
+    quadroSomMoveis(); // spec 039b (T04)
     // (o parque não toca música com o show ou as caixas tocando perto: uma música por vez)
     somParque?.quadro(
       controle.jogador,
@@ -8744,6 +8857,31 @@ export function criarCena(
       case 'espantou':
         window.dispatchEvent(new CustomEvent('brumaluz:espantou', { detail: e.tipo }));
         break;
+      case 'prato': {
+        // spec 039b (T04): todos comem juntos na mesa: as notinhas e um coraçãozinho em cima de
+        // cada um que come (os mais perto da mesa, até `quantos`)
+        somMovel('comerJunto', e.x, e.z);
+        const corpos = [
+          { x: controle.jogador.x, y: controle.jogador.y, z: controle.jogador.z },
+          ...outrosJogadores.lista.map((o) => ({ x: o.x, y: o.y, z: o.z })),
+        ]
+          .map((c) => ({ c, d: Math.hypot(c.x - (e.x + 1), c.z - (e.z + 0.5)) }))
+          .filter((k) => k.d < 3.5)
+          .sort((a, b) => a.d - b.d)
+          .slice(0, e.quantos);
+        for (const { c } of corpos) coracoes.soltar(c.x, c.y + 1.9, c.z, 2);
+        // (T03: os pratinhos com a comida aparecem na mesa, na frente de quem come)
+        moveis.prato(
+          e.x,
+          e.y,
+          e.z,
+          e.item,
+          e.quantos,
+          corpos.map(({ c }) => c),
+        );
+        pratosVistos++;
+        break;
+      }
       case 'comeu':
         // spec 032: a refeição já começou no toque (as mordidas fazem os sons); se ela veio de
         // outro jeito (um atalho de teste), começa agora

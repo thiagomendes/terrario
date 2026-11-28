@@ -256,8 +256,8 @@ for (const modo of ['local', 'nuvem'] as const)
   });
 
 describe('o saneamento dos extras', () => {
-  it('a rede é a 19 (os móveis mudaram o colocar, o quebrar e o quadro)', () => {
-    expect(VERSAO_REDE).toBe(19);
+  it('a rede é a 20 (a 039 levou a 19; a 039b, os contêineres novos, levou a 20)', () => {
+    expect(VERSAO_REDE).toBe(20);
   });
 
   it('aceita até 5 (o tapete) e recusa 6', () => {

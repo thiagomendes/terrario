@@ -131,7 +131,7 @@ describe('receitas', () => {
     }
   });
 
-  it('spec 039: os oito móveis na categoria casa, na mesa, e a pia com ferro de verdade', () => {
+  it('spec 039 e 039b: os treze móveis na categoria casa, na mesa, e o ferro de verdade onde pede', () => {
     const casa = RECEITAS.filter((r) => r.categoria === 'casa');
     const blocos = casa.map((r) => obterItem(r.resultado.item)?.bloco ?? -1);
     expect(new Set(blocos)).toEqual(
@@ -144,11 +144,22 @@ describe('receitas', () => {
         Bloco.TAPETE,
         Bloco.PIA,
         Bloco.GUARDA_ROUPA,
+        // spec 039b: a parte 2
+        Bloco.FOGAO,
+        Bloco.GELADEIRA,
+        Bloco.MESA,
+        Bloco.TV,
+        Bloco.SOM,
       ]),
     );
-    expect(casa).toHaveLength(8);
+    expect(casa).toHaveLength(13);
     for (const r of casa) expect(r.mesa, r.id).toBe(true);
-    expect(Object.values(RECEITAS.find((r) => r.id === 'pia')!.chaves!)).toContain(
+    for (const id of ['pia', 'geladeira', 'fogao', 'tv', 'som'])
+      expect(Object.values(RECEITAS.find((r) => r.id === id)!.chaves!), id).toContain(
+        'lingote_ferro',
+      );
+    // a mesa da casa não tem ferro (tábuas e gravetos)
+    expect(Object.values(RECEITAS.find((r) => r.id === 'mesa_casa')!.chaves!)).not.toContain(
       'lingote_ferro',
     );
     for (const r of RECEITAS) expect(CATEGORIAS_RECEITA, r.id).toContain(r.categoria);

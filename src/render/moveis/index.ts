@@ -40,6 +40,8 @@ import { criarPlasticos } from '../formas';
 import { criarPaletaLuz } from '../vila/luzes';
 import { EDREDOM, almofadaDeitada, montarModeloMovel, type ModeloMovel, type ParteModelo } from './pecas';
 import { formaDaCoberta, montarCoberta, type CaixaCorpo } from './coberta';
+import { criarLigados } from './ligados';
+import type { MovelLigado } from '../../nucleo/protocolo';
 
 /** Até onde os móveis são desenhados (blocos, do meio do pedaço à criança, mais a meia diagonal). */
 export const DISTANCIA_MOVEIS = 32;
@@ -56,6 +58,12 @@ export const BLOCOS_MOVEL: ReadonlySet<number> = new Set([
   Bloco.PIA,
   Bloco.GUARDA_ROUPA,
   Bloco.CAMA,
+  // spec 039b: a parte 2
+  Bloco.FOGAO,
+  Bloco.GELADEIRA,
+  Bloco.MESA,
+  Bloco.TV,
+  Bloco.SOM,
 ]);
 const EH_MOVEL_T = new Uint8Array(256);
 for (const b of BLOCOS_MOVEL) EH_MOVEL_T[b] = 1;
@@ -67,6 +75,8 @@ export interface OpcoesMoveis {
   tapetes(): CamadaTapetes;
   /** Cada malha nova (a cena tira do brilho). */
   aoCriar?(m: Mesh): void;
+  /** Spec 039b: os móveis ligados perto, como o núcleo mandou (`estado.ligados` da tela). */
+  ligados?(): { lista: readonly MovelLigado[]; relogio: number };
 }
 
 export interface RenderMoveis {
@@ -116,6 +126,15 @@ export interface RenderMoveis {
   }>;
   /** Quantos pedaços, malhas, triângulos, móveis e tapetes vivos (testes e medida). */
   contagem(): { pedacos: number; malhas: number; triangulos: number; moveis: number; tapetes: number; mexendo: number };
+  /** Spec 039b: a comida posta na mesa da âncora (o evento `prato`): os pratinhos com a comida. */
+  prato(x: number, y: number, z: number, item: string, quantos: number, quem?: ReadonlyArray<{ x: number; z: number }>): void;
+  /** Spec 039b (testes e fotos): os móveis ligados desenhados agora. */
+  ligados(): Array<{ tipo: string; ancora: string; anima: boolean; k: number; programa?: number }>;
+  /**
+   * Spec 039b (só as fotos): mostra esta lista de ligados no lugar da do núcleo (null: volta à do
+   * núcleo). O relógio é o do núcleo.
+   */
+  forcarLigados(lista: MovelLigado[] | null): void;
   descartar(): void;
 }
 
@@ -187,6 +206,23 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
   /** Os pedaços para montar (o mais perto primeiro, um por quadro). */
   const fila = new Set<string>();
   let versaoTapetes = -1;
+  let forcados: MovelLigado[] | null = null;
+  // spec 039b: o que mexe nos móveis ligados (a TV, o som, o fogão e a geladeira) e o prato da mesa
+  const lig = criarLigados(scene, {
+    bloco: (x, y, z) => op.leitor.bloco(x, y, z),
+    movel: (x, y, z) => {
+      const i = instanciaEm(x, y, z);
+      return i && i.ancora.x === x && i.ancora.y === y && i.ancora.z === z ? i : null;
+    },
+    modelo: (b) => modelo(b, false),
+    material: matCorpo,
+    plasticos: pl,
+    refazer: (x, y, z) => {
+      const i = instanciaEm(x, y, z);
+      if (i) refazerPedacoDe(i);
+    },
+    aoCriar: op.aoCriar,
+  });
   let px = 0;
   let pz = 0;
   let luzAgora = 1;
@@ -373,7 +409,10 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
     const acesos = moveis.filter((i) => i.bloco === Bloco.ABAJUR_ACESO || i.bloco === Bloco.CRIADO_MUDO_ACESO);
     for (const i of [...tapetes, ...moveis]) {
       const mx = mexendo.get(chaveA(i.ancora.x, i.ancora.y, i.ancora.z));
-      const g = girado(i, !!mx && (mx.k > 0 || mx.alvo > 0 || mx.deitados.size > 0));
+      const g = girado(
+        i,
+        (!!mx && (mx.k > 0 || mx.alvo > 0 || mx.deitados.size > 0)) || lig.semPartes(i.ancora.x, i.ancora.y, i.ancora.z),
+      );
       const em = { x: i.cx - ox, y: i.cy, z: i.cz - oz };
       if (g.corpo) corpo.push({ g: g.corpo, ...em, f: luzDoLugar(i, acesos) });
       if (g.luz) luz.push({ g: g.luz, ...em });
@@ -704,7 +743,16 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
         animar(mx, dt);
         largarSeParado(k, mx);
       }
+      const l = op.ligados?.();
+      lig.quadro(forcados ?? l?.lista ?? [], l?.relogio ?? 0, x, z, dt);
     },
+    forcarLigados(lista) {
+      forcados = lista;
+    },
+    prato(x, y, z, item, quantos, quem) {
+      lig.prato(x, y, z, item, quantos, quem);
+    },
+    ligados: () => lig.vistos(),
     portas(x, y, z, abertas) {
       const mx = abertas ? mexer(x, y, z) : mexendo.get(chaveA(x, y, z)) ?? null;
       if (!mx || !mx.partes.portaE) return;
@@ -779,9 +827,11 @@ export function criarRenderMoveis(scene: Scene, op: OpcoesMoveis): RenderMoveis 
             malhas++;
             triangulos += m.getTotalIndices() / 3;
           }
-      return { pedacos: n, malhas, triangulos, moveis, tapetes, mexendo: mexendo.size };
+      const cl = lig.contagem();
+      return { pedacos: n, malhas: malhas + cl.malhas, triangulos: triangulos + cl.triangulos, moveis, tapetes, mexendo: mexendo.size };
     },
     descartar() {
+      lig.descartar();
       for (const p of pedacos.values()) desmontar(p);
       pedacos.clear();
       for (const mx of mexendo.values()) {

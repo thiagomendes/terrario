@@ -1,5 +1,8 @@
 import type { Slot } from '../jogo/inventario';
 import type { EstadoFornalha } from '../jogo/fornalha';
+import { mudancaAceita, noFogao, type EstadoFogao } from '../jogo/fogao';
+import { icone as iconePix } from './pixicones';
+import { iconeDoItem } from './icones';
 import { COMBUSTIVEL, FUNDICAO } from '../jogo/receitas';
 import { obterItem } from '../jogo/itens';
 import type { Inventario } from '../jogo/inventario';
@@ -21,6 +24,16 @@ export const CSS_CONTEINER = `
 .painel-fornalha .progresso { width: 56px; height: 12px; border-radius: 6px; background: var(--poco); box-shadow: var(--sombra-poco); overflow: hidden; }
 .painel-fornalha .progresso i { display: block; height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, #ffd45a, #ff9b2f); }
 .grade-bau { display: grid; grid-template-columns: repeat(9, var(--slot)); gap: 5px; }
+/* spec 039b: o ícone do móvel ao lado do nome (a geladeira e o fogão) e o fogão sem carvão */
+.painel-conteiner .rotulo-secao { display: flex; align-items: center; gap: 8px; }
+.painel-conteiner .icone-conteiner { width: 40px; height: 40px; margin: -6px 0; image-rendering: pixelated; filter: drop-shadow(0 2px 1px rgba(90, 55, 20, 0.3)); }
+.painel-fogao { grid-template-columns: auto auto auto; }
+/* (portão visual) a seta em cima da barrinha e a sombrinha do que vai sair */
+.painel-fogao .meio-fogao { display: grid; justify-items: center; gap: 4px; }
+.painel-fogao .seta-fogao { font-size: 1.4rem; color: #e39a2b; }
+.painel-fogao .lugar-saida-fogao { position: relative; }
+.painel-fogao .sombra-saida { position: absolute; inset: 12%; width: 76%; height: 76%; opacity: 0.35; pointer-events: none; }
+.painel-fogao .sombra-saida[hidden] { display: none; }
 `;
 
 export const TAMANHO_BAU = 27;
@@ -99,30 +112,66 @@ export function pegarSaida(cursor: Slot, saida: Slot): { cursor: Slot; saida: Sl
   };
 }
 
-export function criarPainelBau(ui: InventarioUI, inv: Inventario) {
+/**
+ * Spec 039b: o painel de lugares (o baú, e a geladeira: 9 lugares, só comida). `aceita` é a mesma
+ * regra do núcleo (`mudancaAceita`): o que não serve nem entra na tela.
+ */
+export interface OpcoesPainelLugares {
+  tamanho: number;
+  /** O prefixo dos lugares (`bau:3`, `gel:3`). */
+  prefixo: string;
+  rotulo: string;
+  /** O ícone do móvel ao lado do nome (a geladeira). */
+  icone?: () => string;
+  /** O lugar `i` aceita esta mudança (antes → depois)? Sem ela, tudo entra (o baú). */
+  aceita?: (i: number, antes: Slot, depois: Slot) => boolean;
+}
+
+/** O nome do painel com o ícone do móvel na frente (spec 039b). */
+function rotuloComIconeDoMovel(rot: HTMLElement, texto: string, icone?: () => string) {
+  rot.textContent = texto;
+  if (!icone) return () => undefined;
+  const img = document.createElement('img');
+  img.className = 'icone-conteiner';
+  img.alt = '';
+  img.src = icone();
+  rot.prepend(img);
+  // (o ícone de brinquedo chega depois: troca no lugar)
+  return () => {
+    img.src = icone();
+  };
+}
+
+export function criarPainelBau(ui: InventarioUI, inv: Inventario, op?: OpcoesPainelLugares) {
+  const tamanho = op?.tamanho ?? TAMANHO_BAU;
+  const prefixo = op?.prefixo ?? 'bau';
+  const aceita = op?.aceita ?? (() => true);
   const raiz = document.createElement('div');
   raiz.className = 'painel-conteiner';
   raiz.hidden = true;
-  raiz.setAttribute('data-painel-bau', '');
+  raiz.setAttribute(prefixo === 'bau' ? 'data-painel-bau' : `data-painel-${prefixo}`, '');
   const rot = document.createElement('div');
   rot.className = 'rotulo-secao';
-  rot.textContent = 'Baú';
+  const icone = rotuloComIconeDoMovel(rot, op?.rotulo ?? 'Baú', op?.icone);
   const grade = document.createElement('div');
   grade.className = 'grade-bau';
-  const slots = Array.from({ length: TAMANHO_BAU }, (_, i) => {
+  const slots = Array.from({ length: tamanho }, (_, i) => {
     const s = ui.criarSlot();
-    s.dataset.externo = `bau:${i}`;
+    s.dataset.externo = `${prefixo}:${i}`;
     grade.appendChild(s);
     return s;
   });
   raiz.append(rot, grade);
   ui.areaExtra.appendChild(raiz);
   let conteudo: Slot[] | null = null;
-  const render = () => slots.forEach((s, i) => ui.desenharSlot(s, conteudo?.[i] ?? null));
+  const render = () => {
+    icone();
+    slots.forEach((s, i) => ui.desenharSlot(s, conteudo?.[i] ?? null));
+  };
   ui.clicarExterno((el, cursor, botao, shift) => {
     const a = el.dataset.externo ?? '';
-    if (!a.startsWith('bau:') || !conteudo) return cursor;
-    const i = Number(a.slice(4));
+    if (!a.startsWith(`${prefixo}:`) || !conteudo) return cursor;
+    const i = Number(a.slice(prefixo.length + 1));
     if (shift && !cursor && conteudo[i]) {
       const p = conteudo[i]!;
       const resto = inv.adicionar(p.item, p.qtd, p.dur);
@@ -131,16 +180,18 @@ export function criarPainelBau(ui: InventarioUI, inv: Inventario) {
       return cursor;
     }
     const [novo, c] = trocar(conteudo[i], cursor, botao);
+    // (o que o lugar não aceita fica na mão: o graveto não entra na geladeira nem por um quadro)
+    if (!aceita(i, conteudo[i], novo)) return cursor;
     conteudo[i] = novo;
     render();
     return c;
   });
-  // Shift+clique na mochila com o baú aberto: vai para o baú
+  // Shift+clique na mochila com o baú aberto: vai para o baú (o que o lugar não aceita, não)
   ui.moverRapidoPara((p) => {
-    if (!conteudo) return undefined;
+    if (!conteudo || !aceita(0, null, p)) return undefined;
     const resto = juntarEm(
       conteudo,
-      Array.from({ length: TAMANHO_BAU }, (_, k) => k),
+      Array.from({ length: tamanho }, (_, k) => k),
       p,
     );
     render();
@@ -246,6 +297,107 @@ export function criarPainelFornalha(ui: InventarioUI) {
   return {
     elemento: raiz,
     abrir(estado: EstadoFornalha) {
+      f = estado;
+      raiz.hidden = false;
+      render();
+    },
+    fechar() {
+      f = null;
+      raiz.hidden = true;
+    },
+    render,
+    get aberta() {
+      return f;
+    },
+  };
+}
+
+/**
+ * Spec 039b: o painel do fogão: a entrada (só o que ele cozinha) e a saída (só tirar), sem lugar
+ * de carvão; o progresso vem do núcleo. A regra é a mesma do núcleo (`mudancaAceita`).
+ */
+export function criarPainelFogao(ui: InventarioUI, icone?: () => string) {
+  const raiz = document.createElement('div');
+  raiz.className = 'painel-conteiner';
+  raiz.hidden = true;
+  raiz.setAttribute('data-painel-fogao', '');
+  const rot = document.createElement('div');
+  rot.className = 'rotulo-secao';
+  const desenharIcone = rotuloComIconeDoMovel(rot, 'Fogão', icone);
+  const corpo = document.createElement('div');
+  corpo.className = 'painel-fornalha painel-fogao';
+  const entrada = ui.criarSlot();
+  entrada.dataset.externo = 'fog:entrada';
+  entrada.title = 'Comida para cozinhar';
+  // (portão visual) a seta em cima da barrinha: a comida vai da entrada para a saída
+  const meio = document.createElement('div');
+  meio.className = 'meio-fogao';
+  const seta = iconePix('seta');
+  seta.classList.add('seta-fogao');
+  const prog = document.createElement('div');
+  prog.className = 'progresso';
+  const progI = document.createElement('i');
+  prog.appendChild(progI);
+  meio.append(seta, prog);
+  const saida = ui.criarSlot();
+  saida.classList.add('resultado');
+  saida.dataset.externo = 'fog:saida';
+  // a sombrinha do que vai sair (meio transparente), com a saída vazia e comida na entrada
+  const lugarSaida = document.createElement('div');
+  lugarSaida.className = 'lugar-saida-fogao';
+  const sombra = document.createElement('img');
+  sombra.className = 'sombra-saida';
+  sombra.alt = '';
+  sombra.hidden = true;
+  sombra.setAttribute('data-sombra-saida', '');
+  lugarSaida.append(saida, sombra);
+  corpo.append(entrada, meio, lugarSaida);
+  raiz.append(rot, corpo);
+  ui.areaExtra.appendChild(raiz);
+
+  let f: EstadoFogao | null = null;
+  const render = () => {
+    desenharIcone();
+    if (!f) return;
+    ui.desenharSlot(entrada, f.entrada);
+    ui.desenharSlot(saida, f.saida);
+    progI.style.width = `${Math.min(1, f.progresso) * 100}%`;
+    const vai = !f.saida && f.entrada ? noFogao(f.entrada.item) : undefined;
+    sombra.hidden = !vai;
+    if (vai) {
+      sombra.src = iconeDoItem(vai);
+      sombra.dataset.item = vai;
+    }
+  };
+  ui.clicarExterno((el, cursor, botao) => {
+    const a = el.dataset.externo ?? '';
+    if (!a.startsWith('fog:') || !f) return cursor;
+    if (a === 'fog:saida') {
+      const r = pegarSaida(cursor, f.saida);
+      if (r.pego === 0) return cursor;
+      f.saida = r.saida;
+      render();
+      return r.cursor;
+    }
+    const [novo, c] = trocar(f.entrada, cursor, botao);
+    // só o que o fogão cozinha entra (a mesma regra do núcleo); o resto fica na mão
+    if (!mudancaAceita('fog', 0, f.entrada, novo)) return cursor;
+    f.entrada = novo;
+    render();
+    return c;
+  });
+  // Shift+clique na mochila com o fogão aberto: o que ele cozinha vai para a entrada
+  ui.moverRapidoPara((p) => {
+    if (!f || !mudancaAceita('fog', 0, null, p)) return undefined;
+    const slots: Slot[] = [f.entrada];
+    const resto = juntarEm(slots, [0], p);
+    f.entrada = slots[0];
+    render();
+    return resto;
+  });
+  return {
+    elemento: raiz,
+    abrir(estado: EstadoFogao) {
       f = estado;
       raiz.hidden = false;
       render();

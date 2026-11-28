@@ -12,7 +12,14 @@
 import type { Inventario } from '../jogo/inventario';
 import type { EstadoClima } from '../jogo/clima';
 import type { EstadoSobrevivencia } from '../jogo/sobrevivencia';
-import type { Comando, EventoNucleo, Mensagem, Quadro, SalvoNucleo } from '../nucleo/protocolo';
+import type {
+  Comando,
+  EventoNucleo,
+  Mensagem,
+  MovelLigado,
+  Quadro,
+  SalvoNucleo,
+} from '../nucleo/protocolo';
 import type { Conexao } from './conexao';
 import { indiceDonoDe } from '../world/edicoes';
 import { criarCamadaTapetes, type TapeteMudado } from '../jogo/tapetes';
@@ -119,6 +126,15 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
   const tapetes = criarCamadaTapetes();
   /** Âncoras de tapete com previsão ainda não confirmada (chave → id do comando). */
   const pendentesTapete = new Map<string, number>();
+  /**
+   * Spec 039b: os móveis ligados perto, como o núcleo mandou (o desenho lê; `versao` sobe a cada
+   * lista nova); `relogio`: o tempo do núcleo no último quadro (s), para o `desde` da TV e do som.
+   */
+  const ligados: { lista: MovelLigado[]; versao: number; relogio: number } = {
+    lista: [],
+    versao: 0,
+    relogio: 0,
+  };
 
   /** `dono`: índice do dono previsto (quem coloca prevê que é dele; sem: fica o da célula). */
   function prever(
@@ -158,6 +174,13 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
       if ('fora' in t) tapetes.tirar(t.x, t.y, t.z);
       else tapetes.impor(t);
     }
+    // spec 039b: os móveis ligados perto (a lista inteira quando vem; o primeiro quadro sem ela
+    // começa com tudo desligado)
+    if (q.moveisLigados || q.primeiro) {
+      ligados.lista = q.moveisLigados ?? [];
+      ligados.versao++;
+    }
+    ligados.relogio = q.n * PASSO;
     if (q.criaturas) criaturas.receber(q.criaturas);
     if (q.itens) itens.receber(q.itens);
     if (q.veiculos) veiculos.receber(q.veiculos, performance.now() / 1000, !!q.primeiro);
@@ -308,6 +331,8 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     prever,
     /** Spec 039: a camada dos tapetes (o desenho lê; `versao` sobe a cada mudança). */
     tapetes,
+    /** Spec 039b: os móveis ligados perto (a TV, o som, o fogão e a geladeira). */
+    ligados,
     /**
      * Spec 039: prevê na tela um tapete posto (ou o da âncora tirado) que o núcleo ainda vai
      * confirmar; até lá, o quadro não mexe nessa âncora.

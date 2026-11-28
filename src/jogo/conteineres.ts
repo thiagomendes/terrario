@@ -1,6 +1,14 @@
 import { obterItem } from './itens';
 import type { Slot } from './inventario';
 import { novaFornalha, normalizarFornalha, passoFornalha, type EstadoFornalha } from './fornalha';
+import {
+  cozinhando,
+  normalizarFogao,
+  normalizarGeladeira,
+  novoFogao,
+  passoFogao,
+  type EstadoFogao,
+} from './fogao';
 import { hash3 } from '../world/noise';
 import { idDoBloco } from './itens';
 import { Bloco } from '../world/blocks';
@@ -10,6 +18,14 @@ import { planoDaRegiao, REGIAO_POVOADO } from '../world/povoado';
 export const TAMANHO_BAU = 27;
 
 export const chavePos = (x: number, y: number, z: number) => `${x},${y},${z}`;
+
+/**
+ * Spec 039b: o lugar da transação é de um contêiner aberto (o baú, a fornalha, a geladeira ou o
+ * fogão)? A mesma conta serve à transação, ao aviso aos outros e ao bloqueio do visitante.
+ */
+export function ehLugarDeConteiner(onde: string): boolean {
+  return onde === 'bau' || onde === 'forn' || onde === 'gel' || onde === 'fog';
+}
 
 /** Tesouro determinístico de um baú gerado pelo mundo (ruínas). */
 export function tesouro(x: number, y: number, z: number, semente: number): Slot[] {
@@ -91,7 +107,18 @@ export function conteudoGerado(x: number, y: number, z: number, semente: number)
 export function criarConteineres(salvo: unknown, semente: number) {
   const baus = new Map<string, Slot[]>();
   const fornalhas = new Map<string, EstadoFornalha>();
-  const s = (salvo ?? {}) as { baus?: Record<string, Slot[]>; fornalhas?: Record<string, unknown> };
+  // spec 039b: a geladeira e o fogão, guardados pela âncora do móvel
+  const geladeiras = new Map<string, Slot[]>();
+  const fogoes = new Map<string, EstadoFogao>();
+  const s = (salvo ?? {}) as {
+    baus?: Record<string, Slot[]>;
+    fornalhas?: Record<string, unknown>;
+    geladeiras?: Record<string, unknown>;
+    fogoes?: Record<string, unknown>;
+  };
+  for (const [k, v] of Object.entries(s.geladeiras ?? {}))
+    geladeiras.set(k, normalizarGeladeira(v));
+  for (const [k, v] of Object.entries(s.fogoes ?? {})) fogoes.set(k, normalizarFogao(v));
   for (const [k, v] of Object.entries(s.baus ?? {})) {
     if (Array.isArray(v))
       baus.set(
@@ -121,6 +148,30 @@ export function criarConteineres(salvo: unknown, semente: number) {
       }
       return f;
     },
+    /** Spec 039b: a geladeira da âncora (9 lugares; criada vazia na primeira vez). */
+    geladeira(x: number, y: number, z: number): Slot[] {
+      const k = chavePos(x, y, z);
+      let g = geladeiras.get(k);
+      if (!g) {
+        g = normalizarGeladeira([]);
+        geladeiras.set(k, g);
+      }
+      return g;
+    },
+    /** Spec 039b: o fogão da âncora (criado vazio na primeira vez). */
+    fogao(x: number, y: number, z: number): EstadoFogao {
+      const k = chavePos(x, y, z);
+      let f = fogoes.get(k);
+      if (!f) {
+        f = novoFogao();
+        fogoes.set(k, f);
+      }
+      return f;
+    },
+    /** Spec 039b: os fogões com o que cozinhar agora (chave da âncora → o estado). */
+    fogoesCozinhando(): [string, EstadoFogao][] {
+      return [...fogoes].filter(([, f]) => cozinhando(f));
+    },
     /**
      * Remove e devolve o conteúdo (ao quebrar o bloco). `gerado`: o baú veio do mundo
      * (ruína); se nunca foi aberto, o tesouro ainda não existe e é criado agora.
@@ -131,9 +182,23 @@ export function criarConteineres(salvo: unknown, semente: number) {
       const out: Slot[] = [...salvo];
       const f = fornalhas.get(k);
       if (f) out.push(f.entrada, f.combustivel, f.saida);
+      // spec 039b: a geladeira e o fogão (pela âncora)
+      out.push(...(geladeiras.get(k) ?? []));
+      const fg = fogoes.get(k);
+      if (fg) out.push(fg.entrada, fg.saida);
       baus.delete(k);
       fornalhas.delete(k);
+      geladeiras.delete(k);
+      fogoes.delete(k);
       return out.filter((p) => !!p);
+    },
+    /**
+     * Spec 039b: ao abrir o mundo (depois da peça solta), sai a geladeira e o fogão cuja âncora
+     * não é mais o móvel certo (`valeA` diz se a chave ainda é a âncora dele).
+     */
+    limparMoveis(valeA: (k: string, tipo: 'geladeira' | 'fogao') => boolean): void {
+      for (const k of [...geladeiras.keys()]) if (!valeA(k, 'geladeira')) geladeiras.delete(k);
+      for (const k of [...fogoes.keys()]) if (!valeA(k, 'fogao')) fogoes.delete(k);
     },
     /** Avança todas as fornalhas; chama `aoMudarChama` quando acende ou apaga. */
     atualizar(
@@ -146,9 +211,18 @@ export function criarConteineres(salvo: unknown, semente: number) {
         const [x, y, z] = k.split(',').map(Number);
         if (r.acesa !== acesa(x, y, z)) aoMudarChama(x, y, z, r.acesa);
       }
+      // spec 039b: os fogões cozinham sem carvão (o bloco não muda: o estado vai no quadro)
+      for (const f of fogoes.values()) passoFogao(f, dt);
     },
     salvar() {
-      return { baus: Object.fromEntries(baus), fornalhas: Object.fromEntries(fornalhas) };
+      // spec 039b: os mapas novos só entram quando não estão vazios (o mundo sem geladeira nem
+      // fogão grava igual a antes)
+      return {
+        baus: Object.fromEntries(baus),
+        fornalhas: Object.fromEntries(fornalhas),
+        ...(geladeiras.size ? { geladeiras: Object.fromEntries(geladeiras) } : {}),
+        ...(fogoes.size ? { fogoes: Object.fromEntries(fogoes) } : {}),
+      };
     },
   };
 }

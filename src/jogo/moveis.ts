@@ -107,6 +107,61 @@ const GUARDA_ROUPA: FormaMovel = {
   caixas: [[cheia], [cheia], [cheia], [cheia]],
 };
 
+// spec 039b: os móveis da parte 2
+const FOGAO: FormaMovel = {
+  largura: 1,
+  fundo: 1,
+  altura: 1,
+  partes: [[0, 0, 0]],
+  caixas: [[[P, 0, P, 15 * P, 15 * P, 15 * P]]],
+};
+const GELADEIRA: FormaMovel = {
+  largura: 1,
+  fundo: 1,
+  altura: 2,
+  partes: [
+    [0, 0, 0],
+    [0, 1, 0],
+  ],
+  caixas: [[cheia], [[0, 0, 0, 1, 1, 1]]],
+};
+/** A mesa: o tampo (até 0,88) e o vão das pernas embaixo, onde a cadeira encosta. */
+const MESA: FormaMovel = {
+  largura: 2,
+  fundo: 1,
+  altura: 1,
+  partes: [
+    [0, 0, 0],
+    [1, 0, 0],
+  ],
+  caixas: [[[0, 12 * P, 0, 1, 14 * P, 1]], [[0, 12 * P, 0, 1, 14 * P, 1]]],
+};
+/** A TV de rack: o rack embaixo e a tela em cima, as duas de 2 de largura. */
+const TV: FormaMovel = {
+  largura: 2,
+  fundo: 1,
+  altura: 2,
+  partes: [
+    [0, 0, 0],
+    [1, 0, 0],
+    [0, 1, 0],
+    [1, 1, 0],
+  ],
+  caixas: [
+    [[0, 0, 4 * P, 1, 9 * P, 1]],
+    [[0, 0, 4 * P, 1, 9 * P, 1]],
+    [[0, 0, 9 * P, 1, 14 * P, 14 * P]],
+    [[0, 0, 9 * P, 1, 14 * P, 14 * P]],
+  ],
+};
+const SOM: FormaMovel = {
+  largura: 1,
+  fundo: 1,
+  altura: 1,
+  partes: [[0, 0, 0]],
+  caixas: [[[2 * P, 0, 4 * P, 14 * P, 11 * P, 14 * P]]],
+};
+
 /**
  * O tapete: 3 × 2, rente ao chão, numa camada própria (`jogo/tapetes.ts`). Ele não ocupa a
  * célula: o sofá, a cadeira e os blocos vão por cima. A parte `f * 3 + r` fica `r` para a
@@ -160,6 +215,11 @@ export const NOMES_MOVEIS: Readonly<Record<number, string>> = {
   [Bloco.GUARDA_ROUPA]: 'guarda-roupa',
   [Bloco.ABAJUR_ACESO]: 'abajur aceso',
   [Bloco.CRIADO_MUDO_ACESO]: 'criado-mudo aceso',
+  [Bloco.FOGAO]: 'fogão',
+  [Bloco.GELADEIRA]: 'geladeira',
+  [Bloco.MESA]: 'mesa',
+  [Bloco.TV]: 'televisão',
+  [Bloco.SOM]: 'aparelho de som',
 };
 
 /** Os móveis de célula da parte 1 (o aceso tem a forma do apagado). */
@@ -174,6 +234,12 @@ const MOVEIS: ReadonlyMap<number, FormaMovel> = new Map([
   [Bloco.GUARDA_ROUPA, GUARDA_ROUPA],
   // spec 039 (T03): a cama de duas células (e a curtinha)
   [Bloco.CAMA, FORMA_CAMA],
+  // spec 039b: a parte 2
+  [Bloco.FOGAO, FOGAO],
+  [Bloco.GELADEIRA, GELADEIRA],
+  [Bloco.MESA, MESA],
+  [Bloco.TV, TV],
+  [Bloco.SOM, SOM],
 ]);
 
 /** A forma do móvel de célula (undefined: não é móvel; o tapete não é de célula). */
