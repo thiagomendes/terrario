@@ -102,6 +102,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
   - a roleta às vezes fecha sozinha em 7,0 s em vez de ~8,9 s (está na quarentena);
   - o `servidor.yml` não dispara com `src/personagem/**`, `src/player/**` e `src/art/**`, que o servidor importa;
   - na "Meus tesouros", a criança do mundo aparece atrás da prévia.
+- **Achado na conferência da 039b (27 nov):** o `vila-patins.spec.ts:295` já cai na `main`. Na Vila Neon em pé, a plaquinha do "sair" dos patins encosta no minimapa e no botão da mochila.
 - **Vistos na 039 (27 nov):** as bochechas escuras de quem dorme no sofá à noite (pede bochecha separada no boneco); o tapete fica flutuando se o chão embaixo sair; o colar põe um tapete por comando (fora do alcance fica de fora); as miniaturas das camisetas cortam o topo da cabeça; o fantasma do móvel aparece através da parede; o `mineracao.spec.ts:180` e o `canteiro.spec.ts:288` caem com a placa ocupada.
 - **Consertado:** a velocidade do carrinho de quem guia o bate-bate dobrava sem controle para refazer (`src/cliente/bate.ts`); vai ao ar com a próxima publicação.
 - **A página deitada perde o contexto WebGL** na ponte da placa do WSL (a placa trava uns 2 min). Esses testes só rodam no `--tudo`; conferir no aparelho de verdade.
